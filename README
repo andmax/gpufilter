@@ -1,0 +1,33 @@
+****************************************************************************
+**                                                                        **
+**  gpufilter - GPU-Efficient Recursive Filtering and Summed-Area Tables  **
+**                                                                        **
+**                              README File                               **
+**                                                                        **
+****************************************************************************
+
+    gpufilter is an open software: you can redistribute it and/or
+    modify it under the terms of the MIT License as published by the
+    Massachusetts Institute of Technology (MIT).
+
+    gpufilter is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the MIT
+    License for more details.
+
+    You should have received a copy of the MIT License along with this
+    program.  If not, see
+    <http://www.opensource.org/licenses/mit-license.php>.
+
+Abstract:
+
+The gpufilter project is a set of C for CUDA functions to compute
+recursive filters and summed-area tables in GPUs. This project
+presents a new algorithmic framework for parallel evaluation. It
+partitions the image into 2D blocks, with a small band of data
+buffered along each block perimeter. A remarkable result is that the
+image data is read only twice and written just once, independent of
+image size, and thus total memory bandwidth is reduced even compared
+to the traditional serial algorithm. The project is based on the
+paper: "GPU-Efficient Recursive Filtering and Summed-Area Tables" by
+Diego Nehab, André Maximo, Rodolfo S. Lima and Hugues Hoppe.
