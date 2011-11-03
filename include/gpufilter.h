@@ -1,12 +1,12 @@
 /**
- *  @file goyfilter.h
+ *  @file gpufilter.h
  *  @brief GPU-Efficient Recursive Filtering and Summed-Area Tables definitions
  *  @author Diego Nehab
  *  @author Andre Maximo
  *  @author Rodolfo Lima
  *  @date October, 2010
  *  @date September, 2011
- *  @copyright The MIT License
+ *  @note The MIT License
  */
 
 #ifndef GPUFILTER_H
@@ -55,21 +55,31 @@ The people involved in the gpufilter project are listed below:
 \par
 \htmlonly <a href="http://www.impa.br/~diego" target="_blank">Diego Nehab</a> \endhtmlonly
 \latexonly \href{http://www.impa.br/~diego}{Diego Nehab} \endlatexonly
+
+\par
 \htmlonly <a href="http://www.impa.br/~andmax" target="_blank">André Maximo</a> \endhtmlonly
 \latexonly \href{http://www.impa.br/~andmax}{Andre Maximo} \endlatexonly
+
+\par
 \htmlonly <a href="http://www.rodsoft.org" target="_blank">Rodolfo S. Lima</a> \endhtmlonly
 \latexonly \href{http://www.rodsoft.org}{Rodolfo S. Lima} \endlatexonly
+
+\par
 \htmlonly <a href="http://research.microsoft.com/en-us/um/people/hoppe" target="_blank">Hugues Hoppe</a> \endhtmlonly
 \latexonly \href{http://research.microsoft.com/en-us/um/people/hoppe}{Hugues Hoppe} \endlatexonly
 
 */
 
 /**
- *  @defgroup utils Utility classes and functions to CPU/GPU computations
+ *  @defgroup utils Utility classes and functions for CPU and GPU computations
  */
 
 /**
- *  @defgroup cpu Functions to compute recursive filtering in the CPU
+ *  @defgroup cpu Functions to compute recursive filtering on the CPU
+ */
+
+/**
+ *  @defgroup gpu Functions to compute recursive filtering on the GPU
  */
 
 //== INCLUDES =================================================================
@@ -89,7 +99,7 @@ namespace gpufilter {
  *  Compute the scaling factor of the recursive filter representing a
  *  true Gaussian filter convolution with arbitrary support sigma.
  *
- *  @see [vanVliet:1998] cited in @ref weights2
+ *  @see [vanVliet:1998] cited in @see weights2
  *  @param[in] s Sigma support of the true Gaussian filter
  *  @return Scaling factor q of the recursive filter approximation
  *  @tparam T Sigma value type
@@ -106,7 +116,7 @@ T qs( const T& s ) {
  *  z-transform compute a rescaled pole representing a true Gaussian
  *  filter convolution with arbitrary support sigma.
  *
- *  @see [vanVliet:1998] cited in @ref weights2
+ *  @see [vanVliet:1998] cited in @see weights2
  *  @param[in] d Complex-valued pole of a stable recursive filter
  *  @param[in] s Sigma support of the true Gaussian filter
  *  @return Rescaled complex-valued pole of the recursive filter approximation
@@ -126,7 +136,7 @@ std::complex<T> ds( const std::complex<T>& d,
  *  compute a rescaled pole representing a true Gaussian filter
  *  convolution with arbitrary support sigma.
  *
- *  @see [vanVliet:1998] cited in @ref weights2
+ *  @see [vanVliet:1998] cited in @see weights2
  *  @param[in] d Real pole of a stable recursive filter
  *  @param[in] s Sigma support of the true Gaussian filter
  *  @return Rescaled real pole of the recursive filter approximation
@@ -144,7 +154,7 @@ T ds( const T& d,
  *  Given a Gaussian sigma value compute the feedforward and feedback
  *  first-order coefficients.
  *
- *  @see [vanVliet:1998] cited in @ref weights2
+ *  @see [vanVliet:1998] cited in @see weights2
  *  @param[in] s Gaussian sigma
  *  @param[out] b0 Feedforward coefficient
  *  @param[out] a1 Feedback first-order coefficient

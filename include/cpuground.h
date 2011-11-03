@@ -3,6 +3,7 @@
  *  @ingroup cpu
  *  @brief CPU Groundtruth Recursive Filtering functions
  *  @author Diego Nehab
+ *  @author Andre Maximo
  *  @date October, 2010
  */
 
@@ -21,7 +22,7 @@ namespace gpufilter {
 
 //=== IMPLEMENTATION ==========================================================
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering forward with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -84,7 +85,7 @@ void sat( T *in,
 }
 /** @example example_sat.cc
  *
- *  This is an example of how to use the @ref sat function.
+ *  This is an example of how to use the @see sat function.
  *
  *  @see cpuground.h
  */
@@ -612,10 +613,10 @@ void bspline3i( T **in,
 }
 /** @example app_recursive_cpu.cc
  *
- *  This is an application example of the @ref gaussian and @ref
+ *  This is an application example of the @see gaussian and @see
  *  bspline3i functions usage.
  *
- *  @see cpuground.hh
+ *  @see cpuground.h
  */
 
 //=============================================================================

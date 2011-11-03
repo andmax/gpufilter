@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[sat] Generating random input matrix ... " << std::flush;
 
-    const int w_in = 16, h_in = 16;
+    const int w_in = 8, h_in = 8;
 
     float *in = new float[w_in*h_in];
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < w_in*h_in; ++i)
         in[i] = rand() % 8;
 
-    std::cout << "done!\n[sat] Input matrix " << w_in << "x" << h_in << " :\n";
+    std::cout << "done!\n[sat] Input matrix " << w_in << " x " << h_in << " :\n";
 
     print_matrix(in, h_in, w_in, 2);
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
     gpufilter::sat( in, h_in, w_in );
 
-    std::cout << "done!\n[sat] Output matrix " << w_in << "x" << h_in << " :\n";
+    std::cout << "done!\n[sat] Output matrix " << w_in << " x " << h_in << " :\n";
 
     print_matrix(in, h_in, w_in, 4);
 

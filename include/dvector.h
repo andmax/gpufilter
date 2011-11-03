@@ -17,7 +17,7 @@
 
 //== CLASS DEFINITION =========================================================
 
-/** @class dvector dvector.hh
+/** @class dvector dvector.h
  *  @brief Device Vector class
  *
  *  Device vector is a STL-based vector in the GPU memory.
@@ -52,7 +52,9 @@ public:
         *this = that;
     }
 
-    /// Default constructor
+    /** Default Constructor
+     *  @param[in] size Vector data size
+     */
     dvector( size_t size = 0 ) : m_size(0), m_capacity(0), m_data(0) {
         resize(size);
     }
@@ -91,7 +93,6 @@ public:
     }
 
     /** @brief Read/write operator
-     *
      *  @param idx Index of vector value
      *  @return Vector value at index
      */
@@ -153,15 +154,18 @@ public:
      */
     const T *data() const { return m_data; }
 
+    /** @brief Get last element of the vector
+     *  @return Last element of this vector
+     */
     T back() const { return operator[](size()-1); }
 
-    /** @brief Data in this vector
-     *  @return Vector data
+    /** @brief Address access operator
+     *  @return Pointer to vector data
      */
     operator T* () { return data(); }
 
-    /** @overload operator const T*() const
-     *  @return Constant vector data
+    /** @brief Address access operator
+     *  @return Constant pointer to vector data
      */
     operator const T* () const { return data(); }
 
