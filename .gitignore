@@ -1,0 +1,10 @@
+*.o
+*~
+*.bak
+#*
+bin/
+build/
+.*
+*.tgz
+*.sh
+doc/

@@ -96,7 +96,7 @@ namespace gpufilter {
  */
 template< class T >
 T qs( const T& s ) {
-    return .00399341 + .4715161 * s;
+    return (T)0.00399341 + (T)0.4715161 * s;
 }
 
 /** @ingroup utils
@@ -116,7 +116,7 @@ template< class T >
 std::complex<T> ds( const std::complex<T>& d,
                     const T& s ) {
     T q = qs(s);
-    return std::polar(pow(std::abs(d),1.0/q), std::arg(d)/q);
+    return std::polar(std::pow(std::abs(d),(T)1/q), std::arg(d)/q);
 }
 
 /** @ingroup utils
@@ -135,7 +135,7 @@ std::complex<T> ds( const std::complex<T>& d,
 template< class T >
 T ds( const T& d,
       const T& s ) {
-    return std::pow(d, 1.0/qs(s));
+    return std::pow(d, (T)1/qs(s));
 }
 
 /** @ingroup utils
@@ -155,10 +155,10 @@ template< class T1, class T2 >
 void weights1( const T1& s,
                T2& b0,
                T2& a1 ) {
-    const T1 d3(1.86543);
+    const T1 d3 = (T1)1.86543;
     T1 d = ds(d3, s);
-    b0 = std::static_cast<T2>(-(1.0-d)/d);
-    a1 = std::static_cast<T2>(1.0/d);
+    b0 = static_cast<T2>(-((T1)1-d)/d);
+    a1 = static_cast<T2>((T1)-1/d);
 }
 
 /** @ingroup utils
@@ -188,14 +188,14 @@ void weights2( const T1& s,
                T2& b0,
                T2& a1,
                T2& a2 ) {
-    const std::complex<T1> d1(1.41650, 1.00829);
+    const std::complex<T1> d1((T1)1.41650, (T1)1.00829);
     std::complex<T1> d = ds(d1, s);
     T1 n2 = std::abs(d); 
     n2 *= n2;
     T1 re = std::real(d);
-    b0 = std::static_cast<T2>((1-2*re+n2)/n2);
-    a1 = std::static_cast<T2>(-2*re/n2);
-    a2 = std::static_cast<T2>(1/n2);
+    b0 = static_cast<T2>(((T1)1-(T1)2*re+n2)/n2);
+    a1 = static_cast<T2>((T1)-2*re/n2);
+    a2 = static_cast<T2>((T1)1/n2);
 }
 
 //=============================================================================

@@ -164,12 +164,11 @@ public:
         return ( Ainf * Abar - Sinf * C ) * Cinf * Cbar;
     }
 
-protected:
-    inline T p2( const T& f) const { return f*f; }
-    inline T p3( const T& f) const { return f*f*f; }
-    inline T p4( const T& f) const { T ff = f*f; return ff*ff; }
-
 private:
+    inline static T p2( const T& f) { return f*f; }
+    inline static T p3( const T& f) { return f*f*f; }
+    inline static T p4( const T& f) { T ff = f*f; return ff*ff; }
+
     T m[2][2];
 };
 

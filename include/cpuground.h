@@ -1,7 +1,7 @@
 /**
- *  @file cpufilter.h
+ *  @file cpuground.h
  *  @ingroup cpu
- *  @brief Simple CPU Recursive Filtering definitions
+ *  @brief CPU Groundtruth Recursive Filtering functions
  *  @author Diego Nehab
  *  @date October, 2010
  */
@@ -20,6 +20,74 @@
 namespace gpufilter {
 
 //=== IMPLEMENTATION ==========================================================
+
+/** 
+ *  @brief Compute first-order recursive filtering forward with zero-border
+ *
+ *  Given an input 2D image compute a first-order recursive filtering
+ *  on its rows and columns with only causal filter.  The filter is
+ *  computed using a feedforward coefficient, i.e. a weight on the
+ *  current element, and a feedback coefficient, i.e. a weight on the
+ *  previous element.  The initial condition is zero-border.  When the
+ *  feedforward coefficient is 1 and the feedback coefficient is -1
+ *  this filter becomes the summed-area table computation.  The
+ *  computation is done sequentially in a naïve single-core CPU
+ *  fashion.
+ *
+ *  @param[in,out] inout The 2D image to compute recursive filtering
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback first-order coefficient
+ *  @tparam T Image value type
+ */
+template< class T >
+void rf_0( T *inout,
+           const int& h,
+           const int& w,
+           const T& b0,
+           const T& a1 ) {
+    T p = (T)0;
+	for (int x = 0; x < w; x++) {
+        p = inout[x]*b0 - p*a1;
+        p = p*b0;
+        inout[x] = p;
+    }
+	for (int y = 1; y < h; y++) {
+		p = inout[y*w]*b0;
+		inout[y*w] = inout[y*w]*b0 - inout[(y-1)*w]*a1;
+		for (int x = 1; x < w; x++) {
+			p = inout[y*w+x]*b0 - p*a1;
+			inout[y*w+x] = p*b0 - inout[(y-1)*w+x]*a1;
+		}
+	}
+
+}
+
+/** 
+ *  @brief Compute the Summed-area Table of a matrix
+ *
+ *  Given an input grid compute its Summed-Area Table (SAT) by
+ *  applying a first-order recursive filters forward using zero-border
+ *  initial conditions.
+ *
+ *  @param[in,out] in The grid (or 2D image) to compute the SAT
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @tparam T Image value type
+ */
+template< class T >
+void sat( T *in,
+          const int& hin,
+          const int& win ) {
+    rf_0(in, hin, win, (T)1, (T)-1);
+}
+/** @example example_sat.cc
+ *
+ *  This is an example of how to use the @ref sat function.
+ *
+ *  @see cpuground.h
+ */
 
 /** 
  *  @brief Compute first-order recursive filtering on columns forward and reverse with zero-border
@@ -51,7 +119,7 @@ void rcfr_0( T *inout,
             p = inout[i*w+j]*b0 - p*a1;
             inout[i*w+j] = p; 
         }
-        p = 0.f; 
+        p = (T)0;
         for (int i = h-1; i >= 0; i--) {
             p = inout[i*w+j]*b0 - p*a1;
             inout[i*w+j] = p; 
@@ -75,6 +143,7 @@ void rcfr_0( T *inout,
  *  @param[in] w Width of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
+ *  @param[in] ac Anticausal filter flag (default: true)
  *  @tparam T Image value type
  */
 template< class T >
@@ -159,7 +228,7 @@ void rcfr_0( T *inout,
             pp = p;
             p = inout[i*w+j] = o; 
         }
-        p = 0.f;
+        p = (T)0;
         pp = p;
         for (int i = h-1; i >= 0; i--) {
             T o = inout[i*w+j]*b0 - p*a1 - pp*a2;
@@ -198,14 +267,14 @@ void rrfr_0( T *inout,
     for (int i = 0; i < h; i++) {
         T p = (T)0;
         T pp = p;
-        for (int j = w-1; j >= 0; j--) {
+        for (int j = 0; j < w; j++) {
             T o = inout[i*w+j]*b0 - p*a1 - pp*a2;
             pp = p;
             p = inout[i*w+j] = o; 
         }
         p = (T)0;
         pp = p;
-        for (int j = 0; j < w; j++) {
+        for (int j = w-1; j >= 0; j--) {
             T o = inout[i*w+j]*b0 - p*a1 - pp*a2;
             pp = p;
             p = inout[i*w+j] = o; 
@@ -500,18 +569,17 @@ void r_c( T *inout,
  *  @param[in] hin Height of the input image
  *  @param[in] win Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
- *  @tparam T1 Sigma value type
- *  @tparam T2 Image value type
+ *  @tparam T Image value type
  */
-template< class T1, class T2 >
-void gaussian( T2 **in,
+template< class T >
+void gaussian( T **in,
                const int& hin,
                const int& win,
                const int& depth,
-               const T1& s ) {
-    T2 b10, a11;
+               const T& s ) {
+    T b10, a11;
     weights1(s, b10, a11);
-    T2 b20, a21, a22;
+    T b20, a21, a22;
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
         r_c(in[c], hin, win, b10, a11);
@@ -542,6 +610,13 @@ void bspline3i( T **in,
         r_c(in[c], hin, win, (T)1+alpha, alpha);
     }
 }
+/** @example app_recursive_cpu.cc
+ *
+ *  This is an application example of the @ref gaussian and @ref
+ *  bspline3i functions usage.
+ *
+ *  @see cpuground.hh
+ */
 
 //=============================================================================
 } // namespace gpufilter

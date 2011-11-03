@@ -1,12 +1,34 @@
 
+#include <cstdio>
+#include <cstddef>
+#include <cstdarg>
 #include <cstdlib>
 
 #include "cv.h"
 #include "highgui.h"
 
 #include <gpufilter.h>
-#include <cpufilter.h>
+#include <cpuground.h>
 
+//-----------------------------------------------------------------------------
+// Aborts and prints an error message
+void errorf(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+    exit(1);
+}
+
+//-----------------------------------------------------------------------------
+// Clamp values between 0.f and 1.f 
+static inline float clamp(float f) {
+    return f > 1.f? 1.f: (f < 0.f? 0.f: f);
+}
+
+//-----------------------------------------------------------------------------
 // Runs a given filter
 int main(int argc, char *argv[]) {
     if( argc < 3 )
@@ -24,7 +46,7 @@ int main(int argc, char *argv[]) {
     const char *filter = "gaussian";
     const char *file_in = NULL, *file_out = NULL; 
 
-    float sigma = 1.0;
+    float sigma = 1.f;
     int end = 0;
 
     for (int i = 1; i < argc; i++) {
@@ -67,36 +89,36 @@ int main(int argc, char *argv[]) {
         errorf("Out of memory!");
 
     for (int c = 0; c < depth; c++) {
-        cvSsetImageCOI(in_img, c+1);
+        cvSetImageCOI(in_img, c+1);
         IplImage *ch_img = cvCreateImage(cvSize(w_in, h_in), in_img->depth, 1);
         cvCopy(in_img, ch_img);
-        IplImage *fl_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_32F, 1);
-        cvConvertImage(ch_img, fl_img);
+        IplImage *uc_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_8U, 1);
+        cvConvertImage(ch_img, uc_img);
         for (int i = 0; i < h_in; ++i)
             for (int j = 0; j < w_in; ++j)
-                flat_in[c][i*w+j] = ((float *)(fl_img->imageData + i*fl_img->widthStep))[j];
+                flat_in[c][i*w_in+j] = ((unsigned char *)(uc_img->imageData + i*uc_img->widthStep))[j]/255.f;
         cvReleaseImage(&ch_img);
-        cvReleaseImage(&fl_img);
+        cvReleaseImage(&uc_img);
     }
 
     if( strcmp(filter, "gaussian") == 0 ) {
         printf("Applying filter gaussian (sigma = %g)\n", sigma);
-        gaussian(flat_in, h_in, w_in, depth, sigma);
+        gpufilter::gaussian(flat_in, h_in, w_in, depth, sigma);
     } else if (strcmp(filter, "bspline3i") == 0) {
         printf("Applying filter bspline3i\n");
-        bspline3i(flat_in, h_in, w_in, depth);
+        gpufilter::bspline3i(flat_in, h_in, w_in, depth);
     } else {
         errorf("Unknown method '%s'", filter);
     }
 
     printf("Packing output image\n");
 
-    IplImage *out_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_32F, in_img->nChannels);
+    IplImage *out_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_8U, depth);
 
     for (int c = 0; c < depth; c++)
         for (int i = 0; i < h_in; ++i)
             for (int j = 0; j < w_in; ++j)
-                ((float *)(out_img->imageData + i*out_img->widthStep))[j*depth + c] = flat_in[c][i*w+j];
+                ((unsigned char *)(out_img->imageData + i*out_img->widthStep))[j*depth + c] = (unsigned char) (floorf(clamp(flat_in[c][i*w_in+j])*255.f+0.5f));
 
     printf("Saving output image '%s'\n", file_out);
 

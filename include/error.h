@@ -13,10 +13,6 @@
 
 //== INCLUDES =================================================================
 
-#include <cstdio>
-#include <cstddef>
-#include <cstdarg>
-
 #include <sstream>
 #include <iostream>
 #include <stdexcept>
@@ -24,18 +20,6 @@
 #include <cuda_runtime.h>
 
 //=== IMPLEMENTATION ==========================================================
-
-//-----------------------------------------------------------------------------
-// Aborts and prints an error message
-void errorf(const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
-    fflush(stderr);
-    exit(1);
-}
 
 /**
  *  @brief Check error in device
@@ -144,32 +128,6 @@ void print_errors( const T1 *ref,
         if( a > thrld )
             std::cout << "Elem: " << i << " Err: " << a
                       << " Ref: " << ref[i] << " Res: " << res[i] << "\n";
-    }
-}
-
-/**
- *  @brief Print device matrix values
- *
- *  This function prints values from a matrix (image) stored in the
- *  GPU.  This function is for debug only.
- *
- *  @param[in] res Result (GPU) values
- *  @param[in] w Image width
- *  @param[in] h Image height
- *  @tparam T Values type used in the GPU
- */
-template< class T >
-void print_matrix( const T *res,
-                   const int& w,
-                   const int& h ) {
-    for (int i = 0; i < h; i++)
-    {
-        std::cout << res[ i*w + 0 ] << std::flush;
-        for (int j = 1; j < w; j++)
-        {
-            std::cout << " " << res[ i*w + j ] << std::flush;
-        }
-        std::cout << "\n";
     }
 }
 
