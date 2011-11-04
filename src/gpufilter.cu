@@ -1,6 +1,5 @@
 /**
  *  @file gpufilter.cu
- *  @ingroup gpu
  *  @brief CUDA device code for GPU-Efficient Recursive Filtering
  *  @author Rodolfo Lima
  *  @date September, 2011
@@ -29,22 +28,33 @@ namespace gpufilter {
 
 //== GLOBAL-SCOPE DEFINITIONS =================================================
 
-#define WS 32 ///< Warp size (defines b x b block size where b = WS)
-#define DW 8 ///< Default number of warps (block height)
-#define OW 6 ///< Optimized number of warps (block height for some kernels)
-#define DNB 6 ///< Default number of blocks per SM (minimum blocks per SM launch bounds)
-#define ONB 5 ///< Optimized number of blocks per SM (minimum blocks per SM for some kernels)
+/// @cond
+
+// ignored by doxygen
+
+const int WS = 32; // Warp size (defines b x b block size where b = WS)
+const int DW = 8; // Default number of warps (computational block height)
+const int OW = 6; // Optimized number of warps (computational block height for some kernels)
+const int DNB = 6; // Default number of blocks per SM (minimum blocks per SM launch bounds)
+const int ONB = 5; // Optimized number of blocks per SM (minimum blocks per SM for some kernels)
 
 __constant__ int c_width, c_height, c_m_size, c_n_size;
 
 __constant__ float c_Linf1, c_Svm, c_Stm, c_Alpha,
     c_Delta_x_tail[WS], c_Delta_y[WS],
     c_SignRevProdLinf[WS], c_ProdLinf[WS], c_iR1;
-
+    
 __constant__ float c_Linf2, c_Llast2, c_iR2, c_Minf, c_Ninf;
 __constant__ float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
 
+/// @endcond
+
 //=== IMPLEMENTATION ==========================================================
+
+/**
+ *  @ingroup gpu
+ *  @{
+ */
 
 /**
  *  @brief Algorithm 5 stage 1
@@ -52,16 +62,19 @@ __constant__ float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
  *  This function computes the algorithm stage 5.1 following:
  *
  *  In parallel for all \f$m\f$ and \f$n\f$, compute and store each
- *  \f$P_{m,n}(\bar{Y})\f$, \f$E_{m,n}(\hat{Z})\f$, \f$P^\T_{m,n}(\check{U})\f$,
- *  and \f$E^\T_{m,n}(\tilde{V})\f$.
+ *  \f$P_{m,n}(\bar{Y})\f$, \f$E_{m,n}(\hat{Z})\f$,
+ *  \f$P^T_{m,n}(\check{U})\f$, and \f$E^T_{m,n}(\tilde{V})\f$.
  *
  *  @param[in] g_in Input image
  *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
- *  @param[out] g_ucheck All \f$P^\T_{m,n}(\check{U})\f$
- *  @param[out] g_vtilde All \f$E^\T_{m,n}(\tilde{V})\f$
+ *  @param[out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
+ *  @param[out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
  */
-__global__ __launch_bounds__(WS*DW, ONB)
+__global__
+/// @cond
+__launch_bounds__(WS*DW, ONB)
+/// @endcond
 void algorithm5_stage1( const float *g_in,
                         float *g_transp_ybar,
                         float *g_transp_zhat,
@@ -175,7 +188,10 @@ void algorithm5_stage1( const float *g_in,
  *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
  */
-__global__ __launch_bounds__(WS*DW, DNB)
+__global__
+/// @cond
+__launch_bounds__(WS*DW, DNB)
+/// @endcond
 void algorithm5_stage2_3( float *g_transp_ybar,
                           float *g_transp_zhat )
 {
@@ -398,23 +414,26 @@ void algorithm5_stage2_3( float *g_transp_ybar,
  *  and 5.5 following:
  *
  *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$P^\T_{m,n}(U)\f$ according to (48) and using the previously
- *  computed \f$P^\T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
+ *  store \f$P^T_{m,n}(U)\f$ according to (48) and using the previously
+ *  computed \f$P^T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
  *  \f$E_{m+1,n}(Z)\f$.
  *
  *  with simple kernel fusioned (going thorough global memory):
  *
  *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$E^\T_{m,n}(V)\f$ according to (50) and using the previously
- *  computed \f$E^\T_{m,n}(\tilde{V})\f$, \f$P^\T_{m,n-1}(U)\f$,
+ *  store \f$E^T_{m,n}(V)\f$ according to (50) and using the previously
+ *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
  *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
  *
- *  @param[in,out] g_ucheck All \f$P^\T_{m,n}(\check{U})\f$
- *  @param[in,out] g_vtilde All \f$E^\T_{m,n}(\tilde{V})\f$
+ *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
+ *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_z All \f$E_{m,n}(Z)\f$
  */
-__global__ __launch_bounds__(WS*OW, DNB)
+__global__
+/// @cond
+__launch_bounds__(WS*OW, DNB)
+/// @endcond
 void algorithm5_stage4_5_step1( float *g_ucheck,
                                 float *g_vtilde,
                                 const float *g_y,
@@ -574,21 +593,24 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
  *  and 5.5 following:
  *
  *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$P^\T_{m,n}(U)\f$ according to (48) and using the previously
- *  computed \f$P^\T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
+ *  store \f$P^T_{m,n}(U)\f$ according to (48) and using the previously
+ *  computed \f$P^T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
  *  \f$E_{m+1,n}(Z)\f$.
  *
  *  with simple kernel fusioned (going thorough global memory):
  *
  *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$E^\T_{m,n}(V)\f$ according to (50) and using the previously
- *  computed \f$E^\T_{m,n}(\tilde{V})\f$, \f$P^\T_{m,n-1}(U)\f$,
+ *  store \f$E^T_{m,n}(V)\f$ according to (50) and using the previously
+ *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
  *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
  *
- *  @param[in,out] g_ubar All \f$P^\T_{m,n}(\bar{U})\f$ (half-way fixed \f$P^\T_{m,n}(U)\f$)
- *  @param[in,out] g_vcheck All \f$E^\T_{m,n}(\check{V})\f$ (half-way fixed EP^\T_{m,n}(V)\f$)
+ *  @param[in,out] g_ubar All \f$P^T_{m,n}(\bar{U})\f$ (half-way fixed \f$P^T_{m,n}(U)\f$)
+ *  @param[in,out] g_vcheck All \f$E^T_{m,n}(\check{V})\f$ (half-way fixed \f$E^T_{m,n}(V)\f$)
  */
-__global__ __launch_bounds__(WS*DW, DNB)
+__global__
+/// @cond
+__launch_bounds__(WS*DW, DNB)
+/// @endcond
 void algorithm5_stage4_5_step2( float *g_ubar,
                                 float *g_vcheck )
 
@@ -811,16 +833,19 @@ void algorithm5_stage4_5_step2( float *g_ubar,
  *  In parallel for all \f$m\f$ and \f$n\f$, compute one after the other
  *  \f$B_{m,n}(Y)\f$, \f$B_{m,n}(Z)\f$, \f$B_{m,n}(U)\f$, and \f$B_{m,n}(V)\f$
  *  according to (18) and using the previously computed
- *  \f$P_{m-1,n}(Y)\f$, \f$E_{m+1,n}(Z)\f$, \f$P^\T_{m,n-1}(U)\f$, and
- *  \f$E^\T_{m,n+1}(V)\f$. Store \f$B_{m,n}(V)\f$.
+ *  \f$P_{m-1,n}(Y)\f$, \f$E_{m+1,n}(Z)\f$, \f$P^T_{m,n-1}(U)\f$, and
+ *  \f$E^T_{m,n+1}(V)\f$. Store \f$B_{m,n}(V)\f$.
  *
  *  @param[in,out] g_in Input image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_z All \f$E_{m,n}(Z)\f$
- *  @param[in] g_u All \f$P^\T_{m,n}(U)\f$
- *  @param[in] g_v All \f$E^\T_{m,n}(V)\f$
+ *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
+ *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
  */
-__global__ __launch_bounds__(WS*DW, ONB)
+__global__
+/// @cond
+__launch_bounds__(WS*DW, ONB)
+/// @endcond
 void algorithm5_stage6( float *g_in,
                         const float *g_y,
                         const float *g_z,
@@ -1022,6 +1047,10 @@ void recursive_filtering_5_1( float *h_img,
 
     d_img.copy_to(h_img, width*height);
 }
+
+/**
+ *  @}
+ */
 
 //=============================================================================
 } // namespace gpufilter

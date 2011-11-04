@@ -1,6 +1,5 @@
 /**
  *  @file error.h
- *  @ingroup utils
  *  @brief Device Error Management definition
  *  @author Diego Nehab
  *  @author Rodolfo Lima
@@ -19,7 +18,16 @@
 
 #include <cuda_runtime.h>
 
+//== NAMESPACES ===============================================================
+
+namespace gpufilter {
+
 //=== IMPLEMENTATION ==========================================================
+
+/**
+ *  @ingroup utils
+ *  @{
+ */
 
 /**
  *  @brief Check error in device
@@ -150,6 +158,12 @@ void print_vector( const T *res,
     std::cout << "\n";
 }
 
+/**
+ *  @}
+ */
+
+//=============================================================================
+} // namespace gpufilter
 //=============================================================================
 #endif // ERROR_H
 //=============================================================================

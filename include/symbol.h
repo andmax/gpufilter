@@ -1,6 +1,5 @@
 /**
  *  @file symbol.h
- *  @ingroup utils
  *  @brief Device Symbol Management definition
  *  @author Rodolfo Lima
  *  @date February, 2011
@@ -16,7 +15,16 @@
 
 #include <error.h>
 
+//== NAMESPACES ===============================================================
+
+namespace gpufilter {
+
 //=== IMPLEMENTATION ==========================================================
+
+/**
+ *  @ingroup utils
+ *  @{
+ */
 
 /**
  *  @brief Copy value(s) to symbol
@@ -103,6 +111,12 @@ void copy_to_symbol( const std::string &name,
     copy_to_symbol(name, "", items);
 }
 
+/**
+ *  @}
+ */
+
+//=============================================================================
+} // namespace gpufilter
 //=============================================================================
 #endif // SYMBOL_H
 //=============================================================================

@@ -1,6 +1,5 @@
 /**
  *  @file dvector.h
- *  @ingroup utils
  *  @brief Device Vector Class definition
  *  @author Rodolfo Lima
  *  @date February, 2011
@@ -15,9 +14,19 @@
 
 #include <alloc.h>
 
+//== NAMESPACES ===============================================================
+
+namespace gpufilter {
+
 //== CLASS DEFINITION =========================================================
 
-/** @class dvector dvector.h
+/**
+ *  @ingroup utils
+ *  @{
+ */
+
+/**
+ *  @class dvector dvector.h
  *  @brief Device Vector class
  *
  *  Device vector is a STL-based vector in the GPU memory.
@@ -26,15 +35,19 @@
  */
 template< class T >
 class dvector {
+
 public:
-    /** Constructor
+
+    /**
+     *  Constructor
      *  @param[in] that Host (STL) Vector data (non-converted) to be copied into this object
      */
     explicit dvector( const std::vector<T> &that ) : m_size(0), m_capacity(0), m_data(0) {
         *this = that;
     }
 
-    /** Constructor
+    /**
+     *  Constructor
      *  @param[in] data Vector data to be copied into this object
      *  @param[in] size Vector data size
      */
@@ -45,14 +58,16 @@ public:
         check_cuda_error("Error during memcpy from host to device");
     }
 
-    /** Copy Constructor
+    /**
+     *  Copy Constructor
      *  @param[in] that Copy that object to this object
      */
     dvector( const dvector &that ) : m_size(0), m_capacity(0), m_data(0) {
         *this = that;
     }
 
-    /** Default Constructor
+    /**
+     *  Default Constructor
      *  @param[in] size Vector data size
      */
     dvector( size_t size = 0 ) : m_size(0), m_capacity(0), m_data(0) {
@@ -67,7 +82,8 @@ public:
         m_size = 0;
     }
     
-    /** @brief Resize this vector
+    /**
+     *  @brief Resize this vector
      *  @param[in] size The new vector size
      */
     void resize( size_t size ) {
@@ -86,24 +102,27 @@ public:
             m_size = size;
     }
 
-    /** @brief Clear this vector
+    /**
+     *  @brief Clear this vector
      */
     void clear() {
         m_size = 0;
     }
 
-    /** @brief Read/write operator
-     *  @param idx Index of vector value
+    /**
+     *  @brief Read/write operator
+     *  @param[in] idx Index of vector value
      *  @return Vector value at index
      */
-    T operator [] ( int idx ) const {
+    T operator [] ( const int& idx ) const {
         T value;
         cudaMemcpy(&value, data()+idx, sizeof(T), cudaMemcpyDeviceToHost);
         return value;
     }
 
-    /** @brief Assign operator
-     *  @param that Device vector to copy from
+    /**
+     *  @brief Assign operator
+     *  @param[in] that Device vector to copy from
      *  @return This device vector with assigned values
      */
     dvector &operator = ( const dvector &that ) {
@@ -113,8 +132,9 @@ public:
         return *this;
     }
 
-    /** @brief Assign operator
-     *  @param that Host (STL) Vector to copy from
+    /**
+     *  @brief Assign operator
+     *  @param[in] that Host (STL) Vector to copy from
      *  @return This device vector with assigned values
      */
     dvector &operator = ( const std::vector<T> &that ) {
@@ -124,54 +144,63 @@ public:
         return *this;
     }
 
-    /** @brief Copy values from this vector to a host (CPU) vector
+    /**
+     *  @brief Copy values from this vector to a host (CPU) vector
      *  @param[out] data Host Vector to copy values to
      *  @param[in] s Maximum number of elements to copy
      */
     void copy_to( T *data,
-                  size_t s ) const {
+                  const size_t& s ) const {
         cudaMemcpy(data, this->data(), std::min(size(),s)*sizeof(T), cudaMemcpyDeviceToHost);
         check_cuda_error("Error during memcpy from device to host");
     }
 
-    /** @brief Check if this vector is empty
+    /**
+     *  @brief Check if this vector is empty
      *  @return True if this vector is empty
      */
     bool empty() const { return size()==0; }
 
-    /** @brief Size of this vector
+    /**
+     *  @brief Size of this vector
      *  @return Vector size
      */
     size_t size() const { return m_size; }
 
-    /** @brief Data in this vector
+    /**
+     *  @brief Data in this vector
      *  @return Vector data
      */
     T *data() { return m_data; }
 
-    /** @overload const T *data() const
+    /**
+     *  @overload const T *data() const
      *  @return Constant vector data
      */
     const T *data() const { return m_data; }
 
-    /** @brief Get last element of the vector
+    /**
+     *  @brief Get last element of the vector
      *  @return Last element of this vector
      */
     T back() const { return operator[](size()-1); }
 
-    /** @brief Address access operator
+    /**
+     *  @brief Address access operator
      *  @return Pointer to vector data
      */
     operator T* () { return data(); }
 
-    /** @brief Address access operator
+    /**
+     *  @brief Address access operator
      *  @return Constant pointer to vector data
      */
     operator const T* () const { return data(); }
 
-    /** @brief Swap vector values
-     *  @param [in,out] a Vector to be swapped
-     *  @param [in,out] b Vector to be swapped
+    /**
+     *  @brief Swap vector values
+     *  @param[in,out] a Vector to be swapped
+     *  @param[in,out] b Vector to be swapped
      */
     friend void swap( dvector &a,
                       dvector &b ) {
@@ -181,13 +210,16 @@ public:
     }
 
 private:
+
     T *m_data; ///< Vector data
     size_t m_size, m_capacity; ///< Vector size and capacity
+
 };
 
 //=== IMPLEMENTATION ==========================================================
 
-/** @relates dvector
+/**
+ *  @relates dvector
  *  @brief Copy to the CPU a vector in the GPU
  *
  *  This function copies a device vector (GPU) to a host vector (CPU).
@@ -209,7 +241,8 @@ std::vector<T> to_cpu( const T *d_vec,
     return out;
 }
 
-/** @relates dvector
+/**
+ *  @relates dvector
  *  @overload
  *
  *  @param[in] v Device vector (in the GPU memory)
@@ -221,6 +254,12 @@ std::vector<T> to_cpu( const dvector<T> &v ) {
     return to_cpu(v.data(), v.size());
 }
 
+/**
+ *  @}
+ */
+
+//=============================================================================
+} // namespace gpufilter
 //=============================================================================
 #endif // DVECTOR_H
 //=============================================================================

@@ -12,7 +12,10 @@
 #ifndef GPUFILTER_H
 #define GPUFILTER_H
 
-/*! @mainpage GPU-Efficient Recursive Filtering and Summed-Area Tables
+/**
+ *  @mainpage gpufilter Library
+
+\b gpufilter :: <em>GPU-Efficient Recursive Filtering and Summed-Area Tables</em>
 
 \section introduction Introduction
 
@@ -27,21 +30,28 @@ to the traditional serial algorithm.  The project is based on the
 paper: "GPU-Efficient Recursive Filtering and Summed-Area Tables" by
 Diego Nehab, André Maximo, Rodolfo S. Lima and Hugues Hoppe.
 
-\section structure Functions Structure
+\section structure Library Structure
+
+The gpufilter library offers a list of low-level kernel functions,
+with associated global device- and host-bound constant variables, as
+well as high-level C++ functions to access the CUDA kernel functions.
+
+\section usage How to use
+
+The gpufilter project provides close-to-metal CUDA functions as well
+as high-level C++ functions to access the main GPU algorithms.  The
+main functions are ...
 
 Naming conventions are: c_ constant; t_ texture; g_ global memory; s_
 shared memory; d_ device pointer; a_ cuda-array; p_ template
 parameter; f_ surface.
 
-\section usage How to use
-
-The gpufilter project provides close-to-metal CUDA functions as well
-as high-level C++ functions to access the main GPU algorithms.
-
 \section download How to get it
 
 The source code of the zsig library is available under the <em>MIT
 License</em>, refer to the COPYING file for more details.
+
+The gpufilter library can be downloaded from ...
 
 \section acknowledgments Acknowledgments
 
@@ -71,15 +81,15 @@ The people involved in the gpufilter project are listed below:
 */
 
 /**
- *  @defgroup utils Utility classes and functions for CPU and GPU computations
+ *  @defgroup utils Utility classes and functions
  */
 
 /**
- *  @defgroup cpu Functions to compute recursive filtering on the CPU
+ *  @defgroup cpu CPU Computation functions
  */
 
 /**
- *  @defgroup gpu Functions to compute recursive filtering on the GPU
+ *  @defgroup gpu GPU Computation functions
  */
 
 //== INCLUDES =================================================================
@@ -89,11 +99,20 @@ The people involved in the gpufilter project are listed below:
 
 //== NAMESPACES ===============================================================
 
+/**
+ *  @namespace gpufilter
+ *  @brief Main namespace for the gpufilter library
+ */
 namespace gpufilter {
 
 //=== IMPLEMENTATION ==========================================================
 
-/** @ingroup utils
+/**
+ *  @ingroup utils
+ *  @{
+ */
+
+/**
  *  @brief Compute recursive filtering scaling factor
  *
  *  Compute the scaling factor of the recursive filter representing a
@@ -109,7 +128,7 @@ T qs( const T& s ) {
     return (T)0.00399341 + (T)0.4715161 * s;
 }
 
-/** @ingroup utils
+/**
  *  @brief Rescale poles of the recursive filtering z-transform
  *
  *  Given a complex-valued pole on |z|=1 ROC of the recursive filter
@@ -129,7 +148,7 @@ std::complex<T> ds( const std::complex<T>& d,
     return std::polar(std::pow(std::abs(d),(T)1/q), std::arg(d)/q);
 }
 
-/** @ingroup utils
+/**
  *  @brief Rescale poles in the real-axis of the recursive filtering z-transform
  *
  *  Given a real pole on |z|=1 ROC of the recursive filter z-transform
@@ -148,7 +167,7 @@ T ds( const T& d,
     return std::pow(d, (T)1/qs(s));
 }
 
-/** @ingroup utils
+/**
  *  @brief Compute first-order weights
  *
  *  Given a Gaussian sigma value compute the feedforward and feedback
@@ -171,7 +190,7 @@ void weights1( const T1& s,
     a1 = static_cast<T2>((T1)-1/d);
 }
 
-/** @ingroup utils
+/**
  *  @brief Compute first- and second-order weights
  *
  *  Given a Gaussian sigma value compute the feedforward and feedback
@@ -207,6 +226,10 @@ void weights2( const T1& s,
     a1 = static_cast<T2>((T1)-2*re/n2);
     a2 = static_cast<T2>((T1)1/n2);
 }
+
+/**
+ *  @}
+ */
 
 //=============================================================================
 } // namespace gpufilter

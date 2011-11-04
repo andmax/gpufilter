@@ -1,6 +1,5 @@
 /**
  *  @file cpuground.h
- *  @ingroup cpu
  *  @brief CPU Groundtruth Recursive Filtering functions
  *  @author Diego Nehab
  *  @author Andre Maximo
@@ -21,6 +20,11 @@
 namespace gpufilter {
 
 //=== IMPLEMENTATION ==========================================================
+
+/**
+ *  @ingroup cpu
+ *  @{
+ */
 
 /**
  *  @brief Compute first-order recursive filtering forward with zero-border
@@ -65,7 +69,7 @@ void rf_0( T *inout,
 
 }
 
-/** 
+/**
  *  @brief Compute the Summed-area Table of a matrix
  *
  *  Given an input grid compute its Summed-Area Table (SAT) by
@@ -85,12 +89,12 @@ void sat( T *in,
 }
 /** @example example_sat.cc
  *
- *  This is an example of how to use the @see sat function.
+ *  This is an example of how to use the sat() function.
  *
  *  @see cpuground.h
  */
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering on columns forward and reverse with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -128,7 +132,7 @@ void rcfr_0( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering on rows forward and reverse with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -144,7 +148,6 @@ void rcfr_0( T *inout,
  *  @param[in] w Width of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
- *  @param[in] ac Anticausal filter flag (default: true)
  *  @tparam T Image value type
  */
 template< class T >
@@ -167,7 +170,7 @@ void rrfr_0( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -195,7 +198,7 @@ void r_0( T *inout,
     rrfr_0(inout, h, w, b0, a1);
 }
 
-/** 
+/**
  *  @brief Compute second-order recursive filtering on columns forward and reverse with zero-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -239,7 +242,7 @@ void rcfr_0( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute second-order recursive filtering on rows forward and reverse with zero-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -283,7 +286,7 @@ void rrfr_0( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute second-order recursive filtering with zero-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -313,7 +316,7 @@ void r_0( T *inout,
     rrfr_0(inout, h, w, b0, a1, a2);
 }
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering on columns forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -355,7 +358,7 @@ void rcfr_c( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering on rows forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -397,7 +400,7 @@ void rrfr_c( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute first-order recursive filtering with clamp-to-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -425,7 +428,7 @@ void r_c( T *inout,
     rrfr_c(inout, h, w, b0, a1);
 }
 
-/** 
+/**
  *  @brief Compute second-order recursive filtering on columns forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -477,7 +480,7 @@ void rcfr_c( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute second-order recursive filtering on rows forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -529,7 +532,7 @@ void rrfr_c( T *inout,
     }
 }
 
-/** 
+/**
  *  @brief Compute second-order recursive filtering with clamp-to-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -559,7 +562,7 @@ void r_c( T *inout,
     rrfr_c(inout, h, w, b0, a1, a2);
 }
 
-/** 
+/**
  *  @brief Gaussian blur an image
  *
  *  Given an input 2D image compute the Gaussian blur of it by
@@ -570,6 +573,7 @@ void r_c( T *inout,
  *  @param[in] hin Height of the input image
  *  @param[in] win Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
+ *  @param[in] s Sigma support of Gaussian blur computation
  *  @tparam T Image value type
  */
 template< class T >
@@ -588,7 +592,7 @@ void gaussian( T **in,
     }
 }
 
-/** 
+/**
  *  @brief Compute the Bicubic B-Spline interpolation of an image
  *
  *  Given an input 2D image compute the Bicubic B-Spline interpolation
@@ -611,12 +615,17 @@ void bspline3i( T **in,
         r_c(in[c], hin, win, (T)1+alpha, alpha);
     }
 }
-/** @example app_recursive_cpu.cc
+/**
+ *  @example app_recursive_cpu.cc
  *
- *  This is an application example of the @see gaussian and @see
- *  bspline3i functions usage.
+ *  This is an application example of how to use the gaussian()
+ *  function and bspline3i() function.
  *
  *  @see cpuground.h
+ */
+
+/**
+ *  @}
  */
 
 //=============================================================================

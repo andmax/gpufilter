@@ -1,6 +1,5 @@
 /**
  *  @file alloc.h
- *  @ingroup utils
  *  @brief Device Memory Allocator definition
  *  @author Rodolfo Lima
  *  @date February, 2011
@@ -16,7 +15,16 @@
 
 #include <error.h>
 
+//== NAMESPACES ===============================================================
+
+namespace gpufilter {
+
 //=== IMPLEMENTATION ==========================================================
+
+/**
+ *  @ingroup utils
+ *  @{
+ */
 
 /**
  *  @brief Allocates a new memory space in the GPU
@@ -53,6 +61,12 @@ void cuda_delete( T *d_ptr ) {
     check_cuda_error("Error freeing memory");
 }
 
+/**
+ *  @}
+ */
+
+//=============================================================================
+} // namespace gpufilter
 //=============================================================================
 #endif // ALLOC_H
 //=============================================================================
