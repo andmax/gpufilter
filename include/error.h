@@ -1,7 +1,6 @@
 /**
  *  @file error.h
  *  @brief Device Error Management definition
- *  @author Diego Nehab
  *  @author Rodolfo Lima
  *  @author Andre Maximo
  *  @date February, 2011

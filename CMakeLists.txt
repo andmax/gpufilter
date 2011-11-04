@@ -15,7 +15,10 @@ set(CUDA_NVCC_FLAGS
   -ftz=true -prec-div=false -prec-sqrt=false
 )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CPP_FLAGS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(OPENCV_DIR /usr/include/opencv)

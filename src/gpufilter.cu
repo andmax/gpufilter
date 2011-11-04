@@ -79,8 +79,7 @@ void algorithm5_stage1( const float *g_in,
                         float *g_transp_ybar,
                         float *g_transp_zhat,
                         float *g_ucheck,
-                        float *g_vtilde )
-{
+                        float *g_vtilde ) {
 
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
 
@@ -193,8 +192,7 @@ __global__
 __launch_bounds__(WS*DW, DNB)
 /// @endcond
 void algorithm5_stage2_3( float *g_transp_ybar,
-                          float *g_transp_zhat )
-{
+                          float *g_transp_zhat ) {
 
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2;
 
@@ -437,8 +435,7 @@ __launch_bounds__(WS*OW, DNB)
 void algorithm5_stage4_5_step1( float *g_ucheck,
                                 float *g_vtilde,
                                 const float *g_y,
-                                const float *g_z )
-{
+                                const float *g_z ) {
 
     int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.x*OW + ty, m = blockIdx.y;
 
@@ -612,9 +609,7 @@ __global__
 __launch_bounds__(WS*DW, DNB)
 /// @endcond
 void algorithm5_stage4_5_step2( float *g_ubar,
-                                float *g_vcheck )
-
-{
+                                float *g_vcheck ) {
 
     int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.x*2;
 
@@ -850,8 +845,7 @@ void algorithm5_stage6( float *g_in,
                         const float *g_y,
                         const float *g_z,
                         const float *g_u,
-                        const float *g_v )
-{
+                        const float *g_v ) {
 
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
 
@@ -939,28 +933,27 @@ void algorithm5_stage6( float *g_in,
 }
 
 /**
- *  @brief Recursive Filtering Algorithm 5 for filter order 1
+ *  @brief Compute Algorithm 5_1
  *
  *  This function computes recursive filtering with given feedback and
  *  feedforward coefficients of an image using algorithm 5_1.
  *
- *  @param[in] h_img Input image
- *  @param[in] width Image width
- *  @param[in] height Image height
- *  @param[in] a0 Feedback coefficient
- *  @param[in] b1 Feedforward coefficient
+ *  @param[in] inout The input 2D image to compute recursive filtering
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback coefficient
  */
 __host__
-void recursive_filtering_5_1( float *h_img,
-                              const int& width,
-                              const int& height,
-                              const float& a0,
-                              const float& b1 )
-{
+void algorithm5_1( float *inout,
+                   const int& h,
+                   const int& w,
+                   const float& b0,
+                   const float& a1 ) {
 
-    dvector<float> d_img(h_img, width*height);
+    dvector<float> d_img(inout, w*h);
 
-    const float Linf = -b1, iR = a0*a0*a0*a0/Linf/Linf;
+    const float Linf = -a1, iR = b0*b0*b0*b0/Linf/Linf;
 
     std::vector<float> signrevprodLinf(WS);
 
@@ -1006,46 +999,36 @@ void recursive_filtering_5_1( float *h_img,
     copy_to_symbol("c_Delta_x_tail", delta_x_tail);
     copy_to_symbol("c_Delta_y", delta_y);
 
-    const int m_size = (height+WS-1)/WS, n_size = (width+WS-1)/WS;
+    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
 
-    copy_to_symbol("c_width", width); copy_to_symbol("c_height", height);
+    copy_to_symbol("c_width", w); copy_to_symbol("c_height", h);
     copy_to_symbol("c_m_size", m_size); copy_to_symbol("c_n_size", n_size);
 
-    dvector<float> d_transp_ybar(n_size*height), 
-                   d_transp_zhat(n_size*height), 
-                   d_ucheck(m_size*width), 
-                   d_vtilde(m_size*width);
+    dvector<float> d_transp_ybar(n_size*h), d_transp_zhat(n_size*h),
+        d_ucheck(m_size*w), d_vtilde(m_size*w);
                    
     dvector<float> d_y, d_z, d_ubar, d_u, d_vcheck, d_v;
 
-    algorithm5_stage1<<< dim3(n_size, m_size/2), dim3(WS, DW) >>>
-        ( d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
+    algorithm5_stage1<<< dim3(n_size, m_size/2), dim3(WS, DW) >>>( d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
 
-    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), 
-        dim3(WS, std::min((int)n_size, (int)DW)) >>>
-        ( d_transp_ybar, d_transp_zhat );
+    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>( d_transp_ybar, d_transp_zhat );
 
     swap(d_transp_ybar, d_y);
     swap(d_transp_zhat, d_z);
 
-    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), 
-        dim3(WS, OW) >>>
-        ( d_ucheck, d_vtilde, d_y, d_z );
+    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), dim3(WS, OW) >>>( d_ucheck, d_vtilde, d_y, d_z );
 
     swap(d_ucheck, d_ubar);
     swap(d_vtilde, d_vcheck);
 
-    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2),
-        dim3(WS, std::min((int)m_size, (int)DW)) >>>
-        ( d_ubar, d_vcheck );
+    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2), dim3(WS, std::min(m_size, DW)) >>>( d_ubar, d_vcheck );
 
     swap(d_ubar, d_u);
     swap(d_vcheck, d_v);
 
-    algorithm5_stage6<<< dim3(n_size, m_size/2), dim3(WS, DW) >>>
-        ( d_img, d_y, d_z, d_u, d_v );
+    algorithm5_stage6<<< dim3(n_size, m_size/2), dim3(WS, DW) >>>( d_img, d_y, d_z, d_u, d_v );
 
-    d_img.copy_to(h_img, width*height);
+    d_img.copy_to(inout, w*h);
 }
 
 /**
