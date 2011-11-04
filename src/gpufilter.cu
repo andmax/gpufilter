@@ -23,8 +23,6 @@
 
 /// @cond
 
-// ignored by doxygen
-
 #define WS 32 // Warp size (defines b x b block size where b = WS)
 #define DW 8 // Default number of warps (computational block height)
 #define OW 6 // Optimized number of warps (computational block height for some kernels)

@@ -20,7 +20,7 @@ namespace gpufilter {
 
 //=== IMPLEMENTATION ==========================================================
 
-class base_timer/*{{{*/
+class base_timer
 {
 public:
     base_timer(const char *type_label, size_t data_size=0, 
@@ -49,9 +49,9 @@ private:
     bool m_started;
     size_t m_data_size;
     std::string m_unit;
-};/*}}}*/
+};
 
-class gpu_timer : public base_timer/*{{{*/
+class gpu_timer : public base_timer
 {
 public:
     gpu_timer(size_t data_size=0, const std::string &unit="", bool start=true);
@@ -63,9 +63,9 @@ private:
     virtual void do_start();
     virtual void do_stop();
     virtual float do_get_elapsed() const;
-};/*}}}*/
+};
 
-class cpu_timer : public base_timer/*{{{*/
+class cpu_timer : public base_timer
 {
 public:
     cpu_timer(size_t data_size=0, const std::string &unit="", bool start=true);
@@ -79,7 +79,7 @@ private:
     virtual float do_get_elapsed() const;
 
     double get_cpu_time() const;
-};/*}}}*/
+};
 
 class scoped_timer_stop
 {

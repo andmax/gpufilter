@@ -105,6 +105,15 @@ The people involved in the gpufilter project are listed below:
  */
 namespace gpufilter {
 
+//== EXTERNS ==================================================================
+
+extern
+void algorithm5_1( float *,
+                   const int&,
+                   const int&,
+                   const float&,
+                   const float& );
+
 //=== IMPLEMENTATION ==========================================================
 
 /**
