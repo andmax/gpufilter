@@ -5,9 +5,6 @@
  *  @date September, 2011
  */
 
-#ifndef GPUFILTER_CU
-#define GPUFILTER_CU
-
 //== INCLUDES =================================================================
 
 #include <cmath>
@@ -22,32 +19,33 @@
 #include <symbol.h>
 #include <dvector.h>
 
-//== NAMESPACES ===============================================================
-
-namespace gpufilter {
-
 //== GLOBAL-SCOPE DEFINITIONS =================================================
 
 /// @cond
 
 // ignored by doxygen
 
-const int WS = 32; // Warp size (defines b x b block size where b = WS)
-const int DW = 8; // Default number of warps (computational block height)
-const int OW = 6; // Optimized number of warps (computational block height for some kernels)
-const int DNB = 6; // Default number of blocks per SM (minimum blocks per SM launch bounds)
-const int ONB = 5; // Optimized number of blocks per SM (minimum blocks per SM for some kernels)
+#define WS 32 // Warp size (defines b x b block size where b = WS)
+#define DW 8 // Default number of warps (computational block height)
+#define OW 6 // Optimized number of warps (computational block height for some kernels)
+#define DNB 6 // Default number of blocks per SM (minimum blocks per SM launch bounds)
+#define ONB 5 // Optimized number of blocks per SM (minimum blocks per SM for some kernels)
 
 __constant__ int c_width, c_height, c_m_size, c_n_size;
 
-__constant__ float c_Linf1, c_Svm, c_Stm, c_Alpha,
-    c_Delta_x_tail[WS], c_Delta_y[WS],
-    c_SignRevProdLinf[WS], c_ProdLinf[WS], c_iR1;
+__constant__ float c_Linf1, c_Svm, c_Stm, c_Alpha, c_iR1;
+
+__constant__ float c_Delta_x_tail[WS], c_Delta_y[WS],
+    c_SignRevProdLinf[WS], c_ProdLinf[WS];
     
 __constant__ float c_Linf2, c_Llast2, c_iR2, c_Minf, c_Ninf;
 __constant__ float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
 
 /// @endcond
+
+//== NAMESPACES ===============================================================
+
+namespace gpufilter {
 
 //=== IMPLEMENTATION ==========================================================
 
@@ -953,7 +951,7 @@ void algorithm5_1( float *inout,
 
     dvector<float> d_img(inout, w*h);
 
-    const float Linf = -a1, iR = b0*b0*b0*b0/Linf/Linf;
+    const float Linf = a1, iR = b0*b0*b0*b0/Linf/Linf;
 
     std::vector<float> signrevprodLinf(WS);
 
@@ -1009,7 +1007,7 @@ void algorithm5_1( float *inout,
                    
     dvector<float> d_y, d_z, d_ubar, d_u, d_vcheck, d_v;
 
-    algorithm5_stage1<<< dim3(n_size, m_size/2), dim3(WS, DW) >>>( d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
+    algorithm5_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>( d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
 
     algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>( d_transp_ybar, d_transp_zhat );
 
@@ -1026,7 +1024,7 @@ void algorithm5_1( float *inout,
     swap(d_ubar, d_u);
     swap(d_vcheck, d_v);
 
-    algorithm5_stage6<<< dim3(n_size, m_size/2), dim3(WS, DW) >>>( d_img, d_y, d_z, d_u, d_v );
+    algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>( d_img, d_y, d_z, d_u, d_v );
 
     d_img.copy_to(inout, w*h);
 }
@@ -1037,7 +1035,5 @@ void algorithm5_1( float *inout,
 
 //=============================================================================
 } // namespace gpufilter
-//=============================================================================
-#endif // GPUFILTER_CU
 //=============================================================================
 // vi: ai ts=4 sw=4
