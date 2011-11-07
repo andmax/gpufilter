@@ -237,10 +237,11 @@ void weights2( const T1& s,
  */
 
 /**
- *  @brief Compute Algorithm 5_1
+ *  @brief Compute Algorithm 5 (first-order)
  *
- *  This function computes recursive filtering with given feedback and
- *  feedforward coefficients of an image using algorithm 5_1.
+ *  This function computes first-order recursive filtering with given
+ *  feedback and feedforward coefficients of an input 2D image using
+ *  algorithm \f$5_1\f$.
  *
  *  The algorithm 5 is discussed in depth in our paper:
  *
@@ -254,7 +255,7 @@ void weights2( const T1& s,
   number = {6},
   doi = {},
   publisher = {ACM},
-  address   = {{N}ew {Y}ork, {NY}, {USA}}
+  address = {{N}ew {Y}ork, {NY}, {USA}}
 }   @endverbatim
  *
  *  @param[in] inout The input 2D image to compute recursive filtering
@@ -264,11 +265,53 @@ void weights2( const T1& s,
  *  @param[in] a1 Feedback coefficient
  */
 extern
-void algorithm5_1( float *inout,
+void algorithm5( float *inout,
+                 const int& h,
+                 const int& w,
+                 const float& b0,
+                 const float& a1 );
+
+/**
+ *  @brief Compute Algorithm SAT
+ *
+ *  This function computes the summed-area table (SAT) of an input 2D
+ *  image using algorithm SAT.
+ *
+ *  The algorithm SAT is discussed in depth in our paper (see
+ *  [Nehab:2011] in algorithm5() function) where the following image
+ *  illustrates the process:
+ *
+ *  @image html sat-stages.png
+ *  @image latex sat-stages.eps
+ *
+ *  Overlapped summed-area table computation according to algorithm
+ *  SAT.  Stage S.1 reads the input (in gray) then computes and stores
+ *  incomplete prologues \f$P_{m,n}(\bar{Y})\f$ (in red) and
+ *  \f$P^T_{m,n}(\hat{V})\f$ (in blue).  Stage S.2 completes prologues
+ *  \f$P_{m,n}(Y)\f$ and computes scalars
+ *  \f$s\big(P_{m-1,n}(Y)\big)\f$ (in yellow).  Stage S.3 completes
+ *  prologues \f$P^T_{m,n}(V)\f$. Finally, stage S.4 reads the input
+ *  and completed prologues, then computes and stores the final
+ *  summed-area table.
+ *
+ *  @see [Nehab:2011] cited in algorithm5()
+ *  @param[in] inout The input 2D image to compute SAT
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ */
+extern
+void algorithmSAT( float *inout,
                    const int& h,
-                   const int& w,
-                   const float& b0,
-                   const float& a1 );
+                   const int& w );
+/**
+ *  @example example_sat2.cc
+ *
+ *  This is an example of how to use the algorithmSAT() function in
+ *  the GPU.
+ *
+ *  @see gpufilter.h
+ */
+
 
 /**
  *  @}

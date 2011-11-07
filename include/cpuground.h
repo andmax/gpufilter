@@ -70,31 +70,6 @@ void rf_0( T *inout,
 }
 
 /**
- *  @brief Compute the Summed-area Table of a matrix
- *
- *  Given an input grid compute its Summed-Area Table (SAT) by
- *  applying a first-order recursive filters forward using zero-border
- *  initial conditions.
- *
- *  @param[in,out] in The grid (or 2D image) to compute the SAT
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
- *  @tparam T Image value type
- */
-template< class T >
-void sat( T *in,
-          const int& hin,
-          const int& win ) {
-    rf_0(in, hin, win, (T)1, (T)-1);
-}
-/** @example example_sat1.cc
- *
- *  This is an example of how to use the sat() function.
- *
- *  @see cpuground.h
- */
-
-/**
  *  @brief Compute first-order recursive filtering on columns forward and reverse with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -563,7 +538,7 @@ void r_c( T *inout,
 }
 
 /**
- *  @brief Gaussian blur an image
+ *  @brief Gaussian blur an image in the CPU
  *
  *  Given an input 2D image compute the Gaussian blur of it by
  *  applying a sequence of recursive filters using clamp-to-border
@@ -577,11 +552,11 @@ void r_c( T *inout,
  *  @tparam T Image value type
  */
 template< class T >
-void gaussian( T **in,
-               const int& hin,
-               const int& win,
-               const int& depth,
-               const T& s ) {
+void gaussian_cpu( T **in,
+                   const int& hin,
+                   const int& win,
+                   const int& depth,
+                   const T& s ) {
     T b10, a11;
     weights1(s, b10, a11);
     T b20, a21, a22;
@@ -593,7 +568,7 @@ void gaussian( T **in,
 }
 
 /**
- *  @brief Compute the Bicubic B-Spline interpolation of an image
+ *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
  *
  *  Given an input 2D image compute the Bicubic B-Spline interpolation
  *  of it by applying a first-order recursive filters using
@@ -606,10 +581,10 @@ void gaussian( T **in,
  *  @tparam T Image value type
  */
 template< class T >
-void bspline3i( T **in,
-                const int& hin,
-                const int& win,
-                const int& depth ) {
+void bspline3i_cpu( T **in,
+                    const int& hin,
+                    const int& win,
+                    const int& depth ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
         r_c(in[c], hin, win, (T)1+alpha, alpha);
@@ -618,8 +593,35 @@ void bspline3i( T **in,
 /**
  *  @example app_recursive_cpu.cc
  *
- *  This is an application example of how to use the gaussian()
- *  function and bspline3i() function.
+ *  This is an application example of how to use the gaussian_cpu()
+ *  function in the CPU and bspline3i_cpu() function in the CPU.
+ *
+ *  @see cpuground.h
+ */
+
+/**
+ *  @brief Compute the Summed-area Table of an image in the CPU
+ *
+ *  Given an input 2D image compute its Summed-Area Table (SAT) by
+ *  applying a first-order recursive filters forward using zero-border
+ *  initial conditions.
+ *
+ *  @param[in,out] in The grid (or 2D image) to compute the SAT
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @tparam T Image value type
+ */
+template< class T >
+void sat_cpu( T *in,
+              const int& hin,
+              const int& win ) {
+    rf_0(in, hin, win, (T)1, (T)-1);
+}
+/**
+ *  @example example_sat1.cc
+ *
+ *  This is an example of how to use the sat_cpu() function in the
+ *  CPU.
  *
  *  @see cpuground.h
  */

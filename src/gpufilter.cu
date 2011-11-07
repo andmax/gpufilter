@@ -19,25 +19,9 @@
 #include <dvector.h>
 
 #include <gpufilter.h>
+#include <gpudefs.cuh>
+
 #include <gpufilter.cuh>
-
-//== GLOBAL-SCOPE DEFINITIONS =================================================
-
-#define WS 32 // Warp size (defines b x b block size where b = WS)
-#define DW 8 // Default number of warps (computational block height)
-#define OW 6 // Optimized number of warps (computational block height for some kernels)
-#define DNB 6 // Default number of blocks per SM (minimum blocks per SM launch bounds)
-#define ONB 5 // Optimized number of blocks per SM (minimum blocks per SM for some kernels)
-
-__constant__ int c_width, c_height, c_m_size, c_n_size;
-
-__constant__ float c_Linf1, c_Svm, c_Stm, c_Alpha, c_iR1;
-
-__constant__ float c_Delta_x_tail[WS], c_Delta_y[WS],
-    c_SignRevProdLinf[WS], c_ProdLinf[WS];
-    
-__constant__ float c_Linf2, c_Llast2, c_iR2, c_Minf, c_Ninf;
-__constant__ float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
 
 //== NAMESPACES ===============================================================
 
@@ -818,13 +802,13 @@ void algorithm5_stage6( float *g_in,
 }
 
 __host__
-void algorithm5_1( float *inout,
-                   const int& h,
-                   const int& w,
-                   const float& b0,
-                   const float& a1 ) {
+void algorithm5( float *inout,
+                 const int& h,
+                 const int& w,
+                 const float& b0,
+                 const float& a1 ) {
 
-    dvector<float> d_img(inout, w*h);
+    dvector<float> d_img( inout, h*w );
 
     const float Linf = a1, iR = b0*b0*b0*b0/Linf/Linf;
 
@@ -874,11 +858,15 @@ void algorithm5_1( float *inout,
 
     const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
 
-    copy_to_symbol("c_width", w); copy_to_symbol("c_height", h);
-    copy_to_symbol("c_m_size", m_size); copy_to_symbol("c_n_size", n_size);
+    copy_to_symbol("c_height", h);
+    copy_to_symbol("c_width", w);
+    copy_to_symbol("c_m_size", m_size);
+    copy_to_symbol("c_n_size", n_size);
 
-    dvector<float> d_transp_ybar(n_size*h), d_transp_zhat(n_size*h),
-        d_ucheck(m_size*w), d_vtilde(m_size*w);
+    dvector<float> d_transp_ybar(n_size*h),
+        d_transp_zhat(n_size*h),
+        d_ucheck(m_size*w),
+        d_vtilde(m_size*w);
                    
     dvector<float> d_y, d_z, d_ubar, d_u, d_vcheck, d_v;
 
@@ -901,7 +889,8 @@ void algorithm5_1( float *inout,
 
     algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>( d_img, d_y, d_z, d_u, d_v );
 
-    d_img.copy_to(inout, w*h);
+    d_img.copy_to( inout, h*w );
+
 }
 
 //=============================================================================

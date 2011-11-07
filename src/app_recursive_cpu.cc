@@ -109,10 +109,10 @@ int main(int argc, char *argv[]) {
 
     if( strcmp(filter, "gaussian") == 0 ) {
         printf("Applying filter gaussian (sigma = %g)\n", sigma);
-        gpufilter::gaussian(flat_in, h_in, w_in, depth, sigma);
+        gpufilter::gaussian_cpu(flat_in, h_in, w_in, depth, sigma);
     } else if (strcmp(filter, "bspline3i") == 0) {
         printf("Applying filter bspline3i\n");
-        gpufilter::bspline3i(flat_in, h_in, w_in, depth);
+        gpufilter::bspline3i_cpu(flat_in, h_in, w_in, depth);
     } else {
         errorf("Unknown method '%s'", filter);
     }

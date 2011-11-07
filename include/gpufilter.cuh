@@ -5,6 +5,9 @@
  *  @date September, 2011
  */
 
+#ifndef GPUFILTER_CUH
+#define GPUFILTER_CUH
+
 //== NAMESPACES ===============================================================
 
 namespace gpufilter {
@@ -25,7 +28,7 @@ namespace gpufilter {
  *  \f$P_{m,n}(\bar{Y})\f$, \f$E_{m,n}(\hat{Z})\f$,
  *  \f$P^T_{m,n}(\check{U})\f$, and \f$E^T_{m,n}(\tilde{V})\f$.
  *
- *  @see [Nehab:2011] cited in algorithm5_1()
+ *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in] g_in Input image
  *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
@@ -54,7 +57,7 @@ void algorithm5_stage1( const float *g_in,
  *  store \f$E_{m,n}(Z)\f$ according to (45) using the previously computed
  *  \f$P_{m-1,n}(Y)\f$ and \f$E_{m+1,n}(\hat{Z})\f$.
  *
- *  @see [Nehab:2011] cited in algorithm5_1()
+ *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
  */
@@ -80,7 +83,7 @@ void algorithm5_stage2_3( float *g_transp_ybar,
  *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
  *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
  *
- *  @see [Nehab:2011] cited in algorithm5_1()
+ *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
  *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
@@ -110,7 +113,7 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
  *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
  *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
  *
- *  @see [Nehab:2011] cited in algorithm5_1()
+ *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_ubar All \f$P^T_{m,n}(\bar{U})\f$ (half-way fixed \f$P^T_{m,n}(U)\f$)
  *  @param[in,out] g_vcheck All \f$E^T_{m,n}(\check{V})\f$ (half-way fixed \f$E^T_{m,n}(V)\f$)
  */
@@ -129,7 +132,7 @@ void algorithm5_stage4_5_step2( float *g_ubar,
  *  \f$P_{m-1,n}(Y)\f$, \f$E_{m+1,n}(Z)\f$, \f$P^T_{m,n-1}(U)\f$, and
  *  \f$E^T_{m,n+1}(V)\f$. Store \f$B_{m,n}(V)\f$.
  *
- *  @see [Nehab:2011] cited in algorithm5_1()
+ *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_in Input image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_z All \f$E_{m,n}(Z)\f$
@@ -149,4 +152,6 @@ void algorithm5_stage6( float *g_in,
 
 //=============================================================================
 } // namespace gpufilter
+//=============================================================================
+#endif // GPUFILTER_CUH
 //=============================================================================

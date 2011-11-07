@@ -29,24 +29,24 @@ void print_matrix( const float *img,
 // Main
 int main(int argc, char *argv[]) {
 
-    std::cout << "[sat1] Generating random input matrix ... " << std::flush;
-
     const int w_in = 8, h_in = 8;
 
-    float *in = new float[w_in*h_in];
+    std::cout << "[sat1] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+
+    float *in = new float[h_in*w_in];
 
     srand(time(0));
 
-    for (int i = 0; i < w_in*h_in; ++i)
+    for (int i = 0; i < h_in*w_in; ++i)
         in[i] = rand() % 8;
 
-    std::cout << "done!\n[sat1] Input matrix " << w_in << " x " << h_in << " :\n";
+    std::cout << "done!\n";
 
     print_matrix(in, h_in, w_in, 2);
 
-    std::cout << "[sat1] Computing summed-area table ... " << std::flush;
+    std::cout << "[sat1] Computing summed-area table in the CPU ... " << std::flush;
 
-    gpufilter::sat( in, h_in, w_in );
+    gpufilter::sat_cpu( in, h_in, w_in );
 
     std::cout << "done!\n[sat1] Output matrix " << w_in << " x " << h_in << " :\n";
 

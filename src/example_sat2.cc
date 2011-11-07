@@ -1,6 +1,6 @@
 /**
- *  @file example_r2.cc
- *  @brief Second R (Recursive Filtering) example
+ *  @file example_sat2.cc
+ *  @brief Second SAT (Summed-Area Table) example
  *  @author Andre Maximo
  *  @date November, 2011
  */
@@ -38,9 +38,8 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float b0 = 1.f, a1 = .5f;
 
-    std::cout << "[r2] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[sat2] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
     float *in_cpu = new float[h_in*w_in];
     float *in_gpu = new float[h_in*w_in];
@@ -48,44 +47,41 @@ int main(int argc, char *argv[]) {
     srand(time(0));
 
     for (int i = 0; i < h_in*w_in; ++i)
-        in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
+        in_gpu[i] = in_cpu[i] = rand() % 8;
 
-    std::cout << "done!\n[r2] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
-    std::cout << "[r2] Considering forward and reverse on rows and columns\n";
-    std::cout << "[r2] Feedforward and feedback coefficients are: b0 = " << b0 << " ; a1 = " << a1 << "\n";
-    std::cout << "[r2] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "done!\n[sat2] Computing summed-area table in the CPU ... " << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r_0( in_cpu, h_in, w_in, b0, a1 );
+        gpufilter::sat_cpu( in_cpu, h_in, w_in );
 
-        std::cout << "done!\n[r2] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[sat2] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
 
-    std::cout << "[r2] GPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "[sat2] Computing summed-area table in the GPU ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::algorithm5( in_gpu, h_in, w_in, b0, a1 );
+        gpufilter::algorithmSAT( in_gpu, h_in, w_in );
 
-        std::cout << "done!\n[r2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[sat2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
 
-    std::cout << "[r2] GPU Timing includes memory transfers from and to the CPU\n";
+    std::cout << "[sat2] GPU Timing includes memory transfers from and to the CPU\n";
 
-    std::cout << "[r2] Checking GPU result with CPU reference values\n";
+    std::cout << "[sat2] Checking GPU result with CPU reference values\n";
 
     float me, mre;
 
     check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
 
-    std::cout << std::scientific;
+    std::cout << std::resetiosflags( std::ios_base::floatfield );
 
-    std::cout << "[r2] Maximum error: " << me << " ; Maximum relative error: " << mre << "\n";
+    std::cout << "[sat2] Maximum error: " << me << " ; Maximum relative error: " << mre << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;
