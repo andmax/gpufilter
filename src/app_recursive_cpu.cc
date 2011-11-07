@@ -1,3 +1,9 @@
+/**
+ *  @file app_recursive_cpu.cc
+ *  @brief Application of recursive filtering in the CPU example
+ *  @author Diego Nehab
+ *  @date November, 2011
+ */
 
 #include <cstdio>
 #include <cstddef>

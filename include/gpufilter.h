@@ -15,8 +15,6 @@
 /**
  *  @mainpage gpufilter Library
 
-\b gpufilter :: <em>GPU-Efficient Recursive Filtering and Summed-Area Tables</em>
-
 \section introduction Introduction
 
 The gpufilter project is a set of C for CUDA functions to compute
@@ -105,16 +103,7 @@ The people involved in the gpufilter project are listed below:
  */
 namespace gpufilter {
 
-//== EXTERNS ==================================================================
-
-extern
-void algorithm5_1( float *,
-                   const int&,
-                   const int&,
-                   const float&,
-                   const float& );
-
-//=== IMPLEMENTATION ==========================================================
+//== IMPLEMENTATION ===========================================================
 
 /**
  *  @ingroup utils
@@ -127,7 +116,7 @@ void algorithm5_1( float *,
  *  Compute the scaling factor of the recursive filter representing a
  *  true Gaussian filter convolution with arbitrary support sigma.
  *
- *  @see [vanVliet:1998] cited in @see weights2
+ *  @see [vanVliet:1998] cited in weights2()
  *  @param[in] s Sigma support of the true Gaussian filter
  *  @return Scaling factor q of the recursive filter approximation
  *  @tparam T Sigma value type
@@ -144,7 +133,7 @@ T qs( const T& s ) {
  *  z-transform compute a rescaled pole representing a true Gaussian
  *  filter convolution with arbitrary support sigma.
  *
- *  @see [vanVliet:1998] cited in @see weights2
+ *  @see [vanVliet:1998] cited in weights2()
  *  @param[in] d Complex-valued pole of a stable recursive filter
  *  @param[in] s Sigma support of the true Gaussian filter
  *  @return Rescaled complex-valued pole of the recursive filter approximation
@@ -164,7 +153,7 @@ std::complex<T> ds( const std::complex<T>& d,
  *  compute a rescaled pole representing a true Gaussian filter
  *  convolution with arbitrary support sigma.
  *
- *  @see [vanVliet:1998] cited in @see weights2
+ *  @see [vanVliet:1998] cited in weights2()
  *  @param[in] d Real pole of a stable recursive filter
  *  @param[in] s Sigma support of the true Gaussian filter
  *  @return Rescaled real pole of the recursive filter approximation
@@ -182,7 +171,7 @@ T ds( const T& d,
  *  Given a Gaussian sigma value compute the feedforward and feedback
  *  first-order coefficients.
  *
- *  @see [vanVliet:1998] cited in @see weights2
+ *  @see [vanVliet:1998] cited in weights2()
  *  @param[in] s Gaussian sigma
  *  @param[out] b0 Feedforward coefficient
  *  @param[out] a1 Feedback first-order coefficient
@@ -235,6 +224,51 @@ void weights2( const T1& s,
     a1 = static_cast<T2>((T1)-2*re/n2);
     a2 = static_cast<T2>((T1)1/n2);
 }
+
+/**
+ *  @}
+ */
+
+//== EXTERNS ==================================================================
+
+/**
+ *  @ingroup gpu
+ *  @{
+ */
+
+/**
+ *  @brief Compute Algorithm 5_1
+ *
+ *  This function computes recursive filtering with given feedback and
+ *  feedforward coefficients of an image using algorithm 5_1.
+ *
+ *  The algorithm 5 is discussed in depth in our paper:
+ *
+ *  @verbatim
+@inproceedings{Nehab:2011,
+  title = {{GPU}-{E}fficient {R}ecursive {F}iltering and {S}ummed-{A}rea {T}ables},
+  author = {{N}ehab, {D}. and {M}aximo, {A}. and {L}ima, {R}. {S}. and {H}oppe, {H}.},
+  journal = {{ACM} {T}ransactions on {G}raphics ({P}roceedings of the {ACM} {SIGGRAPH} {A}sia 2011)},
+  year = {2011},
+  volume = {30},
+  number = {6},
+  doi = {},
+  publisher = {ACM},
+  address   = {{N}ew {Y}ork, {NY}, {USA}}
+}   @endverbatim
+ *
+ *  @param[in] inout The input 2D image to compute recursive filtering
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback coefficient
+ */
+extern
+void algorithm5_1( float *inout,
+                   const int& h,
+                   const int& w,
+                   const float& b0,
+                   const float& a1 );
 
 /**
  *  @}

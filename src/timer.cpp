@@ -7,13 +7,10 @@
 
 //== INCLUDES =================================================================
 
-#include <iostream>
 #include <cmath>
 #include <stack>
 #include <iomanip>
-
-#include <error.h>
-#include <timer.h>
+#include <iostream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -22,11 +19,14 @@
 #include <sys/time.h>
 #endif
 
+#include <error.h>
+#include <timer.h>
+
 //== NAMESPACES ===============================================================
 
 namespace gpufilter {
 
-//=== IMPLEMENTATION ==========================================================
+//== IMPLEMENTATION ===========================================================
 
 timer_pool timers;
 
@@ -175,11 +175,6 @@ float cpu_timer::do_get_elapsed() const
 scoped_timer_stop::scoped_timer_stop(base_timer &timer) 
     : m_timer(&timer)
 {
-}
-
-void scoped_timer_stop::stop() 
-{ 
-    m_timer->stop(); 
 }
 
 gpu_timer &timer_pool::gpu_add(const std::string &label, size_t data_size,

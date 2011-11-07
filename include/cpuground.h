@@ -19,7 +19,7 @@
 
 namespace gpufilter {
 
-//=== IMPLEMENTATION ==========================================================
+//== IMPLEMENTATION ===========================================================
 
 /**
  *  @ingroup cpu
@@ -87,7 +87,7 @@ void sat( T *in,
           const int& win ) {
     rf_0(in, hin, win, (T)1, (T)-1);
 }
-/** @example example_sat.cc
+/** @example example_sat1.cc
  *
  *  This is an example of how to use the sat() function.
  *

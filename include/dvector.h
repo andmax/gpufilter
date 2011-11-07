@@ -42,7 +42,7 @@ public:
      *  Constructor
      *  @param[in] that Host (STL) Vector data (non-converted) to be copied into this object
      */
-    explicit dvector( const std::vector<T> &that ) : m_size(0), m_capacity(0), m_data(0) {
+    explicit dvector( const std::vector<T>& that ) : m_size(0), m_capacity(0), m_data(0) {
         *this = that;
     }
 
@@ -62,7 +62,7 @@ public:
      *  Copy Constructor
      *  @param[in] that Copy that object to this object
      */
-    dvector( const dvector &that ) : m_size(0), m_capacity(0), m_data(0) {
+    dvector( const dvector& that ) : m_size(0), m_capacity(0), m_data(0) {
         *this = that;
     }
 
@@ -74,7 +74,9 @@ public:
         resize(size);
     }
 
-    /// Destructor
+    /**
+     *  Destructor
+     */
     ~dvector() {
         cuda_delete(m_data);
         m_data = 0;
@@ -125,7 +127,7 @@ public:
      *  @param[in] that Device vector to copy from
      *  @return This device vector with assigned values
      */
-    dvector &operator = ( const dvector &that ) {
+    dvector& operator = ( const dvector& that ) {
         resize(that.size());
         cudaMemcpy(data(), that.data(), size()*sizeof(T), cudaMemcpyDeviceToDevice);
         check_cuda_error("Error during memcpy from device to device");
@@ -137,7 +139,7 @@ public:
      *  @param[in] that Host (STL) Vector to copy from
      *  @return This device vector with assigned values
      */
-    dvector &operator = ( const std::vector<T> &that ) {
+    dvector& operator = ( const std::vector<T>& that ) {
         resize(that.size());
         cudaMemcpy(data(), &that[0], size()*sizeof(T), cudaMemcpyHostToDevice);
         check_cuda_error("Error during memcpy from host to device");
@@ -202,8 +204,8 @@ public:
      *  @param[in,out] a Vector to be swapped
      *  @param[in,out] b Vector to be swapped
      */
-    friend void swap( dvector &a,
-                      dvector &b ) {
+    friend void swap( dvector& a,
+                      dvector& b ) {
         std::swap(a.m_data, b.m_data);
         std::swap(a.m_size, b.m_size);
         std::swap(a.m_capacity, b.m_capacity);
@@ -216,7 +218,7 @@ private:
 
 };
 
-//=== IMPLEMENTATION ==========================================================
+//== IMPLEMENTATION ===========================================================
 
 /**
  *  @relates dvector
@@ -250,7 +252,7 @@ std::vector<T> to_cpu( const T *d_vec,
  *  @tparam T Vector values type
  */
 template< class T >
-std::vector<T> to_cpu( const dvector<T> &v ) {
+std::vector<T> to_cpu( const dvector<T>& v ) {
     return to_cpu(v.data(), v.size());
 }
 

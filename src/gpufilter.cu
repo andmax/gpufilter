@@ -8,20 +8,20 @@
 //== INCLUDES =================================================================
 
 #include <cmath>
-#include <cfloat>
 #include <cstdio>
-#include <cstdlib>
+#include <cfloat>
+#include <complex>
 #include <cassert>
 #include <iostream>
 #include <algorithm>
-#include <complex>
 
 #include <symbol.h>
 #include <dvector.h>
 
-//== GLOBAL-SCOPE DEFINITIONS =================================================
+#include <gpufilter.h>
+#include <gpufilter.cuh>
 
-/// @cond
+//== GLOBAL-SCOPE DEFINITIONS =================================================
 
 #define WS 32 // Warp size (defines b x b block size where b = WS)
 #define DW 8 // Default number of warps (computational block height)
@@ -39,38 +39,14 @@ __constant__ float c_Delta_x_tail[WS], c_Delta_y[WS],
 __constant__ float c_Linf2, c_Llast2, c_iR2, c_Minf, c_Ninf;
 __constant__ float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
 
-/// @endcond
-
 //== NAMESPACES ===============================================================
 
 namespace gpufilter {
 
-//=== IMPLEMENTATION ==========================================================
+//== IMPLEMENTATION ===========================================================
 
-/**
- *  @ingroup gpu
- *  @{
- */
-
-/**
- *  @brief Algorithm 5 stage 1
- *
- *  This function computes the algorithm stage 5.1 following:
- *
- *  In parallel for all \f$m\f$ and \f$n\f$, compute and store each
- *  \f$P_{m,n}(\bar{Y})\f$, \f$E_{m,n}(\hat{Z})\f$,
- *  \f$P^T_{m,n}(\check{U})\f$, and \f$E^T_{m,n}(\tilde{V})\f$.
- *
- *  @param[in] g_in Input image
- *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
- *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
- *  @param[out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
- *  @param[out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
- */
 __global__
-/// @cond
 __launch_bounds__(WS*DW, ONB)
-/// @endcond
 void algorithm5_stage1( const float *g_in,
                         float *g_transp_ybar,
                         float *g_transp_zhat,
@@ -165,28 +141,8 @@ void algorithm5_stage1( const float *g_in,
 
 }
 
-/**
- *  @brief Algorithm 5 stage 2 and 3 (fusioned)
- *
- *  This function computes the algorithm stages 5.2 and 5.3 following:
- *
- *  In parallel for all \f$n\f$, sequentially for each \f$m\f$, compute and
- *  store the \f$P_{m,n}(Y)\f$ according to (37) and using the previously
- *  computed \f$P_{m-1,n}(\bar{Y})\f$.
- *
- *  with simple kernel fusioned (going thorough global memory):
- *
- *  In parallel for all \f$n\f$, sequentially for each \f$m\f$, compute and
- *  store \f$E_{m,n}(Z)\f$ according to (45) using the previously computed
- *  \f$P_{m-1,n}(Y)\f$ and \f$E_{m+1,n}(\hat{Z})\f$.
- *
- *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
- *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
- */
 __global__
-/// @cond
 __launch_bounds__(WS*DW, DNB)
-/// @endcond
 void algorithm5_stage2_3( float *g_transp_ybar,
                           float *g_transp_zhat ) {
 
@@ -401,33 +357,8 @@ void algorithm5_stage2_3( float *g_transp_ybar,
 
 }
 
-/**
- *  @brief Algorithm 5 stage 4 and 5 (fusioned) step 1
- *
- *  This function computes the first part of the algorithm stages 5.4
- *  and 5.5 following:
- *
- *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$P^T_{m,n}(U)\f$ according to (48) and using the previously
- *  computed \f$P^T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
- *  \f$E_{m+1,n}(Z)\f$.
- *
- *  with simple kernel fusioned (going thorough global memory):
- *
- *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$E^T_{m,n}(V)\f$ according to (50) and using the previously
- *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
- *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
- *
- *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
- *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
- *  @param[in] g_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_z All \f$E_{m,n}(Z)\f$
- */
 __global__
-/// @cond
 __launch_bounds__(WS*OW, DNB)
-/// @endcond
 void algorithm5_stage4_5_step1( float *g_ucheck,
                                 float *g_vtilde,
                                 const float *g_y,
@@ -579,31 +510,8 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
     *g_ucheck = sum_ucheck;
 }
 
-/**
- *  @brief Algorithm 5 stage 4 and 5 (fusioned) step 2
- *
- *  This function computes the second part of the algorithm stages 5.4
- *  and 5.5 following:
- *
- *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$P^T_{m,n}(U)\f$ according to (48) and using the previously
- *  computed \f$P^T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
- *  \f$E_{m+1,n}(Z)\f$.
- *
- *  with simple kernel fusioned (going thorough global memory):
- *
- *  In parallel for all \f$m\f$, sequentially for each \f$n\f$, compute and
- *  store \f$E^T_{m,n}(V)\f$ according to (50) and using the previously
- *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
- *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
- *
- *  @param[in,out] g_ubar All \f$P^T_{m,n}(\bar{U})\f$ (half-way fixed \f$P^T_{m,n}(U)\f$)
- *  @param[in,out] g_vcheck All \f$E^T_{m,n}(\check{V})\f$ (half-way fixed \f$E^T_{m,n}(V)\f$)
- */
 __global__
-/// @cond
 __launch_bounds__(WS*DW, DNB)
-/// @endcond
 void algorithm5_stage4_5_step2( float *g_ubar,
                                 float *g_vcheck ) {
 
@@ -816,27 +724,8 @@ void algorithm5_stage4_5_step2( float *g_ubar,
 
 }
 
-/**
- *  @brief Algorithm 5 stage 6
- *
- *  This function computes the algorithm stage 5.6 following:
- *
- *  In parallel for all \f$m\f$ and \f$n\f$, compute one after the other
- *  \f$B_{m,n}(Y)\f$, \f$B_{m,n}(Z)\f$, \f$B_{m,n}(U)\f$, and \f$B_{m,n}(V)\f$
- *  according to (18) and using the previously computed
- *  \f$P_{m-1,n}(Y)\f$, \f$E_{m+1,n}(Z)\f$, \f$P^T_{m,n-1}(U)\f$, and
- *  \f$E^T_{m,n+1}(V)\f$. Store \f$B_{m,n}(V)\f$.
- *
- *  @param[in,out] g_in Input image
- *  @param[in] g_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_z All \f$E_{m,n}(Z)\f$
- *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
- *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
- */
 __global__
-/// @cond
 __launch_bounds__(WS*DW, ONB)
-/// @endcond
 void algorithm5_stage6( float *g_in,
                         const float *g_y,
                         const float *g_z,
@@ -928,18 +817,6 @@ void algorithm5_stage6( float *g_in,
 
 }
 
-/**
- *  @brief Compute Algorithm 5_1
- *
- *  This function computes recursive filtering with given feedback and
- *  feedforward coefficients of an image using algorithm 5_1.
- *
- *  @param[in] inout The input 2D image to compute recursive filtering
- *  @param[in] h Image height
- *  @param[in] w Image width
- *  @param[in] b0 Feedforward coefficient
- *  @param[in] a1 Feedback coefficient
- */
 __host__
 void algorithm5_1( float *inout,
                    const int& h,
@@ -1026,10 +903,6 @@ void algorithm5_1( float *inout,
 
     d_img.copy_to(inout, w*h);
 }
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter
