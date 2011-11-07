@@ -23,10 +23,6 @@ namespace gpufilter {
 
 /**
  *  @ingroup utils
- *  @{
- */
-
-/**
  *  @brief Allocates a new memory space in the GPU
  *
  *  This function allocates device (GPU) memory space.
@@ -40,7 +36,7 @@ T *cuda_new( size_t elements ) {
     T *ptr = 0;
 
     cudaMalloc((void **)&ptr, elements*sizeof(T));
-    check_cuda_error("Memory allocation error");
+    cuda_error("Memory allocation error");
     if( ptr == 0 )
         throw std::runtime_error("Memory allocation error");
 
@@ -48,6 +44,7 @@ T *cuda_new( size_t elements ) {
 }
 
 /**
+ *  @ingroup utils
  *  @brief Deallocates a memory space in the GPU
  *
  *  This function deletes device (GPU) memory space.
@@ -58,12 +55,8 @@ T *cuda_new( size_t elements ) {
 template< class T >
 void cuda_delete( T *d_ptr ) {
     cudaFree((void *)d_ptr);
-    check_cuda_error("Error freeing memory");
+    cuda_error("Error freeing memory");
 }
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter

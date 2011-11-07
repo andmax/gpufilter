@@ -21,12 +21,8 @@ namespace gpufilter {
 //== CLASS DEFINITION =========================================================
 
 /**
- *  @ingroup utils
- *  @{
- */
-
-/**
  *  @class dvector dvector.h
+ *  @ingroup utils
  *  @brief Device Vector class
  *
  *  Device vector is a STL-based vector in the GPU memory.
@@ -55,7 +51,7 @@ public:
              size_t size ) : m_size(0), m_capacity(0), m_data(0) {
         resize(size);
         cudaMemcpy(this->data(), const_cast<T *>(data), size*sizeof(T), cudaMemcpyHostToDevice);
-        check_cuda_error("Error during memcpy from host to device");
+        cuda_error("Error during memcpy from host to device");
     }
 
     /**
@@ -130,7 +126,7 @@ public:
     dvector& operator = ( const dvector& that ) {
         resize(that.size());
         cudaMemcpy(data(), that.data(), size()*sizeof(T), cudaMemcpyDeviceToDevice);
-        check_cuda_error("Error during memcpy from device to device");
+        cuda_error("Error during memcpy from device to device");
         return *this;
     }
 
@@ -142,7 +138,7 @@ public:
     dvector& operator = ( const std::vector<T>& that ) {
         resize(that.size());
         cudaMemcpy(data(), &that[0], size()*sizeof(T), cudaMemcpyHostToDevice);
-        check_cuda_error("Error during memcpy from host to device");
+        cuda_error("Error during memcpy from host to device");
         return *this;
     }
 
@@ -154,7 +150,7 @@ public:
     void copy_to( T *data,
                   const size_t& s ) const {
         cudaMemcpy(data, this->data(), std::min(size(),s)*sizeof(T), cudaMemcpyDeviceToHost);
-        check_cuda_error("Error during memcpy from device to host");
+        cuda_error("Error during memcpy from device to host");
     }
 
     /**
@@ -238,7 +234,7 @@ std::vector<T> to_cpu( const T *d_vec,
     out.resize(len);
 
     cudaMemcpy(&out[0], d_vec, len*sizeof(T), cudaMemcpyDeviceToHost);
-    check_cuda_error("Error during memcpy from device to host");
+    cuda_error("Error during memcpy from device to host");
 
     return out;
 }
@@ -255,10 +251,6 @@ template< class T >
 std::vector<T> to_cpu( const dvector<T>& v ) {
     return to_cpu(v.data(), v.size());
 }
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter

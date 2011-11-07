@@ -710,7 +710,7 @@ void algorithm5_stage4_5_step2( float *g_ubar,
 
 __global__
 __launch_bounds__(WS*DW, ONB)
-void algorithm5_stage6( float *g_in,
+void algorithm5_stage6( float *g_inout,
                         const float *g_y,
                         const float *g_z,
                         const float *g_u,
@@ -720,7 +720,7 @@ void algorithm5_stage6( float *g_in,
 
     __shared__ float block[WS*2][WS+1];
 
-    const float *in_data = g_in + (m*WS + ty)*c_width + n*WS + tx;
+    const float *in_data = g_inout + (m*WS + ty)*c_width + n*WS + tx;
 
 #pragma unroll
     for(int i=0; i<WS; i+=8)
@@ -778,7 +778,7 @@ void algorithm5_stage6( float *g_in,
 
             // calculate v ---------------------
 
-            float *out_data = g_in + (m*WS+WS-1)*c_width + n*WS + tx;
+            float *out_data = g_inout + (m*WS+WS-1)*c_width + n*WS + tx;
 
             prev = bdata[WS-1][0];
             if(m == c_m_size-1)

@@ -16,10 +16,6 @@ namespace gpufilter {
 
 /**
  *  @ingroup gpu
- *  @{
- */
-
-/**
  *  @brief Algorithm 5 stage 1
  *
  *  This function computes the algorithm stage 5.1 following:
@@ -27,6 +23,9 @@ namespace gpufilter {
  *  In parallel for all \f$m\f$ and \f$n\f$, compute and store each
  *  \f$P_{m,n}(\bar{Y})\f$, \f$E_{m,n}(\hat{Z})\f$,
  *  \f$P^T_{m,n}(\check{U})\f$, and \f$E^T_{m,n}(\tilde{V})\f$.
+ *
+ *  @note The CUDA kernel functions (as this one) have many
+ *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in] g_in Input image
@@ -43,6 +42,7 @@ void algorithm5_stage1( const float *g_in,
                         float *g_vtilde );
 
 /**
+ *  @ingroup gpu
  *  @brief Algorithm 5 stage 2 and 3 (fusioned)
  *
  *  This function computes the algorithm stages 5.2 and 5.3 following:
@@ -57,6 +57,9 @@ void algorithm5_stage1( const float *g_in,
  *  store \f$E_{m,n}(Z)\f$ according to (45) using the previously computed
  *  \f$P_{m-1,n}(Y)\f$ and \f$E_{m+1,n}(\hat{Z})\f$.
  *
+ *  @note The CUDA kernel functions (as this one) have many
+ *  idiosyncrasies and should not be used lightly.
+ *
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
@@ -66,6 +69,7 @@ void algorithm5_stage2_3( float *g_transp_ybar,
                           float *g_transp_zhat );
 
 /**
+ *  @ingroup gpu
  *  @brief Algorithm 5 stage 4 and 5 (fusioned) step 1
  *
  *  This function computes the first part of the algorithm stages 5.4
@@ -83,6 +87,9 @@ void algorithm5_stage2_3( float *g_transp_ybar,
  *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
  *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
  *
+ *  @note The CUDA kernel functions (as this one) have many
+ *  idiosyncrasies and should not be used lightly.
+ *
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
  *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
@@ -96,6 +103,7 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
                                 const float *g_z );
 
 /**
+ *  @ingroup gpu
  *  @brief Algorithm 5 stage 4 and 5 (fusioned) step 2
  *
  *  This function computes the second part of the algorithm stages 5.4
@@ -113,6 +121,9 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
  *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
  *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
  *
+ *  @note The CUDA kernel functions (as this one) have many
+ *  idiosyncrasies and should not be used lightly.
+ *
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_ubar All \f$P^T_{m,n}(\bar{U})\f$ (half-way fixed \f$P^T_{m,n}(U)\f$)
  *  @param[in,out] g_vcheck All \f$E^T_{m,n}(\check{V})\f$ (half-way fixed \f$E^T_{m,n}(V)\f$)
@@ -122,6 +133,7 @@ void algorithm5_stage4_5_step2( float *g_ubar,
                                 float *g_vcheck );
 
 /**
+ *  @ingroup gpu
  *  @brief Algorithm 5 stage 6
  *
  *  This function computes the algorithm stage 5.6 following:
@@ -132,23 +144,22 @@ void algorithm5_stage4_5_step2( float *g_ubar,
  *  \f$P_{m-1,n}(Y)\f$, \f$E_{m+1,n}(Z)\f$, \f$P^T_{m,n-1}(U)\f$, and
  *  \f$E^T_{m,n+1}(V)\f$. Store \f$B_{m,n}(V)\f$.
  *
+ *  @note The CUDA kernel functions (as this one) have many
+ *  idiosyncrasies and should not be used lightly.
+ *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_in Input image
+ *  @param[in,out] g_inout The input and output image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_z All \f$E_{m,n}(Z)\f$
  *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
  */
 __global__
-void algorithm5_stage6( float *g_in,
+void algorithm5_stage6( float *g_inout,
                         const float *g_y,
                         const float *g_z,
                         const float *g_u,
                         const float *g_v );
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter

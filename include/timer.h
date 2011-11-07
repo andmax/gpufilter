@@ -21,12 +21,8 @@ namespace gpufilter {
 //== CLASS DEFINITION =========================================================
 
 /**
- *  @ingroup utils
- *  @{
- */
-
-/**
  *  @class base_timer timer.h
+ *  @ingroup utils
  *  @brief Base timer class
  *
  *  Base timer is the abstract class for timing computation.
@@ -136,6 +132,7 @@ private:
 
 /**
  *  @class gpu_timer timer.h
+ *  @ingroup utils
  *  @brief GPU specialization of the timer class
  *
  *  GPU timer is the specialized class for GPU timing computation.
@@ -185,6 +182,7 @@ private:
 
 /**
  *  @class cpu_timer timer.h
+ *  @ingroup utils
  *  @brief CPU specialization of the timer class
  *
  *  CPU timer is the specialized class for CPU timing computation.
@@ -240,6 +238,7 @@ private:
 
 /**
  *  @class scoped_timer_stop timer.h
+ *  @ingroup utils
  *  @brief Scope-limited timer class
  *
  *  Scoped timer stop is a timer class that stops counting timing when
@@ -276,20 +275,12 @@ private:
     base_timer *m_timer; ///< Base timer associated with this scope-limited timer
 
 };
-/**
- *  @example example_r2.cc
- *
- *  This is an example of how to use the algorithm5_1() function in
- *  the GPU and r_0() function in the CPU, as well as
- *  gpufilter::scoped_timer_stop class.
- *
- *  @see timer.h
- */
 
 //== CLASS DEFINITION =========================================================
 
 /**
  *  @class timer_pool timer.h
+ *  @ingroup utils
  *  @brief Pool of timers
  *
  *  Pool of timers allows a number of timers to be composed and
@@ -350,14 +341,12 @@ private:
 //== EXTERNS ==================================================================
 
 /**
- *  @var Global pool of timers
+ *  @var timers
+ *  @ingroup utils
+ *  @brief Global pool of timers
  */
 extern
 timer_pool timers;
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter

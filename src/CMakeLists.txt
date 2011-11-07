@@ -10,7 +10,7 @@ add_executable(ex1 example_sat1.cc)
 cuda_add_executable(ex2 example_sat2.cc)
 target_link_libraries(ex2 gpufilter)
 
-#add_executable(ex3 example_r1.cc)
+add_executable(ex3 example_r1.cc)
 
 cuda_add_executable(ex4 example_r2.cc)
 target_link_libraries(ex4 gpufilter)

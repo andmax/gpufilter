@@ -40,10 +40,6 @@ The gpufilter project provides close-to-metal CUDA functions as well
 as high-level C++ functions to access the main GPU algorithms.  The
 main functions are ...
 
-Naming conventions are: c_ constant; t_ texture; g_ global memory; s_
-shared memory; d_ device pointer; a_ cuda-array; p_ template
-parameter; f_ surface.
-
 \section download How to get it
 
 The source code of the zsig library is available under the <em>MIT
@@ -107,10 +103,6 @@ namespace gpufilter {
 
 /**
  *  @ingroup utils
- *  @{
- */
-
-/**
  *  @brief Compute recursive filtering scaling factor
  *
  *  Compute the scaling factor of the recursive filter representing a
@@ -127,6 +119,7 @@ T qs( const T& s ) {
 }
 
 /**
+ *  @ingroup utils
  *  @brief Rescale poles of the recursive filtering z-transform
  *
  *  Given a complex-valued pole on |z|=1 ROC of the recursive filter
@@ -147,6 +140,7 @@ std::complex<T> ds( const std::complex<T>& d,
 }
 
 /**
+ *  @ingroup utils
  *  @brief Rescale poles in the real-axis of the recursive filtering z-transform
  *
  *  Given a real pole on |z|=1 ROC of the recursive filter z-transform
@@ -166,6 +160,7 @@ T ds( const T& d,
 }
 
 /**
+ *  @ingroup utils
  *  @brief Compute first-order weights
  *
  *  Given a Gaussian sigma value compute the feedforward and feedback
@@ -189,6 +184,7 @@ void weights1( const T1& s,
 }
 
 /**
+ *  @ingroup utils
  *  @brief Compute first- and second-order weights
  *
  *  Given a Gaussian sigma value compute the feedforward and feedback
@@ -225,18 +221,10 @@ void weights2( const T1& s,
     a2 = static_cast<T2>((T1)1/n2);
 }
 
-/**
- *  @}
- */
-
 //== EXTERNS ==================================================================
 
 /**
  *  @ingroup gpu
- *  @{
- */
-
-/**
  *  @brief Compute Algorithm 5 (first-order)
  *
  *  This function computes first-order recursive filtering with given
@@ -258,6 +246,10 @@ void weights2( const T1& s,
   address = {{N}ew {Y}ork, {NY}, {USA}}
 }   @endverbatim
  *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function only works with \f$64^2\f$ minimum image resolution,
+ *  and only in multiples of 64 in each dimension.
+ *
  *  @param[in] inout The input 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
@@ -270,8 +262,18 @@ void algorithm5( float *inout,
                  const int& w,
                  const float& b0,
                  const float& a1 );
+/**
+ *  @example example_r2.cc
+ *
+ *  This is an example of how to use the algorithm5() function in the
+ *  GPU and the r_0() function in the CPU, as well as the
+ *  gpufilter::scoped_timer_stop class.
+ *
+ *  @see gpufilter.h
+ */
 
 /**
+ *  @ingroup gpu
  *  @brief Compute Algorithm SAT
  *
  *  This function computes the summed-area table (SAT) of an input 2D
@@ -294,6 +296,10 @@ void algorithm5( float *inout,
  *  and completed prologues, then computes and stores the final
  *  summed-area table.
  *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function only works with \f$32^2\f$ minimum image resolution,
+ *  and only in multiples of 32 in each dimension.
+ *
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in] inout The input 2D image to compute SAT
  *  @param[in] h Image height
@@ -310,11 +316,6 @@ void algorithmSAT( float *inout,
  *  the GPU.
  *
  *  @see gpufilter.h
- */
-
-
-/**
- *  @}
  */
 
 //=============================================================================

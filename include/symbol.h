@@ -23,10 +23,6 @@ namespace gpufilter {
 
 /**
  *  @ingroup utils
- *  @{
- */
-
-/**
  *  @brief Copy value(s) to symbol
  *
  *  @param[in] name Name of the symbol in device (GPU)
@@ -38,16 +34,17 @@ void copy_to_symbol( const std::string &name,
                      const T &value ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, name.c_str());
-    check_cuda_error("Invalid symbol '"+name+"'");
+    cuda_error("Invalid symbol '"+name+"'");
 
     if( sizeof(T) > size_storage )
         throw std::runtime_error("'"+name+"'"+" storage overflow");
 
     cudaMemcpyToSymbol(name.c_str(), &value, sizeof(T), 0, cudaMemcpyHostToDevice);
-    check_cuda_error("Error copying '"+name+"' buffer to device");
+    cuda_error("Error copying '"+name+"' buffer to device");
 }
 
 /**
+ *  @ingroup utils
  *  @overload
  *
  *  @param[in] name Name of the symbol in device (GPU)
@@ -59,6 +56,7 @@ inline void copy_to_symbol( const std::string &name,
 }
 
 /**
+ *  @ingroup utils
  *  @overload
  *
  *  @param[in] name Name of the symbol in device (GPU)
@@ -70,6 +68,7 @@ inline void copy_to_symbol( const std::string &name,
 }
 
 /**
+ *  @ingroup utils
  *  @overload
  *
  *  @param[in] name Name of the symbol in device (GPU)
@@ -83,7 +82,7 @@ void copy_to_symbol( const std::string &name,
                      const std::vector<T> &items ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, name.c_str());
-    check_cuda_error("Invalid symbol '"+name+"'");
+    cuda_error("Invalid symbol '"+name+"'");
 
     size_t size = items.size()*sizeof(T);
 
@@ -92,13 +91,14 @@ void copy_to_symbol( const std::string &name,
 
     cudaMemcpyToSymbol(name.c_str(),&items[0], size, 0,
                        cudaMemcpyHostToDevice);
-    check_cuda_error("Error copying '"+name+"' buffer to device");
+    cuda_error("Error copying '"+name+"' buffer to device");
 
     if( !size_name.empty() )
         copy_to_symbol(size_name.c_str(), items.size());
 }
 
 /**
+ *  @ingroup utils
  *  @overload
  *
  *  @param[in] name Name of the symbol in device (GPU)
@@ -110,10 +110,6 @@ void copy_to_symbol( const std::string &name,
                      const std::vector<T> &items ) {
     copy_to_symbol(name, "", items);
 }
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter

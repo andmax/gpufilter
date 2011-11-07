@@ -15,12 +15,8 @@ namespace gpufilter {
 //== CLASS DEFINITION =========================================================
 
 /**
- *  @ingroup utils
- *  @{
- */
-
-/**
  *  @class mat2 mat.h
+ *  @ingroup utils
  *  @brief Simple matrix type for second-order recursive filtering computations
  *
  *  This class is a simple 2 by 2 matrix with basic operations and
@@ -291,10 +287,6 @@ private:
 
     T m[2][2]; ///< Matrix values
 };
-
-/**
- *  @}
- */
 
 //=============================================================================
 } // namespace gpufilter

@@ -90,12 +90,12 @@ gpu_timer::~gpu_timer()
     if(m_stop)
     {
         cudaEventDestroy(m_stop);
-        check_cuda_error("Timer event destruction");
+        cuda_error("Timer event destruction");
     }
     if(m_start)
     {
         cudaEventDestroy(m_start);
-        check_cuda_error("Timer event destruction");
+        cuda_error("Timer event destruction");
     }
 }
 
@@ -104,23 +104,23 @@ void gpu_timer::do_start()
     if(m_start == NULL)
     {
         cudaEventCreate(&m_start);
-        check_cuda_error("Timer event creation");
+        cuda_error("Timer event creation");
     }
     if(m_stop == NULL)
     {
         cudaEventCreate(&m_stop);
-        check_cuda_error("Timer event creation");
+        cuda_error("Timer event creation");
     }
 
 
     cudaEventRecord(m_start, 0);
-    check_cuda_error("Event recording");
+    cuda_error("Event recording");
 }
 
 void gpu_timer::do_stop()
 {
     cudaEventRecord(m_stop, 0);
-    check_cuda_error("Event recording");
+    cuda_error("Event recording");
 }
 
 float gpu_timer::do_get_elapsed() const
@@ -128,9 +128,9 @@ float gpu_timer::do_get_elapsed() const
     float elapsed;
 
     cudaEventSynchronize(m_stop);
-    check_cuda_error("Event synchronize");
+    cuda_error("Event synchronize");
     cudaEventElapsedTime(&elapsed, m_start, m_stop);
-    check_cuda_error("Event elapsed time");
+    cuda_error("Event elapsed time");
 
     return elapsed/1000.f;
 }

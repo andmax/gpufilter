@@ -23,53 +23,6 @@ namespace gpufilter {
 
 /**
  *  @ingroup cpu
- *  @{
- */
-
-/**
- *  @brief Compute first-order recursive filtering forward with zero-border
- *
- *  Given an input 2D image compute a first-order recursive filtering
- *  on its rows and columns with only causal filter.  The filter is
- *  computed using a feedforward coefficient, i.e. a weight on the
- *  current element, and a feedback coefficient, i.e. a weight on the
- *  previous element.  The initial condition is zero-border.  When the
- *  feedforward coefficient is 1 and the feedback coefficient is -1
- *  this filter becomes the summed-area table computation.  The
- *  computation is done sequentially in a naïve single-core CPU
- *  fashion.
- *
- *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
- *  @param[in] w Width of the input image
- *  @param[in] b0 Feedforward coefficient
- *  @param[in] a1 Feedback first-order coefficient
- *  @tparam T Image value type
- */
-template< class T >
-void rf_0( T *inout,
-           const int& h,
-           const int& w,
-           const T& b0,
-           const T& a1 ) {
-    T p = (T)0;
-	for (int x = 0; x < w; x++) {
-        p = inout[x]*b0 - p*a1;
-        p = p*b0;
-        inout[x] = p;
-    }
-	for (int y = 1; y < h; y++) {
-		p = inout[y*w]*b0;
-		inout[y*w] = inout[y*w]*b0 - inout[(y-1)*w]*a1;
-		for (int x = 1; x < w; x++) {
-			p = inout[y*w+x]*b0 - p*a1;
-			inout[y*w+x] = p*b0 - inout[(y-1)*w+x]*a1;
-		}
-	}
-
-}
-
-/**
  *  @brief Compute first-order recursive filtering on columns forward and reverse with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -85,6 +38,7 @@ void rf_0( T *inout,
  *  @param[in] w Width of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
+ *  @param[in] ff Forward-only (ignore anticausal filter) flag
  *  @tparam T Image value type
  */
 template< class T >
@@ -92,13 +46,15 @@ void rcfr_0( T *inout,
              const int& h,
              const int& w,
              const T& b0,
-             const T& a1 ) {
+             const T& a1,
+             const bool& ff = false ) {
     for (int j = 0; j < w; j++) {
         T p = (T)0;
         for (int i = 0; i < h; i++) {
             p = inout[i*w+j]*b0 - p*a1;
             inout[i*w+j] = p; 
         }
+        if( ff ) continue;
         p = (T)0;
         for (int i = h-1; i >= 0; i--) {
             p = inout[i*w+j]*b0 - p*a1;
@@ -108,6 +64,7 @@ void rcfr_0( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute first-order recursive filtering on rows forward and reverse with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -123,6 +80,7 @@ void rcfr_0( T *inout,
  *  @param[in] w Width of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
+ *  @param[in] ff Forward-only (ignore anticausal filter) flag
  *  @tparam T Image value type
  */
 template< class T >
@@ -130,13 +88,15 @@ void rrfr_0( T *inout,
              const int& h,
              const int& w,
              const T& b0,
-             const T& a1 ) {
+             const T& a1,
+             const bool& ff = false) {
     for (int i = 0; i < h; i++) {
         T p = (T)0;
         for (int j = 0; j < w; j++) {
             p = inout[i*w+j]*b0 - p*a1;
             inout[i*w+j] = p; 
         }
+        if( ff ) continue;
         p = (T)0;
         for (int j = w-1; j >= 0; j--) {
             p = inout[i*w+j]*b0 - p*a1;
@@ -144,8 +104,16 @@ void rrfr_0( T *inout,
         }
     }
 }
+/**
+ *  @example example_r1.cc
+ *
+ *  This is an example of how to use the rrfr_0() function in the CPU.
+ *
+ *  @see cpuground.h
+ */
 
 /**
+ *  @ingroup cpu
  *  @brief Compute first-order recursive filtering with zero-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -161,6 +129,7 @@ void rrfr_0( T *inout,
  *  @param[in] w Width of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
+ *  @param[in] ff Forward-only (ignore anticausal filter) flag
  *  @tparam T Image value type
  */
 template< class T >
@@ -168,12 +137,14 @@ void r_0( T *inout,
           const int& h,
           const int& w,
           const T& b0,
-          const T& a1 ) {
-    rcfr_0(inout, h, w, b0, a1);
-    rrfr_0(inout, h, w, b0, a1);
+          const T& a1,
+          const bool& ff = false ) {
+    rcfr_0(inout, h, w, b0, a1, ff);
+    rrfr_0(inout, h, w, b0, a1, ff);
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute second-order recursive filtering on columns forward and reverse with zero-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -218,6 +189,7 @@ void rcfr_0( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute second-order recursive filtering on rows forward and reverse with zero-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -262,6 +234,7 @@ void rrfr_0( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute second-order recursive filtering with zero-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -292,6 +265,7 @@ void r_0( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute first-order recursive filtering on columns forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -334,6 +308,7 @@ void rcfr_c( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute first-order recursive filtering on rows forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -376,6 +351,7 @@ void rrfr_c( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute first-order recursive filtering with clamp-to-border
  *
  *  Given an input 2D image compute a first-order recursive filtering
@@ -404,6 +380,7 @@ void r_c( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute second-order recursive filtering on columns forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -456,6 +433,7 @@ void rcfr_c( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute second-order recursive filtering on rows forward and reverse with clamp-to-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -508,6 +486,7 @@ void rrfr_c( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute second-order recursive filtering with clamp-to-border
  *
  *  Given an input 2D image compute a second-order recursive filtering
@@ -538,6 +517,7 @@ void r_c( T *inout,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Gaussian blur an image in the CPU
  *
  *  Given an input 2D image compute the Gaussian blur of it by
@@ -568,6 +548,7 @@ void gaussian_cpu( T **in,
 }
 
 /**
+ *  @ingroup cpu
  *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
  *
  *  Given an input 2D image compute the Bicubic B-Spline interpolation
@@ -600,13 +581,14 @@ void bspline3i_cpu( T **in,
  */
 
 /**
+ *  @ingroup cpu
  *  @brief Compute the Summed-area Table of an image in the CPU
  *
  *  Given an input 2D image compute its Summed-Area Table (SAT) by
  *  applying a first-order recursive filters forward using zero-border
  *  initial conditions.
  *
- *  @param[in,out] in The grid (or 2D image) to compute the SAT
+ *  @param[in,out] in The 2D image to compute the SAT
  *  @param[in] hin Height of the input image
  *  @param[in] win Width of the input image
  *  @tparam T Image value type
@@ -615,7 +597,7 @@ template< class T >
 void sat_cpu( T *in,
               const int& hin,
               const int& win ) {
-    rf_0(in, hin, win, (T)1, (T)-1);
+    r_0(in, hin, win, (T)1, (T)-1, true);
 }
 /**
  *  @example example_sat1.cc
@@ -624,10 +606,6 @@ void sat_cpu( T *in,
  *  CPU.
  *
  *  @see cpuground.h
- */
-
-/**
- *  @}
  */
 
 //=============================================================================

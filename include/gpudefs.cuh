@@ -10,6 +10,10 @@
 
 //== DEFINITIONS ===============================================================
 
+// Naming conventions are: c_ constant; t_ texture; g_ global memory;
+// s_ shared memory; d_ device pointer; a_ cuda-array; p_ template
+// parameter; f_ surface.
+
 #define WS 32 // Warp size (defines b x b block size where b = WS)
 #define HWS 16 // Half Warp Size
 #define DW 8 // Default number of warps (computational block height)
