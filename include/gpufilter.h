@@ -254,6 +254,14 @@ void weights2( const T1& s,
 
 //== EXTERNS ==================================================================
 
+extern
+void algorithm4( float *inout,
+                 const int& h,
+                 const int& w,
+                 const float& b0,
+                 const float& a1,
+                 const float& a2 );
+
 /**
  *  @ingroup api_gpu
  *  @brief Compute Algorithm 5 (first-order)
@@ -345,6 +353,34 @@ void algorithmSAT( float *inout,
  *
  *  This is an example of how to use the algorithmSAT() function in
  *  the GPU.
+ *
+ *  @see gpufilter.h
+ */
+
+/**
+ *  @ingroup api_gpu
+ *  @brief Gaussian blur a single-channel image in the GPU
+ *
+ *  Given an input single-channel 2D image compute the Gaussian blur
+ *  of it by applying a first-order recursive filter (using
+ *  algorithm5()) followed by a second-order recursive filter (using
+ *  algorithm4()) and zero-border initial condition.
+ *
+ *  @param[in,out] inout The single-channel 2D image to compute Gaussian blur
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ *  @param[in] s Sigma support of Gaussian blur computation
+ */
+extern
+void gaussian_gpu( float *inout,
+                   const int& h,
+                   const int& w,
+                   const float& s );
+/**
+ *  @example app_recursive_gpu.cc
+ *
+ *  This is an application example of how to use the gaussian_gpu()
+ *  function in the GPU.
  *
  *  @see gpufilter.h
  */

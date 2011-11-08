@@ -15,7 +15,13 @@ add_executable(ex3 example_r1.cc)
 cuda_add_executable(ex4 example_r2.cc)
 target_link_libraries(ex4 gpufilter)
 
+cuda_add_executable(ex5 example_gauss.cc)
+target_link_libraries(ex5 gpufilter)
+
 include_directories(${OPENCV_DIR})
 
 add_executable(recursive_cpu app_recursive_cpu.cc)
 target_link_libraries(recursive_cpu cv highgui)
+
+cuda_add_executable(recursive_gpu app_recursive_gpu.cc)
+target_link_libraries(recursive_gpu gpufilter cv highgui)

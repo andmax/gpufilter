@@ -16,6 +16,39 @@ namespace gpufilter {
 
 /**
  *  @ingroup gpu
+ */
+__global__
+void algorithm4_stage1( float *g_inout,
+                        float2 *g_transp_ybar,
+                        float2 *g_transp_zhat );
+
+/**
+ *  @ingroup gpu
+ */
+__global__
+void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
+                                 float2 *g_transp_zhat );
+
+/**
+ *  @ingroup gpu
+ */
+__global__
+void algorithm4_stage4( float *g_inout,
+                        float2 *g_transp_y,
+                        float2 *g_transp_z,
+                        float2 *g_ubar,
+                        float2 *g_vhat );
+
+/**
+ *  @ingroup gpu
+ */
+__global__
+void algorithm4_stage7( float *g_inout,
+                        float2 *g_u,
+                        float2 *g_v );
+
+/**
+ *  @ingroup gpu
  *  @brief Algorithm 5 stage 1
  *
  *  This function computes the algorithm stage 5.1 following:
@@ -93,14 +126,14 @@ void algorithm5_stage2_3( float *g_transp_ybar,
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
  *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
- *  @param[in] g_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_z All \f$E_{m,n}(Z)\f$
+ *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
  */
 __global__
 void algorithm5_stage4_5_step1( float *g_ucheck,
                                 float *g_vtilde,
-                                const float *g_y,
-                                const float *g_z );
+                                const float *g_transp_y,
+                                const float *g_transp_z );
 
 /**
  *  @ingroup gpu
@@ -149,17 +182,28 @@ void algorithm5_stage4_5_step2( float *g_ubar,
  *
  *  @see [Nehab:2011] cited in algorithm5()
  *  @param[in,out] g_inout The input and output image
- *  @param[in] g_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_z All \f$E_{m,n}(Z)\f$
+ *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
  *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
  */
 __global__
 void algorithm5_stage6( float *g_inout,
-                        const float *g_y,
-                        const float *g_z,
+                        const float *g_transp_y,
+                        const float *g_transp_z,
                         const float *g_u,
                         const float *g_v );
+/**
+ *  @ingroup gpu
+ */
+__global__
+void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
+                                                 const float *g_transp_y,
+                                                 const float *g_transp_z,
+                                                 const float *g_u,
+                                                 const float *g_v,
+                                                 float2 *g_transp_ybar,
+                                                 float2 *g_transp_zhat );
 
 //=============================================================================
 } // namespace gpufilter

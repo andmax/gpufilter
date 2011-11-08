@@ -58,7 +58,7 @@ public:
      *  Copy Constructor
      *  @param[in] that Copy that object to this object
      */
-    dvector( const dvector& that ) : m_size(0), m_capacity(0), m_data(0) {
+    dvector( const dvector<T>& that ) : m_size(0), m_capacity(0), m_data(0) {
         *this = that;
     }
 
@@ -123,7 +123,7 @@ public:
      *  @param[in] that Device vector to copy from
      *  @return This device vector with assigned values
      */
-    dvector& operator = ( const dvector& that ) {
+    dvector& operator = ( const dvector<T>& that ) {
         resize(that.size());
         cudaMemcpy(data(), that.data(), size()*sizeof(T), cudaMemcpyDeviceToDevice);
         cuda_error("Error during memcpy from device to device");
@@ -200,8 +200,8 @@ public:
      *  @param[in,out] a Vector to be swapped
      *  @param[in,out] b Vector to be swapped
      */
-    friend void swap( dvector& a,
-                      dvector& b ) {
+    friend void swap( dvector<T>& a,
+                      dvector<T>& b ) {
         std::swap(a.m_data, b.m_data);
         std::swap(a.m_size, b.m_size);
         std::swap(a.m_capacity, b.m_capacity);

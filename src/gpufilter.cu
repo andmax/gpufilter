@@ -29,14 +29,486 @@ namespace gpufilter {
 
 //== IMPLEMENTATION ===========================================================
 
-__global__
-__launch_bounds__(WS*DW, ONB)
+//-- Device -------------------------------------------------------------------
+
+template <class T> 
+__device__ inline
+void swap(T& a, T& b)
+{
+    T c = a;
+    a = b;
+    b = c;
+}
+
+__device__ inline
+float2 multgpu(const float M[2][2], const float2& v)
+{
+    return make_float2(M[0][0]*v.x + M[0][1]*v.y, M[1][0]*v.x + M[1][1]*v.y);
+}
+
+__device__ inline
+float2 addgpu(const float2& u, const float2& v)
+{
+    return make_float2(u.x+v.x, u.y+v.y);
+}
+
+__device__ inline
+float2 addgpu(const float2& u, const float2& v, const float2& w)
+{
+    return make_float2(u.x+v.x+w.x, u.y+v.y+w.y);
+}
+
+//-- Algorithm 4_2 ------------------------------------------------------------
+
+__global__ __launch_bounds__(WS*SOW, MBO)
+void algorithm4_stage1( float *g_inout,
+                        float2 *g_transp_ybar,
+                        float2 *g_transp_zhat )
+{
+    int m = blockIdx.y, n = blockIdx.x;
+    int tx = threadIdx.x, ty = threadIdx.y;
+
+    __shared__ float block[WS][WS+1];
+
+    g_inout += (m*WS + ty)*c_width + n*WS + tx;
+
+#pragma unroll
+    for(int i=0; i<WS-2; i+=SOW)
+    {
+        block[ty+i][tx] = g_inout[i*c_width];
+    }
+
+    if(ty < 2)
+    {
+        block[ty+WS-2][tx] = g_inout[(WS-2)*c_width];
+    }
+
+    __syncthreads();
+
+    if(ty == 0) // one warp computing
+    {
+
+        float *bdata = block[tx];
+        int outidx = n*c_height + m*WS + tx; // transposed!
+
+        float2 accum;
+
+        if(n < c_n_size-1)
+        {
+            accum.x = bdata[0];
+            accum.y = bdata[1] -= c_Minf*accum.x;
+
+            for(int i=2; i<WS; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+        }
+        else
+        {
+            accum.x = bdata[0];
+            accum.y = bdata[1] -= c_Minf*accum.x;
+
+            //int imax = min(n*WS+WS,c_width)-n*WS-1;
+            //for(int i=2; i<imax; ++i)
+            for(int i=2; i<WS-1; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+            //accum.x = bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
+            accum.x = bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
+            swap(accum.x, accum.y);
+        }
+
+        g_transp_ybar[outidx] = accum;
+
+        if(n < c_n_size-1)
+        {
+            accum.y = bdata[WS-1] * c_Linf2;
+            accum.x = (bdata[WS-2] - accum.y*c_Ninf)*c_Linf2;
+
+#pragma unroll
+            for(int i=WS-3; i>=0; --i)
+            {
+                accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x, accum.y);
+            }
+        }
+        else // last block
+        {
+            // int imax = min(n*WS+WS,c_width)-n*WS-1;
+            // int i = imax;
+            int i = WS-1;
+
+            accum.y = bdata[i--] * c_Llast2;
+            accum.x = (bdata[i--] - accum.y*c_Ninf)*c_Linf2;
+
+            for(; i>=0; --i)
+            {
+                accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x, accum.y);
+            }
+
+        }
+
+        g_transp_zhat[outidx] = accum;
+    }
+}
+
+__global__ __launch_bounds__(MTS, MBO)
+void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
+                                 float2 *g_transp_zhat )
+{
+    int m = blockIdx.x;
+    int tx = threadIdx.x;
+
+    int row = m*blockDim.x + tx;
+
+    if(row >= c_height) 
+        return;
+
+    g_transp_ybar += row;
+    g_transp_zhat += row;
+
+    float2 accum = g_transp_ybar[0];
+
+    for(int j=1; j<c_n_size; ++j)
+    {
+        g_transp_ybar += c_height;
+
+        *g_transp_ybar = accum = addgpu(*g_transp_ybar,
+                                        multgpu(c_Af, accum));
+    }
+
+    g_transp_zhat += (c_n_size-1)*c_height;
+    g_transp_ybar -= c_height;
+
+    *g_transp_zhat = accum = addgpu(*g_transp_zhat,
+                                    multgpu(c_Arf, *g_transp_ybar));
+
+    for(int j=c_n_size-2; j>=1; --j)
+    {
+        g_transp_ybar -= c_height;
+        g_transp_zhat -= c_height;
+
+        *g_transp_zhat = accum = addgpu(*g_transp_zhat,
+                                        multgpu(c_Ar, accum),
+                                        multgpu(c_Arf, *g_transp_ybar));
+    }
+}
+
+__global__ __launch_bounds__(WS*SOW, ONB)
+void algorithm4_stage4( float *g_inout,
+                        float2 *g_transp_y,
+                        float2 *g_transp_z,
+                        float2 *g_ubar,
+                        float2 *g_vhat )
+{
+    int m = blockIdx.y*2, n = blockIdx.x;
+    int tx = threadIdx.x, ty = threadIdx.y;
+
+    __shared__ float block[WS*2][WS+1];
+
+    g_inout += (m*WS + ty)*c_width + n*WS + tx;
+
+#pragma unroll
+    for(int i=0; i<WS-2; i+=SOW)
+    {
+        block[ty+i][tx] = g_inout[i*c_width];
+        block[ty+i+WS][tx] = g_inout[(i+WS)*c_width];
+    }
+
+    if(ty < 2)
+    {
+        block[ty+WS-2][tx] = g_inout[(WS-2)*c_width];
+        block[ty+WS-2+WS][tx] = g_inout[(WS-2+WS)*c_width];
+    }
+
+    __syncthreads();
+
+    if(ty < 2)
+    {
+        m += ty;
+
+        int outidx = n*c_height + m*WS + tx; // transposed!
+
+        float *bdata = block[tx+ty*WS];
+
+        if(n < c_n_size-1)
+        {
+            float2 accum;
+            
+            if(n == 0)
+            {
+                accum.x = bdata[0];
+                accum.y = bdata[1] -= c_Minf*accum.x;
+            }
+            else
+                accum = g_transp_y[outidx-c_height];
+
+#pragma unroll
+            for(int i=0; i<WS; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+        }
+        else
+        {
+            float2 accum = g_transp_y[outidx-c_height];
+
+            // int imax = min(n*WS+WS,c_width)-n*WS-1;
+            //for(int i=0; i<imax; ++i)
+            for(int i=0; i<WS-1; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+            //bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
+            bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
+
+        }
+
+        if(n < c_n_size-1)
+        {
+            float2 accum = g_transp_z[outidx+c_height];
+
+#pragma unroll
+            for(int i=WS-1; i>=0; --i)
+            {
+                accum.y = bdata[i] = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x,accum.y);
+            }
+        }
+        // last block
+        else
+        {
+            float2 accum;
+            // int imax = min(n*WS+WS,c_width)-n*WS-1;
+            // int i=imax;
+            int i = WS-1;
+
+            accum.y = bdata[i--] *= c_Linf2;
+            accum.x = bdata[i] = (bdata[i] - accum.y*c_Ninf)*c_Linf2;
+            --i;
+
+            for(; i>=0; --i)
+            {
+                accum.y = bdata[i] = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x,accum.y);
+            }
+        }
+
+        m -= ty;
+    }
+
+    __syncthreads();
+
+#pragma unroll
+    for(int i=0; i<WS-2; i+=SOW)
+    {
+        g_inout[i*c_width] = block[ty+i][tx];
+        g_inout[(i+WS)*c_width] = block[ty+i+WS][tx];
+    }
+
+    if(ty < 2)
+    {
+        g_inout[(WS-2)*c_width] = block[ty+WS-2][tx];
+        g_inout[(WS-2+WS)*c_width] = block[ty+WS-2+WS][tx];
+    }
+
+    if(ty < 2)
+    {
+        m += ty;
+
+        float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty*WS][tx];
+
+        int outidx = m*c_width + n*WS + tx; 
+        float2 accum;
+
+        // first block
+        if(m < c_m_size-1)
+        {
+            accum.x = bdata[0][0];
+            accum.y = bdata[1][0] -= c_Minf*accum.x;
+
+#pragma unroll
+            for(int i=2; i<WS; ++i)
+            {
+                accum.x = bdata[i][0] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+        }
+        else
+        {
+            accum.x = bdata[0][0];
+            accum.y = bdata[1][0] -= c_Minf*accum.x;
+
+            // int imax = min(m*WS+WS,c_height)-m*WS-1;
+            // for(int i=2; i<imax; ++i)
+            for(int i=2; i<WS-1; ++i)
+            {
+                accum.x = bdata[i][0] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+            //accum.x = bdata[imax][0] -= c_Minf*accum.y + c_Linf2*accum.x;
+            accum.x = bdata[WS-1][0] -= c_Minf*accum.y + c_Linf2*accum.x;
+            swap(accum.x, accum.y);
+        }
+
+        g_ubar[outidx] = accum;
+
+        if(m < c_m_size-1)
+        {
+            accum.y = bdata[WS-1][0] * c_Linf2;
+            accum.x = (bdata[WS-2][0] - accum.y*c_Ninf)*c_Linf2;
+
+#pragma unroll
+            for(int i=WS-3; i>=0; --i)
+            {
+                accum.y = (bdata[i][0] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x,accum.y);
+            }
+        }
+        else
+        {
+            // int imax = min(m*WS+WS,c_height)-m*WS-1;
+            // int i=imax;
+            int i = WS-1;
+
+            accum.y = bdata[i--][0] * c_Linf2;
+            accum.x = (bdata[i--][0] - accum.y*c_Ninf)*c_Linf2;
+            for(; i>=0; --i)
+            {
+                accum.y = (bdata[i][0] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x,accum.y);
+            }
+        }
+
+        g_vhat[outidx] = accum;
+    }
+}
+
+__global__ __launch_bounds__(WS*SOW, DNB)
+void algorithm4_stage7( float *g_inout,
+                        float2 *g_u,
+                        float2 *g_v )
+{
+    int m = blockIdx.y, n = blockIdx.x;
+    int tx = threadIdx.x, ty = threadIdx.y;
+
+    __shared__ float block[WS][WS+1];
+
+    g_inout += (m*WS + ty)*c_width + n*WS + tx;
+
+#pragma unroll
+    for(int i=0; i<WS-2; i+=SOW)
+    {
+        block[tx][ty+i] = g_inout[i*c_width];
+    }
+
+    if(ty < 2)
+    {
+        block[tx][ty+WS-2] = g_inout[(WS-2)*c_width];
+    }
+
+    __syncthreads();
+
+    if(ty == 0)
+    {
+        int outidx = m*c_width + n*WS + tx; 
+
+        float *bdata = block[tx+ty*WS];
+
+        // first block
+        if(m < c_m_size-1)
+        {
+            float2 accum;
+
+            if(m == 0)
+            {
+                accum.x = bdata[0];
+                accum.y = bdata[1] -= c_Minf*accum.x;
+            }
+            else
+                accum = g_u[outidx-c_width];
+
+#pragma unroll
+            for(int i=0; i<WS; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+        }
+        else
+        {
+            float2 accum  = g_u[outidx-c_width];
+
+            // int imax = min(m*WS+WS,c_height)-m*WS-1;
+            // for(int i=0; i<imax; ++i)
+            for(int i=0; i<WS-1; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+            //bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
+            bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
+        }
+
+        if(m < c_m_size-1)
+        {
+            float2 accum = g_v[outidx+c_width];
+
+#pragma unroll
+            for(int i=WS-1; i>=0; --i)
+            {
+                bdata[i] = accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x,accum.y);
+            }
+        }
+        // last block
+        else
+        {
+            // int imax = min(m*WS+WS,c_height)-m*WS-1;
+            // int i = imax;
+            int i = WS-1;
+
+            float2 accum;
+            accum.y = bdata[i--] *= c_Linf2;
+            accum.x = bdata[i] = (bdata[i] - accum.y*c_Ninf)*c_Linf2;
+            --i;
+            for(; i>=0; --i)
+            {
+                bdata[i] = accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x,accum.y);
+            }
+        }
+    }
+
+    __syncthreads();
+
+#pragma unroll
+    for(int i=0; i<WS-2; i+=SOW)
+    {
+        g_inout[i*c_width] = block[tx][ty+i]*c_iR2;
+    }
+
+    if(ty < 2)
+    {
+        g_inout[(WS-2)*c_width] = block[tx][ty+WS-2]*c_iR2;
+    }
+}
+
+//-- Algorithm 5_1 ------------------------------------------------------------
+
+__global__ __launch_bounds__(WS*DW, ONB)
 void algorithm5_stage1( const float *g_in,
                         float *g_transp_ybar,
                         float *g_transp_zhat,
                         float *g_ucheck,
-                        float *g_vtilde ) {
-
+                        float *g_vtilde )
+{
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
 
     // each cuda block will work on two WSxWS input data blocks, so allocate
@@ -120,16 +592,13 @@ void algorithm5_stage1( const float *g_in,
 
             g_vtilde[outidx] = prev;
         }
-
     }
-
 }
 
-__global__
-__launch_bounds__(WS*DW, DNB)
+__global__ __launch_bounds__(WS*DW, DNB)
 void algorithm5_stage2_3( float *g_transp_ybar,
-                          float *g_transp_zhat ) {
-
+                          float *g_transp_zhat )
+{
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2;
 
     __shared__ float block[DW][WS*2];
@@ -338,16 +807,14 @@ void algorithm5_stage2_3( float *g_transp_ybar,
             g_transp_zhat[WS] = block[ty][tx+WS];
         }
     }
-
 }
 
-__global__
-__launch_bounds__(WS*OW, DNB)
+__global__ __launch_bounds__(WS*OW, DNB)
 void algorithm5_stage4_5_step1( float *g_ucheck,
                                 float *g_vtilde,
-                                const float *g_y,
-                                const float *g_z ) {
-
+                                const float *g_transp_y,
+                                const float *g_transp_z )
+{
     int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.x*OW + ty, m = blockIdx.y;
 
     if(n >= c_n_size)
@@ -360,16 +827,16 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
     delta_x = c_Delta_x_tail[tx];
     delta_y = c_Delta_y[tx];
 
-    g_y += (n-1)*c_height + m*WS; 
-    g_z += (n+1)*c_height + m*WS;
+    g_transp_y += (n-1)*c_height + m*WS; 
+    g_transp_z += (n+1)*c_height + m*WS;
 
     float *yimb1 = shared_yimb1[ty], *zim1b = shared_zim1b[ty];
 
     if(n > 0)
-        yimb1[tx] = g_y[tx];
+        yimb1[tx] = g_transp_y[tx];
     
     if(n < c_n_size-1)
-        zim1b[tx] = g_z[tx];
+        zim1b[tx] = g_transp_z[tx];
 
     int e;
 
@@ -494,11 +961,10 @@ void algorithm5_stage4_5_step1( float *g_ucheck,
     *g_ucheck = sum_ucheck;
 }
 
-__global__
-__launch_bounds__(WS*DW, DNB)
+__global__ __launch_bounds__(WS*DW, DNB)
 void algorithm5_stage4_5_step2( float *g_ubar,
-                                float *g_vcheck ) {
-
+                                float *g_vcheck )
+{
     int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.x*2;
 
     __shared__ float block[DW][WS*2];
@@ -705,17 +1171,15 @@ void algorithm5_stage4_5_step2( float *g_ubar,
             g_vcheck[WS] = block[ty][tx+WS];
         }
     }
-
 }
 
-__global__
-__launch_bounds__(WS*DW, ONB)
+__global__ __launch_bounds__(WS*DW, ONB)
 void algorithm5_stage6( float *g_inout,
-                        const float *g_y,
-                        const float *g_z,
+                        const float *g_transp_y,
+                        const float *g_transp_z,
                         const float *g_u,
-                        const float *g_v ) {
-
+                        const float *g_v )
+{
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
 
     __shared__ float block[WS*2][WS+1];
@@ -723,7 +1187,7 @@ void algorithm5_stage6( float *g_inout,
     const float *in_data = g_inout + (m*WS + ty)*c_width + n*WS + tx;
 
 #pragma unroll
-    for(int i=0; i<WS; i+=8)
+    for(int i=0; i<WS; i+=DW)
     {
         block[ty+i][tx] = in_data[i*c_width];
         block[ty+i+WS][tx] = in_data[(i+WS)*c_width];
@@ -745,7 +1209,7 @@ void algorithm5_stage6( float *g_inout,
             prev = bdata[0];
 
             if(n > 0)
-                bdata[0] = prev -= g_y[(n-1)*c_height + m*WS+tx]*c_Linf1;
+                bdata[0] = prev -= g_transp_y[(n-1)*c_height + m*WS+tx]*c_Linf1;
 #pragma unroll
             for(int j=1; j<WS; ++j)
                 prev = bdata[j] -= prev*c_Linf1;
@@ -753,7 +1217,7 @@ void algorithm5_stage6( float *g_inout,
             // calculate z ---------------------
 
             if(n < c_n_size-1)
-                bdata[WS-1] = prev = (bdata[WS-1] - g_z[(n+1)*c_height+m*WS+tx])*c_Linf1;
+                bdata[WS-1] = prev = (bdata[WS-1] - g_transp_z[(n+1)*c_height+m*WS+tx])*c_Linf1;
             else
                 prev = bdata[WS-1] *= c_Linf1;
 
@@ -796,20 +1260,285 @@ void algorithm5_stage6( float *g_inout,
                 *out_data = prev = (bdata[i][0]*c_iR1 - prev)*c_Linf1;
             }
         }
+    }
+}
 
+//-- Fusion -------------------------------------------------------------------
+
+__global__ __launch_bounds__(WS*DW, ONB)
+void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
+                                                 const float *g_transp_y,
+                                                 const float *g_transp_z,
+                                                 const float *g_u,
+                                                 const float *g_v,
+                                                 float2 *g_transp_ybar,
+                                                 float2 *g_transp_zhat )
+{
+    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
+
+    __shared__ float block[WS*2][WS+1];
+
+    float *in_data = g_inout + (m*WS + ty)*c_width + n*WS + tx;
+
+#pragma unroll
+    for(int i=0; i<WS; i+=DW)
+    {
+        block[ty+i][tx] = in_data[i*c_width];
+        block[ty+i+WS][tx] = in_data[(i+WS)*c_width];
     }
 
+    __syncthreads();
+
+    if(ty < 2)
+    {
+        // 1st ORDER ENDING ----------------------------
+        m += ty;
+        {
+            float *bdata = block[tx+ty*WS];
+            float prev;
+
+            prev = bdata[0];
+
+            if(n > 0)
+                bdata[0] = prev -= g_transp_y[(n-1)*c_height + m*WS+tx]*c_Linf1;
+#pragma unroll
+            for(int j=1; j<WS; ++j)
+                prev = bdata[j] -= prev*c_Linf1;
+
+            if(n < c_n_size-1)
+                bdata[WS-1] = prev = (bdata[WS-1] - g_transp_z[(n+1)*c_height+m*WS+tx])*c_Linf1;
+            else
+                prev = bdata[WS-1] *= c_Linf1;
+
+            for(int j=WS-2; j>=0; --j)
+                bdata[j] = prev = (bdata[j] - prev)*c_Linf1;
+        }
+
+        {
+            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty*WS][tx];
+            float prev;
+
+            prev = bdata[0][0];
+
+            if(m > 0)
+                bdata[0][0] = prev -= g_u[(m-1)*c_width + n*WS+tx]*c_Linf1;
+
+#pragma unroll
+            for(int i=1; i<WS; ++i)
+                prev = bdata[i][0] -= prev*c_Linf1;
+
+            float *out_data = g_inout + (m*WS+WS-1)*c_width + n*WS + tx;
+
+            prev = bdata[WS-1][0];
+            if(m == c_m_size-1)
+                prev *= c_Linf1;
+            else
+                prev = (prev - g_v[(m+1)*c_width + n*WS+tx])*c_Linf1;
+
+            bdata[WS-1][0] = prev *= c_iR1;
+
+            *out_data = prev;
+
+            for(int i=WS-2; i>=0; --i)
+            {
+                out_data -= c_width;
+                *out_data = bdata[i][0] = prev = (bdata[i][0]*c_iR1 - prev)*c_Linf1;
+            }
+        }
+    }
+
+    // 2nd ORDER BEGINNING ----------------------------
+    if(ty < 2)
+    {
+        float *bdata = block[tx+ty*WS];
+        int outidx = n*c_height + m*WS + tx; // transposed!
+
+        float2 accum;
+
+        if(n < c_n_size-1)
+        {
+            accum.x = bdata[0];
+            accum.y = bdata[1] -= c_Minf*accum.x;
+
+            for(int i=2; i<WS; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+        }
+        else
+        {
+            accum.x = bdata[0];
+            accum.y = bdata[1] -= c_Minf*accum.x;
+
+            // int imax = min(n*WS+WS,c_width)-n*WS-1;
+            // for(int i=2; i<imax; ++i)
+            for(int i=2; i<WS-1; ++i)
+            {
+                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
+                swap(accum.x, accum.y);
+            }
+            //accum.x = bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
+            accum.x = bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
+            swap(accum.x, accum.y);
+        }
+
+        g_transp_ybar[outidx] = accum;
+
+        if(n < c_n_size-1)
+        {
+            accum.y = bdata[WS-1] * c_Linf2;
+            accum.x = (bdata[WS-2] - accum.y*c_Ninf)*c_Linf2;
+
+#pragma unroll
+            for(int i=WS-3; i>=0; --i)
+            {
+                accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x, accum.y);
+            }
+
+        }
+        else // last block
+        {
+            // int imax = min(n*WS+WS,c_width)-n*WS-1;
+            // int i = imax;
+            int i = WS-1;
+
+            accum.y = bdata[i--] * c_Llast2;
+            accum.x = (bdata[i--] - accum.y*c_Ninf)*c_Linf2;
+
+            for(; i>=0; --i)
+            {
+                accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
+                swap(accum.x, accum.y);
+            }
+
+        }
+
+        g_transp_zhat[outidx] = accum;
+    }
+}
+
+//-- Host ---------------------------------------------------------------------
+
+template <class T>
+__host__
+void mul(T R[2][2], const T A[2][2], const T B[2][2])
+{
+    T aux[2][2];
+    aux[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0];
+    aux[0][1] = A[0][0]*B[0][1] + A[0][1]*B[1][1];
+
+    aux[1][0] = A[1][0]*B[0][0] + A[1][1]*B[1][0];
+    aux[1][1] = A[1][0]*B[0][1] + A[1][1]*B[1][1];
+
+    R[0][0] = aux[0][0];
+    R[0][1] = aux[0][1];
+    R[1][0] = aux[1][0];
+    R[1][1] = aux[1][1];
 }
 
 __host__
-void algorithm5( float *inout,
-                 const int& h,
-                 const int& w,
-                 const float& b0,
-                 const float& a1 ) {
+void calc_forward_matrix(float T[2][2], float n, float L, float M)
+{
+    if(n == 1)
+    {
+        T[0][0] = 0;
+        T[0][1] = 1;
+        T[1][0] = -L;
+        T[1][1] = -M;
+        return;
+    }
 
-    dvector<float> d_img( inout, h*w );
+    std::complex<float> delta = sqrt(std::complex<float>(M*M-4*L));
 
+    std::complex<float> S[2][2] = {{1,1},
+                     {-(delta+M)/2.f, (delta-M)/2.f}},
+           iS[2][2] = {{(delta-M)/(2.f*delta), -1.f/delta},
+                       {(delta+M)/(2.f*delta), 1.f/delta}};
+
+    std::complex<float> LB[2][2] = {{-(delta+M)/2.f, 0},
+                      {0,(delta-M)/2.f}};
+
+    LB[0][0] = pow(LB[0][0], n);
+    LB[1][1] = pow(LB[1][1], n);
+
+    std::complex<float> cT[2][2];
+    mul(cT, S, LB);
+    mul(cT, cT, iS);
+
+    T[0][0] = real(cT[0][0]);
+    T[0][1] = real(cT[0][1]);
+    T[1][0] = real(cT[1][0]);
+    T[1][1] = real(cT[1][1]);
+}
+
+__host__
+void calc_reverse_matrix(float T[2][2], float n, float L, float N)
+{
+    if(n == 1)
+    {
+        T[0][0] = -L*N;
+        T[0][1] = -L;
+        T[1][0] = 1;
+        T[1][1] = 0;
+        return;
+    }
+
+    std::complex<float> delta = sqrt(std::complex<float>(L*L*N*N)-4*L);
+
+    std::complex<float> S[2][2] = {{1,1},
+                                   {(delta-L*N)/(2*L), -(delta+L*N)/(2*L)}},
+        iS[2][2] = {{(delta+L*N)/(2.f*delta), L/delta},
+                    {(delta-L*N)/(2.f*delta), -L/delta}};
+                        
+    std::complex<float> LB[2][2] = {{-(delta+L*N)/2.f, 0},
+                       {0, (delta-L*N)/2.f}};
+
+    LB[0][0] = pow(LB[0][0], n);
+    LB[1][1] = pow(LB[1][1], n);
+
+    std::complex<float> cT[2][2];
+    mul(cT, S, LB);
+    mul(cT, cT, iS);
+
+    T[0][0] = real(cT[0][0]);
+    T[0][1] = real(cT[0][1]);
+    T[1][0] = real(cT[1][0]);
+    T[1][1] = real(cT[1][1]);
+}
+
+__host__
+void calc_forward_reverse_matrix(float T[2][2], int n, float L, float M, float N)
+{
+    using std::swap;
+
+    float block_raw[WS+4], *block = block_raw+2;
+
+    block[-2] = 1;
+    block[-1] = 0;
+
+    block[n] = block[n+1] = 0;
+
+    for(int i=0; i<2; ++i)
+    {
+        for(int j=0; j<n; ++j)
+            block[j] = -L*block[j-2] - M*block[j-1];
+
+        for(int j=n-1; j>=0; --j)
+            block[j] = (block[j] - block[j+1]*N - block[j+2])*L;
+
+        T[0][i] = block[0];
+        T[1][i] = block[1];
+
+        swap(block[-1], block[-2]); // [0, 1]
+    }
+}
+
+__host__
+void upload_constants( const float& b0,
+                       const float& a1 )
+{
     const float Linf = a1, iR = b0*b0*b0*b0/Linf/Linf;
 
     std::vector<float> signrevprodLinf(WS);
@@ -855,6 +1584,54 @@ void algorithm5( float *inout,
 
     copy_to_symbol("c_Delta_x_tail", delta_x_tail);
     copy_to_symbol("c_Delta_y", delta_y);
+}
+
+__host__
+void upload_constants( const float& b0,
+                       const float& a1,
+                       const float& a2 )
+{
+    const float Linf = a2, Ninf = a1/a2, Minf = a1, iR = b0*b0*b0*b0/Linf/Linf;
+
+    copy_to_symbol("c_iR2", iR);
+    copy_to_symbol("c_Linf2", Linf);
+    copy_to_symbol("c_Minf", Minf);
+    copy_to_symbol("c_Ninf", Ninf);
+
+    // c_Llast2 ??
+
+    float T[2][2];
+    calc_forward_matrix(T, WS, Linf, Minf);
+    copy_to_symbol("c_Af",std::vector<float>(&T[0][0], &T[0][0]+4));
+
+    calc_reverse_matrix(T, WS, Linf, Ninf);
+    copy_to_symbol("c_Ar",std::vector<float>(&T[0][0], &T[0][0]+4));
+
+    calc_forward_reverse_matrix(T, WS, Linf, Minf, Ninf);
+    copy_to_symbol("c_Arf",std::vector<float>(&T[0][0], &T[0][0]+4));
+}
+
+__host__
+void algorithm4( float *inout,
+                 const int& h,
+                 const int& w,
+                 const float& b0,
+                 const float& a1,
+                 const float& a2 )
+{
+    // ...
+}
+
+__host__
+void algorithm5( float *inout,
+                 const int& h,
+                 const int& w,
+                 const float& b0,
+                 const float& a1 )
+{
+    dvector<float> d_img(inout, h*w);
+
+    upload_constants( b0, a1 );
 
     const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
 
@@ -868,28 +1645,119 @@ void algorithm5( float *inout,
         d_ucheck(m_size*w),
         d_vtilde(m_size*w);
                    
-    dvector<float> d_y, d_z, d_ubar, d_u, d_vcheck, d_v;
+    dvector<float> d_transp_y, d_transp_z, d_ubar, d_vcheck, d_u, d_v;
 
-    algorithm5_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>( d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
+    algorithm5_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+        d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
 
-    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>( d_transp_ybar, d_transp_zhat );
+    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>(
+        d_transp_ybar, d_transp_zhat );
 
-    swap(d_transp_ybar, d_y);
-    swap(d_transp_zhat, d_z);
+    swap(d_transp_ybar, d_transp_y);
+    swap(d_transp_zhat, d_transp_z);
 
-    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), dim3(WS, OW) >>>( d_ucheck, d_vtilde, d_y, d_z );
+    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), dim3(WS, OW) >>>(
+        d_ucheck, d_vtilde, d_transp_y, d_transp_z );
 
     swap(d_ucheck, d_ubar);
     swap(d_vtilde, d_vcheck);
 
-    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2), dim3(WS, std::min(m_size, DW)) >>>( d_ubar, d_vcheck );
+    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2), dim3(WS, std::min(m_size, DW)) >>>(
+        d_ubar, d_vcheck );
 
     swap(d_ubar, d_u);
     swap(d_vcheck, d_v);
 
-    algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>( d_img, d_y, d_z, d_u, d_v );
+    algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+        d_img, d_transp_y, d_transp_z, d_u, d_v );
 
-    d_img.copy_to( inout, h*w );
+    d_img.copy_to(inout, h*w);
+}
+
+__host__
+void gaussian_gpu( float *inout,
+                   const int& h,
+                   const int& w,
+                   const float& s )
+{
+    dvector<float> d_img(inout, h*w);
+
+    float b10, a11, b20, a21, a22;
+
+    weights1( s, b10, a11 );
+        
+    upload_constants( b10, a11 );
+
+    weights2( s, b20, a21, a22 );
+
+    upload_constants( b20, a21, a22 );
+
+    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
+
+    copy_to_symbol("c_height", h);
+    copy_to_symbol("c_width", w);
+    copy_to_symbol("c_m_size", m_size);
+    copy_to_symbol("c_n_size", n_size);
+
+    // for order 1
+    dvector<float> d_transp_ybar1(n_size*h),
+        d_transp_zhat1(n_size*h),
+        d_ucheck1(m_size*w),
+        d_vtilde1(m_size*w);
+
+    dvector<float> d_transp_y1, d_transp_z1, d_ubar1, d_vcheck1, d_u1, d_v1;
+
+    // for order 2
+    dvector<float2> d_transp_ybar2(m_size*w),
+        d_transp_zhat2(m_size*w),
+        d_ubar2(n_size*h),
+        d_vhat2(n_size*h);
+
+    dvector<float2> d_transp_y2, d_transp_z2, d_u2, d_v2;
+   
+    algorithm5_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+        d_img, d_transp_ybar1, d_transp_zhat1, d_ucheck1, d_vtilde1 );
+
+    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>(
+        d_transp_ybar1, d_transp_zhat1 );
+	    
+    swap(d_transp_ybar1, d_transp_y1);
+    swap(d_transp_zhat1, d_transp_z1);
+
+    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), dim3(WS, OW) >>>(
+        d_ucheck1, d_vtilde1, d_transp_y1, d_transp_z1 );
+
+    swap(d_ucheck1, d_ubar1);
+    swap(d_vtilde1, d_vcheck1);
+
+    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2), dim3(WS, std::min(m_size, DW)) >>>(
+        d_ubar1, d_vcheck1 );
+
+    swap(d_ubar1, d_u1);
+    swap(d_vcheck1, d_v1);
+
+    algorithm5_stage6_fusion_algorithm4_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+        d_img, d_transp_y1, d_transp_z1, d_u1, d_v1, d_transp_ybar2, d_transp_zhat2 );
+
+    algorithm4_stage2_3_or_5_6<<< dim3(m_size, 1), dim3(MTS, 1) >>>(
+        d_transp_ybar2, d_transp_zhat2 );
+
+    swap( d_transp_ybar2, d_transp_y2 );
+    swap( d_transp_zhat2, d_transp_z2 );
+
+    algorithm4_stage4<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, SOW) >>>(
+        d_img, d_transp_y2, d_transp_z2, d_ubar2, d_vhat2 );
+
+    algorithm4_stage2_3_or_5_6<<< dim3(n_size, 1), dim3(MTS, 1) >>>(
+        d_ubar2, d_vhat2 );
+
+    swap( d_ubar2, d_u2 );
+    swap( d_vhat2, d_v2 );
+
+    algorithm4_stage7<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
+        d_img, d_u2, d_v2 );
+
+    d_img.copy_to(inout, h*w);
 
 }
 

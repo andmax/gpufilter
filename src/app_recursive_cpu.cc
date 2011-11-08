@@ -1,6 +1,6 @@
 /**
  *  @file app_recursive_cpu.cc
- *  @brief Application of recursive filtering in the CPU example
+ *  @brief Example of an application of recursive filtering in the CPU
  *  @author Diego Nehab
  *  @date November, 2011
  */
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
     // process options
     const char *filter = "gaussian";
-    const char *file_in = NULL, *file_out = NULL; 
+    const char *file_in = 0, *file_out = 0;
 
     float sigma = 1.f;
     int end = 0;
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         if (strncmp(argv[i], "-filter:", sizeof("-filter:")-1) == 0) {
             filter = argv[i]+sizeof("-filter:")-1;
         } else if (sscanf(argv[i], "-sigma:%f%n", &sigma, &end) == 1) {
-            if (argv[i][end] != '\0' || sigma < 0.f) 
+            if (argv[i][end] != '\0' || sigma < 0.f)
                 errorf("Invalid argument '%s'", argv[i]);
         } else if (argv[i][0] == '-') {
             errorf("Unknown option '%s'", argv[i]);
@@ -95,26 +95,42 @@ int main(int argc, char *argv[]) {
         errorf("Out of memory!");
 
     for (int c = 0; c < depth; c++) {
+
         cvSetImageCOI(in_img, c+1);
+
         IplImage *ch_img = cvCreateImage(cvSize(w_in, h_in), in_img->depth, 1);
+
         cvCopy(in_img, ch_img);
+
         IplImage *uc_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_8U, 1);
+
         cvConvertImage(ch_img, uc_img);
+
         for (int i = 0; i < h_in; ++i)
             for (int j = 0; j < w_in; ++j)
                 flat_in[c][i*w_in+j] = ((unsigned char *)(uc_img->imageData + i*uc_img->widthStep))[j]/255.f;
+
         cvReleaseImage(&ch_img);
         cvReleaseImage(&uc_img);
+
     }
 
     if( strcmp(filter, "gaussian") == 0 ) {
+
         printf("Applying filter gaussian (sigma = %g)\n", sigma);
+
         gpufilter::gaussian_cpu(flat_in, h_in, w_in, depth, sigma);
+
     } else if (strcmp(filter, "bspline3i") == 0) {
+
         printf("Applying filter bspline3i\n");
+
         gpufilter::bspline3i_cpu(flat_in, h_in, w_in, depth);
+
     } else {
+
         errorf("Unknown method '%s'", filter);
+
     }
 
     printf("Packing output image\n");

@@ -142,6 +142,14 @@ void r_0( T *inout,
     rcfr_0(inout, h, w, b0, a1, ff);
     rrfr_0(inout, h, w, b0, a1, ff);
 }
+/**
+ *  @example example_gauss.cc
+ *
+ *  This is an example of how to use the r_0() function in the CPU and
+ *  the gaussian_gpu() function in the GPU.
+ *
+ *  @see cpuground.h
+ */
 
 /**
  *  @ingroup cpu
@@ -575,7 +583,7 @@ void bspline3i_cpu( T **in,
  *  @example app_recursive_cpu.cc
  *
  *  This is an application example of how to use the gaussian_cpu()
- *  function in the CPU and bspline3i_cpu() function in the CPU.
+ *  function and bspline3i_cpu() function in the CPU.
  *
  *  @see cpuground.h
  */
