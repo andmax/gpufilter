@@ -21,13 +21,43 @@
 
 Abstract:
 
-The gpufilter project is a set of C for CUDA functions to compute
-recursive filters and summed-area tables in GPUs. This project
-presents a new algorithmic framework for parallel evaluation. It
-partitions the image into 2D blocks, with a small band of data
-buffered along each block perimeter. A remarkable result is that the
+The GPU-Efficient Recursive Filtering and Summed-Area Tables
+(gpufilter) project is a set of C for CUDA functions to
+compute recursive filters and summed-area tables in GPUs.  This
+project presents a new algorithmic framework for parallel evaluation.
+It partitions the image into 2D blocks, with a small band of data
+buffered along each block perimeter.  A remarkable result is that the
 image data is read only twice and written just once, independent of
 image size, and thus total memory bandwidth is reduced even compared
-to the traditional serial algorithm. The project is based on the
-paper: "GPU-Efficient Recursive Filtering and Summed-Area Tables" by
-Diego Nehab, André Maximo, Rodolfo S. Lima and Hugues Hoppe.
+to the traditional serial algorithm.
+
+Installation:
+
+    gpufilter code was written in C++ and C for CUDA and tested on
+    Linux platform using gcc 4.4.4 of the Ubuntu distribution.  The
+    library is built along with the examples and applications (see
+    below) although part of the code is in the include/ directory.
+
+Build:
+
+    To run a number of examples and applications in this project, do:
+
+    <in project root directory>
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
+
+    After that, the binaries are created in ../bin and the main
+    library (libgpufilter.a) is created in ../lib.  To run the
+    examples execute in any order:
+
+    $ ../bin/ex1
+    $ ../bin/ex2
+    $ ../bin/ex3
+    $ ../bin/ex4
+
+    There are also a number of applications to use in ../bin; to
+    better understand each example and application see the
+    corresponding source file in ../src and library headers in
+    ../include.

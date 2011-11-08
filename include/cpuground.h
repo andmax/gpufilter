@@ -517,7 +517,7 @@ void r_c( T *inout,
 }
 
 /**
- *  @ingroup cpu
+ *  @ingroup api_cpu
  *  @brief Gaussian blur an image in the CPU
  *
  *  Given an input 2D image compute the Gaussian blur of it by
@@ -548,7 +548,7 @@ void gaussian_cpu( T **in,
 }
 
 /**
- *  @ingroup cpu
+ *  @ingroup api_cpu
  *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
  *
  *  Given an input 2D image compute the Bicubic B-Spline interpolation
@@ -581,7 +581,7 @@ void bspline3i_cpu( T **in,
  */
 
 /**
- *  @ingroup cpu
+ *  @ingroup api_cpu
  *  @brief Compute the Summed-area Table of an image in the CPU
  *
  *  Given an input 2D image compute its Summed-Area Table (SAT) by

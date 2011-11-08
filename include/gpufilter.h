@@ -13,48 +13,91 @@
 #define GPUFILTER_H
 
 /**
+ *  @defgroup utils Utility classes and functions
+ */
+
+/**
+ *  @defgroup api_cpu API for CPU functions
+ */
+
+/**
+ *  @defgroup cpu CPU Computation functions
+ *  @ingroup api_cpu
+ */
+
+/**
+ *  @defgroup api_gpu API for GPU functions
+ */
+
+/**
+ *  @defgroup gpu GPU Computation functions
+ *  @ingroup api_gpu
+ */
+
+/**
  *  @mainpage gpufilter Library
 
 \section introduction Introduction
 
-The gpufilter project is a set of C for CUDA functions to compute
-recursive filters and summed-area tables in GPUs.  This project
-presents a new algorithmic framework for parallel evaluation.  It
-partitions the image into 2D blocks, with a small band of data
+The GPU-Efficient Recursive Filtering and Summed-Area Tables
+(::gpufilter) project is a set of <em>C for CUDA</em> functions to
+compute recursive filters and summed-area tables in GPUs.  This
+project presents a new algorithmic framework for parallel evaluation.
+It partitions the image into 2D blocks, with a small band of data
 buffered along each block perimeter.  A remarkable result is that the
 image data is read only twice and written just once, independent of
 image size, and thus total memory bandwidth is reduced even compared
-to the traditional serial algorithm.  The project is based on the
-paper: "GPU-Efficient Recursive Filtering and Summed-Area Tables" by
-Diego Nehab, André Maximo, Rodolfo S. Lima and Hugues Hoppe.
+to the traditional serial algorithm.
 
-\section structure Library Structure
-
-The gpufilter library offers a list of low-level kernel functions,
-with associated global device- and host-bound constant variables, as
-well as high-level C++ functions to access the CUDA kernel functions.
+The ::gpufilter project is based on the paper: <b>"GPU-Efficient
+Recursive Filtering and Summed-Area Tables"</b> by <b>Diego Nehab</b>,
+<b>André Maximo</b>, <b>Rodolfo S. Lima</b> and <b>Hugues Hoppe</b>.
 
 \section usage How to use
 
-The gpufilter project provides close-to-metal CUDA functions as well
-as high-level C++ functions to access the main GPU algorithms.  The
-main functions are ...
+The ::gpufilter project provides a list of low-level CUDA kernel
+functions (written in <em>C for CUDA</em>) in the @ref gpu module.
+These kernel functions implement the algorithms described in the
+paper.  On top of those CUDA kernel functions, there are several
+high-level C++ functions in the @ref api_gpu module to access them.
+
+For comparison purposes, the project also provides @ref cpu to perform
+the same recursive filters in the CPU, an easy way to assess the
+difference between traditional serial algorithms and their massively
+parallel counterparts.  On top of those CPU functions, there are
+several high-level C++ functions in the @ref api_cpu module to access
+them.
+
+Finally the project includes @ref utils to (1) facilitate the
+communication between the CPU and the GPU, (2) measure computation
+timings, (3) approximate Gaussian filter convolution by third-order
+recursive filter with cascade first- and second-order filters.
 
 \section download How to get it
 
-The source code of the zsig library is available under the <em>MIT
-License</em>, refer to the COPYING file for more details.
+The source code of the ::gpufilter library is available under the
+<em>MIT License</em>, refer to the COPYING file for more details.
 
-The gpufilter library can be downloaded from ...
+The ::gpufilter library can be downloaded following the link:
+
+\htmlonly <a href="https://code.google.com/p/gpufilter" target="_blank">Google Code: code.google.com/p/gpufilter</a> \endhtmlonly
+\latexonly \href{https://code.google.com/p/gpufilter}{Google Code: code.google.com/p/gpufilter} \endlatexonly
+
+For more information about the project visit the main project page at:
+
+\htmlonly <a href="http://www.impa.br/~diego/projects/NehEtAl11" target="_blank">Project Page: www.impa.br/~diego/projects/NehEtAl11</a> \endhtmlonly
+\latexonly \href{http://www.impa.br/~diego/projects/NehEtAl11}{Project Page: www.impa.br/~diego/projects/NehEtAl11} \endlatexonly
 
 \section acknowledgments Acknowledgments
 
 This work has been funded in part by a post-doctoral scholarship from
-CNPq and by an INST grant from FAPERJ.
+CNPq (Brazilian National Counsel of Technological and Scientific
+Development) and by an INST grant from FAPERJ (Rio de Janeiro
+Foundation for Research).
 
 \section credits Credits
 
-The people involved in the gpufilter project are listed below:
+The people involved in the ::gpufilter project are listed below:
 
 \par
 \htmlonly <a href="http://www.impa.br/~diego" target="_blank">Diego Nehab</a> \endhtmlonly
@@ -73,18 +116,6 @@ The people involved in the gpufilter project are listed below:
 \latexonly \href{http://research.microsoft.com/en-us/um/people/hoppe}{Hugues Hoppe} \endlatexonly
 
 */
-
-/**
- *  @defgroup utils Utility classes and functions
- */
-
-/**
- *  @defgroup cpu CPU Computation functions
- */
-
-/**
- *  @defgroup gpu GPU Computation functions
- */
 
 //== INCLUDES =================================================================
 
@@ -224,7 +255,7 @@ void weights2( const T1& s,
 //== EXTERNS ==================================================================
 
 /**
- *  @ingroup gpu
+ *  @ingroup api_gpu
  *  @brief Compute Algorithm 5 (first-order)
  *
  *  This function computes first-order recursive filtering with given
@@ -273,7 +304,7 @@ void algorithm5( float *inout,
  */
 
 /**
- *  @ingroup gpu
+ *  @ingroup api_gpu
  *  @brief Compute Algorithm SAT
  *
  *  This function computes the summed-area table (SAT) of an input 2D
