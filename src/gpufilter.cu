@@ -200,8 +200,8 @@ void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
 
 __global__ __launch_bounds__(WS*SOW, ONB)
 void algorithm4_stage4( float *g_inout,
-                        float2 *g_transp_y,
-                        float2 *g_transp_z,
+                        const float2 *g_transp_y,
+                        const float2 *g_transp_z,
                         float2 *g_ubar,
                         float2 *g_vhat )
 {
@@ -392,8 +392,8 @@ void algorithm4_stage4( float *g_inout,
 
 __global__ __launch_bounds__(WS*SOW, DNB)
 void algorithm4_stage7( float *g_inout,
-                        float2 *g_u,
-                        float2 *g_v )
+                        const float2 *g_u,
+                        const float2 *g_v )
 {
     int m = blockIdx.y, n = blockIdx.x;
     int tx = threadIdx.x, ty = threadIdx.y;

@@ -83,6 +83,17 @@ The ::gpufilter library can be downloaded following the link:
 \htmlonly <a href="https://code.google.com/p/gpufilter" target="_blank">Google Code: code.google.com/p/gpufilter</a> \endhtmlonly
 \latexonly \href{https://code.google.com/p/gpufilter}{Google Code: code.google.com/p/gpufilter} \endlatexonly
 
+Alternatively, the source code can be downloaded directly from the
+repository using the following command:
+
+$ git clone https://code.google.com/p/gpufilter
+
+Or a static (non-version control) instance of the source code can be
+downloaded from the following link:
+
+\htmlonly <a href="http://www.impa.br/~andmax/libs/gpufilter.zip" target="_blank">http://www.impa.br/~andmax/libs/gpufilter.zip</a> \endhtmlonly
+\latexonly \href{http://www.impa.br/~andmax/libs/gpufilter.zip}{http://www.impa.br/~andmax/libs/gpufilter.zip} \endlatexonly
+
 For more information about the project visit the main project page at:
 
 \htmlonly <a href="http://www.impa.br/~diego/projects/NehEtAl11" target="_blank">Project Page: www.impa.br/~diego/projects/NehEtAl11</a> \endhtmlonly
@@ -254,6 +265,28 @@ void weights2( const T1& s,
 
 //== EXTERNS ==================================================================
 
+/**
+ *  @ingroup api_gpu
+ *  @brief Compute Algorithm 4 (second-order)
+ *
+ *  This function computes second-order recursive filtering with given
+ *  feedback and feedforward coefficients of an input 2D image using
+ *  algorithm \f$4_2\f$.
+ *
+ *  The algorithm 4 is discussed in depth in our paper ([Nehab:2011]
+ *  cited in algorithm5() function).
+ *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function only works with \f$64^2\f$ minimum image resolution,
+ *  and only in multiples of 64 in each dimension.
+ *
+ *  @param[in] inout The input 2D image to compute recursive filtering
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback first-order coefficient
+ *  @param[in] a2 Feedback second-order coefficient
+ */
 extern
 void algorithm4( float *inout,
                  const int& h,

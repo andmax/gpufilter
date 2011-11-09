@@ -38,6 +38,15 @@ Installation:
     library is built along with the examples and applications (see
     below) although part of the code is in the include/ directory.
 
+Dependencies:
+
+    The applications using the gpufilter library depend on the OpenCV
+    library (http://opencv.willowgarage.com) to read and write images.
+    The gpufilter project is based on CMake (http://www.cmake.org) and
+    its documentation is based on doxygen (www.doxygen.org).  All the
+    GPU code is written in C for CUDA
+    (http://developer.nvidia.com/what-cuda).
+
 Build:
 
     To run a number of examples and applications in this project, do:
@@ -56,8 +65,16 @@ Build:
     $ ../bin/ex2
     $ ../bin/ex3
     $ ../bin/ex4
+    $ ../bin/ex5
 
-    There are also a number of applications to use in ../bin; to
-    better understand each example and application see the
-    corresponding source file in ../src and library headers in
-    ../include.
+    There are also a number of applications to use in ../bin:
+
+    $ ../bin/recursive_cpu
+    $ ../bin/recursive_gpu
+
+    Additionally the documentation of the gpufilter project can be
+    built by:
+
+    $ cd ..
+    <back in project root directory>
+    $ doxygen
