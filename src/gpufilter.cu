@@ -10,16 +10,17 @@
 #include <cmath>
 #include <cstdio>
 #include <cfloat>
-#include <complex>
 #include <cassert>
 #include <iostream>
 #include <algorithm>
 
+#include <timer.h>
 #include <symbol.h>
 #include <dvector.h>
 
 #include <gpufilter.h>
 #include <gpudefs.cuh>
+#include <gpuconsts.cuh>
 
 #include <gpufilter.cuh>
 
@@ -32,9 +33,8 @@ namespace gpufilter {
 //-- Device -------------------------------------------------------------------
 
 template <class T> 
-__device__ inline
-void swap(T& a, T& b)
-{
+__device__
+inline void swap(T& a, T& b) {
     T c = a;
     a = b;
     b = c;
@@ -61,7 +61,7 @@ float2 addgpu(const float2& u, const float2& v, const float2& w)
 //-- Algorithm 4_2 ------------------------------------------------------------
 
 __global__ __launch_bounds__(WS*SOW, MBO)
-void algorithm4_stage1( float *g_inout,
+void algorithm4_stage1( const float *g_inout,
                         float2 *g_transp_ybar,
                         float2 *g_transp_zhat )
 {
@@ -87,7 +87,6 @@ void algorithm4_stage1( float *g_inout,
 
     if(ty == 0) // one warp computing
     {
-
         float *bdata = block[tx];
         int outidx = n*c_height + m*WS + tx; // transposed!
 
@@ -109,14 +108,11 @@ void algorithm4_stage1( float *g_inout,
             accum.x = bdata[0];
             accum.y = bdata[1] -= c_Minf*accum.x;
 
-            //int imax = min(n*WS+WS,c_width)-n*WS-1;
-            //for(int i=2; i<imax; ++i)
             for(int i=2; i<WS-1; ++i)
             {
                 accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
                 swap(accum.x, accum.y);
             }
-            //accum.x = bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
             accum.x = bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
             swap(accum.x, accum.y);
         }
@@ -137,8 +133,6 @@ void algorithm4_stage1( float *g_inout,
         }
         else // last block
         {
-            // int imax = min(n*WS+WS,c_width)-n*WS-1;
-            // int i = imax;
             int i = WS-1;
 
             accum.y = bdata[i--] * c_Llast2;
@@ -258,14 +252,11 @@ void algorithm4_stage4( float *g_inout,
         {
             float2 accum = g_transp_y[outidx-c_height];
 
-            // int imax = min(n*WS+WS,c_width)-n*WS-1;
-            //for(int i=0; i<imax; ++i)
             for(int i=0; i<WS-1; ++i)
             {
                 accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
                 swap(accum.x, accum.y);
             }
-            //bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
             bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
 
         }
@@ -285,8 +276,6 @@ void algorithm4_stage4( float *g_inout,
         else
         {
             float2 accum;
-            // int imax = min(n*WS+WS,c_width)-n*WS-1;
-            // int i=imax;
             int i = WS-1;
 
             accum.y = bdata[i--] *= c_Linf2;
@@ -345,14 +334,11 @@ void algorithm4_stage4( float *g_inout,
             accum.x = bdata[0][0];
             accum.y = bdata[1][0] -= c_Minf*accum.x;
 
-            // int imax = min(m*WS+WS,c_height)-m*WS-1;
-            // for(int i=2; i<imax; ++i)
             for(int i=2; i<WS-1; ++i)
             {
                 accum.x = bdata[i][0] -= c_Minf*accum.y + c_Linf2*accum.x;
                 swap(accum.x, accum.y);
             }
-            //accum.x = bdata[imax][0] -= c_Minf*accum.y + c_Linf2*accum.x;
             accum.x = bdata[WS-1][0] -= c_Minf*accum.y + c_Linf2*accum.x;
             swap(accum.x, accum.y);
         }
@@ -373,8 +359,6 @@ void algorithm4_stage4( float *g_inout,
         }
         else
         {
-            // int imax = min(m*WS+WS,c_height)-m*WS-1;
-            // int i=imax;
             int i = WS-1;
 
             accum.y = bdata[i--][0] * c_Linf2;
@@ -419,7 +403,7 @@ void algorithm4_stage7( float *g_inout,
     {
         int outidx = m*c_width + n*WS + tx; 
 
-        float *bdata = block[tx+ty*WS];
+        float *bdata = block[tx];
 
         // first block
         if(m < c_m_size-1)
@@ -445,14 +429,11 @@ void algorithm4_stage7( float *g_inout,
         {
             float2 accum  = g_u[outidx-c_width];
 
-            // int imax = min(m*WS+WS,c_height)-m*WS-1;
-            // for(int i=0; i<imax; ++i)
             for(int i=0; i<WS-1; ++i)
             {
                 accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
                 swap(accum.x, accum.y);
             }
-            //bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
             bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
         }
 
@@ -470,8 +451,6 @@ void algorithm4_stage7( float *g_inout,
         // last block
         else
         {
-            // int imax = min(m*WS+WS,c_height)-m*WS-1;
-            // int i = imax;
             int i = WS-1;
 
             float2 accum;
@@ -491,12 +470,12 @@ void algorithm4_stage7( float *g_inout,
 #pragma unroll
     for(int i=0; i<WS-2; i+=SOW)
     {
-        g_inout[i*c_width] = block[tx][ty+i]*c_iR2;
+        g_inout[i*c_width] = block[tx][ty+i] * c_iR2;
     }
 
     if(ty < 2)
     {
-        g_inout[(WS-2)*c_width] = block[tx][ty+WS-2]*c_iR2;
+        g_inout[(WS-2)*c_width] = block[tx][ty+WS-2] * c_iR2;
     }
 }
 
@@ -1371,14 +1350,11 @@ void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
             accum.x = bdata[0];
             accum.y = bdata[1] -= c_Minf*accum.x;
 
-            // int imax = min(n*WS+WS,c_width)-n*WS-1;
-            // for(int i=2; i<imax; ++i)
             for(int i=2; i<WS-1; ++i)
             {
                 accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
                 swap(accum.x, accum.y);
             }
-            //accum.x = bdata[imax] -= c_Minf*accum.y + c_Linf2*accum.x;
             accum.x = bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
             swap(accum.x, accum.y);
         }
@@ -1400,8 +1376,6 @@ void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
         }
         else // last block
         {
-            // int imax = min(n*WS+WS,c_width)-n*WS-1;
-            // int i = imax;
             int i = WS-1;
 
             accum.y = bdata[i--] * c_Llast2;
@@ -1421,196 +1395,6 @@ void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
 
 //-- Host ---------------------------------------------------------------------
 
-template <class T>
-__host__
-void mul(T R[2][2], const T A[2][2], const T B[2][2])
-{
-    T aux[2][2];
-    aux[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0];
-    aux[0][1] = A[0][0]*B[0][1] + A[0][1]*B[1][1];
-
-    aux[1][0] = A[1][0]*B[0][0] + A[1][1]*B[1][0];
-    aux[1][1] = A[1][0]*B[0][1] + A[1][1]*B[1][1];
-
-    R[0][0] = aux[0][0];
-    R[0][1] = aux[0][1];
-    R[1][0] = aux[1][0];
-    R[1][1] = aux[1][1];
-}
-
-__host__
-void calc_forward_matrix(float T[2][2], float n, float L, float M)
-{
-    if(n == 1)
-    {
-        T[0][0] = 0;
-        T[0][1] = 1;
-        T[1][0] = -L;
-        T[1][1] = -M;
-        return;
-    }
-
-    std::complex<float> delta = sqrt(std::complex<float>(M*M-4*L));
-
-    std::complex<float> S[2][2] = {{1,1},
-                     {-(delta+M)/2.f, (delta-M)/2.f}},
-           iS[2][2] = {{(delta-M)/(2.f*delta), -1.f/delta},
-                       {(delta+M)/(2.f*delta), 1.f/delta}};
-
-    std::complex<float> LB[2][2] = {{-(delta+M)/2.f, 0},
-                      {0,(delta-M)/2.f}};
-
-    LB[0][0] = pow(LB[0][0], n);
-    LB[1][1] = pow(LB[1][1], n);
-
-    std::complex<float> cT[2][2];
-    mul(cT, S, LB);
-    mul(cT, cT, iS);
-
-    T[0][0] = real(cT[0][0]);
-    T[0][1] = real(cT[0][1]);
-    T[1][0] = real(cT[1][0]);
-    T[1][1] = real(cT[1][1]);
-}
-
-__host__
-void calc_reverse_matrix(float T[2][2], float n, float L, float N)
-{
-    if(n == 1)
-    {
-        T[0][0] = -L*N;
-        T[0][1] = -L;
-        T[1][0] = 1;
-        T[1][1] = 0;
-        return;
-    }
-
-    std::complex<float> delta = sqrt(std::complex<float>(L*L*N*N)-4*L);
-
-    std::complex<float> S[2][2] = {{1,1},
-                                   {(delta-L*N)/(2*L), -(delta+L*N)/(2*L)}},
-        iS[2][2] = {{(delta+L*N)/(2.f*delta), L/delta},
-                    {(delta-L*N)/(2.f*delta), -L/delta}};
-                        
-    std::complex<float> LB[2][2] = {{-(delta+L*N)/2.f, 0},
-                       {0, (delta-L*N)/2.f}};
-
-    LB[0][0] = pow(LB[0][0], n);
-    LB[1][1] = pow(LB[1][1], n);
-
-    std::complex<float> cT[2][2];
-    mul(cT, S, LB);
-    mul(cT, cT, iS);
-
-    T[0][0] = real(cT[0][0]);
-    T[0][1] = real(cT[0][1]);
-    T[1][0] = real(cT[1][0]);
-    T[1][1] = real(cT[1][1]);
-}
-
-__host__
-void calc_forward_reverse_matrix(float T[2][2], int n, float L, float M, float N)
-{
-    using std::swap;
-
-    float block_raw[WS+4], *block = block_raw+2;
-
-    block[-2] = 1;
-    block[-1] = 0;
-
-    block[n] = block[n+1] = 0;
-
-    for(int i=0; i<2; ++i)
-    {
-        for(int j=0; j<n; ++j)
-            block[j] = -L*block[j-2] - M*block[j-1];
-
-        for(int j=n-1; j>=0; --j)
-            block[j] = (block[j] - block[j+1]*N - block[j+2])*L;
-
-        T[0][i] = block[0];
-        T[1][i] = block[1];
-
-        swap(block[-1], block[-2]); // [0, 1]
-    }
-}
-
-__host__
-void upload_constants( const float& b0,
-                       const float& a1 )
-{
-    const float Linf = a1, iR = b0*b0*b0*b0/Linf/Linf;
-
-    std::vector<float> signrevprodLinf(WS);
-
-    signrevprodLinf[WS-1] = 1;
-
-    for(int i=WS-2; i>=0; --i)
-        signrevprodLinf[i] = -signrevprodLinf[i+1]*Linf;
-
-    copy_to_symbol("c_SignRevProdLinf", signrevprodLinf);
-
-    std::vector<float> prodLinf(WS);
-
-    prodLinf[0] = Linf;
-    for(int i=1; i<WS; ++i)
-        prodLinf[i] = prodLinf[i-1]*Linf;
-
-    copy_to_symbol("c_ProdLinf", prodLinf);
-
-    copy_to_symbol("c_iR1", iR);
-    copy_to_symbol("c_Linf1", Linf);
-
-    const float Linf2 = Linf*Linf,
-                alpha = Linf2*(1-pow(Linf2,WS))/(1-Linf2),
-                stm = (WS & 1 ? -1 : 1)*pow(Linf, WS);
-
-    copy_to_symbol("c_Stm", stm);
-    copy_to_symbol("c_Svm", stm);
-    copy_to_symbol("c_Alpha", alpha);
-
-    std::vector<float> delta_x_tail(WS), delta_y(WS);
-
-    delta_x_tail[WS-1] = -Linf;
-    for(int j=WS-2; j>=0; --j)
-        delta_x_tail[j] = -delta_x_tail[j+1]*Linf;
-
-    float sign = WS & 1 ? -1 : 1;
-    for(int j=WS-1; j>=0; --j)
-    {
-        delta_y[j] = sign*pow(Linf,2+j)*(1-pow(Linf,2*(WS+1-j)))/(1-Linf*Linf);
-        sign *= -1;
-    }
-
-    copy_to_symbol("c_Delta_x_tail", delta_x_tail);
-    copy_to_symbol("c_Delta_y", delta_y);
-}
-
-__host__
-void upload_constants( const float& b0,
-                       const float& a1,
-                       const float& a2 )
-{
-    const float Linf = a2, Ninf = a1/a2, Minf = a1, iR = b0*b0*b0*b0/Linf/Linf;
-
-    copy_to_symbol("c_iR2", iR);
-    copy_to_symbol("c_Linf2", Linf);
-    copy_to_symbol("c_Minf", Minf);
-    copy_to_symbol("c_Ninf", Ninf);
-
-    // c_Llast2 ??
-
-    float T[2][2];
-    calc_forward_matrix(T, WS, Linf, Minf);
-    copy_to_symbol("c_Af",std::vector<float>(&T[0][0], &T[0][0]+4));
-
-    calc_reverse_matrix(T, WS, Linf, Ninf);
-    copy_to_symbol("c_Ar",std::vector<float>(&T[0][0], &T[0][0]+4));
-
-    calc_forward_reverse_matrix(T, WS, Linf, Minf, Ninf);
-    copy_to_symbol("c_Arf",std::vector<float>(&T[0][0], &T[0][0]+4));
-}
-
 __host__
 void algorithm4( float *inout,
                  const int& h,
@@ -1619,7 +1403,46 @@ void algorithm4( float *inout,
                  const float& a1,
                  const float& a2 )
 {
-    // ...
+    dvector<float> d_img(inout, h*w);
+
+    constants_coefficients2( b0, a1, a2 );
+
+    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
+
+    copy_to_symbol("c_height", h);
+    copy_to_symbol("c_width", w);
+    copy_to_symbol("c_m_size", m_size);
+    copy_to_symbol("c_n_size", n_size);
+
+    dvector<float2> d_transp_ybar(m_size*w),
+        d_transp_zhat(m_size*w),
+        d_ubar(n_size*h),
+        d_vhat(n_size*h);
+
+    dvector<float2> d_transp_y, d_transp_z, d_u, d_v;
+
+    algorithm4_stage1<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
+        d_img, d_transp_ybar, d_transp_zhat );
+
+    algorithm4_stage2_3_or_5_6<<< dim3(m_size, 1), dim3(MTS, 1) >>>(
+        d_transp_ybar, d_transp_zhat );
+
+    swap( d_transp_ybar, d_transp_y );
+    swap( d_transp_zhat, d_transp_z );
+
+    algorithm4_stage4<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, SOW) >>>(
+        d_img, d_transp_y, d_transp_z, d_ubar, d_vhat );
+
+    algorithm4_stage2_3_or_5_6<<< dim3(n_size, 1), dim3(MTS, 1) >>>(
+        d_ubar, d_vhat );
+
+    swap( d_ubar, d_u );
+    swap( d_vhat, d_v );
+
+    algorithm4_stage7<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
+        d_img, d_u, d_v );
+
+    d_img.copy_to(inout, h*w);
 }
 
 __host__
@@ -1631,7 +1454,7 @@ void algorithm5( float *inout,
 {
     dvector<float> d_img(inout, h*w);
 
-    upload_constants( b0, a1 );
+    constants_coefficients1( b0, a1 );
 
     const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
 
@@ -1686,11 +1509,11 @@ void gaussian_gpu( float *inout,
 
     weights1( s, b10, a11 );
         
-    upload_constants( b10, a11 );
+    constants_coefficients1( b10, a11 );
 
     weights2( s, b20, a21, a22 );
 
-    upload_constants( b20, a21, a22 );
+    constants_coefficients2( b20, a21, a22 );
 
     const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
 
@@ -1738,6 +1561,12 @@ void gaussian_gpu( float *inout,
 
     algorithm5_stage6_fusion_algorithm4_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
         d_img, d_transp_y1, d_transp_z1, d_u1, d_v1, d_transp_ybar2, d_transp_zhat2 );
+
+    // algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+    //     d_img, d_transp_y1, d_transp_z1, d_u1, d_v1 );
+
+    // algorithm4_stage1<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
+    //     d_img, d_transp_ybar2, d_transp_zhat2 );
 
     algorithm4_stage2_3_or_5_6<<< dim3(m_size, 1), dim3(MTS, 1) >>>(
         d_transp_ybar2, d_transp_zhat2 );

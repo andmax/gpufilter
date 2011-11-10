@@ -40,7 +40,7 @@ static inline float clamp(float f) {
 int main( int argc, char** argv ) {
 
     const char *file_in = "../images/cactus-512.png", *file_out = "cactus-gauss.png"; 
-    const float sigma = 4.f;
+    const float sigma = 8.f;
 
     printf("Loading input image '%s'\n", file_in);
 

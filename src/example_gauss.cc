@@ -38,7 +38,7 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float sigma = 2.f;
+    const float sigma = 8.f;
 
     std::cout << "[gauss] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 

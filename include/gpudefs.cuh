@@ -1,5 +1,5 @@
 /**
- *  GPU definitions
+ *  GPU definitions (header)
  *  @author Andre Maximo
  *  @author Rodolfo Lima
  *  @date March, 2011
@@ -12,7 +12,7 @@
 
 // Naming conventions are: c_ constant; t_ texture; g_ global memory;
 // s_ shared memory; d_ device pointer; a_ cuda-array; p_ template
-// parameter; f_ surface.
+// parameter in kernels; f_ surface.
 
 #define WS 32 // Warp size (defines b x b block size where b = WS)
 #define HWS 16 // Half Warp Size
@@ -26,16 +26,28 @@
 #define SOW 5 // Dual-scheduler optimized number of warps per block (with 8 blocks per SM and to use the dual scheduler with 1 computing warp)
 #define MBH 3 // Maximum number of blocks per SM using half-warp size
 
-__constant__ int c_width, c_height, c_m_size, c_n_size;
+//== NAMESPACES ===============================================================
 
-__constant__ float c_Linf1, c_Svm, c_Stm, c_Alpha, c_iR1;
+namespace gpufilter {
 
-__constant__ float c_Delta_x_tail[WS], c_Delta_y[WS],
-    c_SignRevProdLinf[WS], c_ProdLinf[WS];
-    
-__constant__ float c_Linf2, c_Llast2, c_iR2, c_Minf, c_Ninf;
-__constant__ float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
+//== PROTOTYPES ===============================================================
 
+__host__
+void constants_sizes( dim3& g,
+                      const int& h,
+                      const int& w );
+
+__host__
+void constants_coefficients1( const float& b0,
+                              const float& a1 );
+
+__host__
+void constants_coefficients2( const float& b0,
+                              const float& a1,
+                              const float& a2 );
+
+//=============================================================================
+} // namespace gpufilter
 //=============================================================================
 #endif // GPUDEFS_CUH
 //=============================================================================

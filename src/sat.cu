@@ -12,6 +12,7 @@
 
 #include <gpufilter.h>
 #include <gpudefs.cuh>
+#include <gpuconsts.cuh>
 
 #include <sat.cuh>
 
@@ -196,31 +197,39 @@ void algorithmSAT_stage4( float *g_inout,
 }
 
 __host__
+void algorithmSAT( dvector<float>& d_img,
+                   dvector<float>& d_xbar,
+                   dvector<float>& d_ybar,
+                   dvector<float>& d_xsum,
+                   const dim3& cg_img,
+                   const dim3& cg_xbar,
+                   const dim3& cg_ybar ) {
+
+    algorithmSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_img, d_xbar, d_ybar );
+
+    algorithmSAT_stage2<<< cg_xbar, dim3(WS, MW) >>>( d_xbar, d_xsum );
+
+    algorithmSAT_stage3<<< cg_ybar, dim3(WS, MW) >>>( d_xsum, d_ybar );
+
+    algorithmSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_img, d_xbar, d_ybar );
+
+}
+
+__host__
 void algorithmSAT( float *inout,
                    const int& h,
                    const int& w ) {
 
-    dvector<float> d_img( inout, w*h );
+    dim3 cg_img; // computational grid of input image
+    constants_sizes( cg_img, h, w );
+
+    dvector<float> d_img( inout, h*w );
+    dvector<float> d_xbar( cg_img.x*h ), d_ybar( cg_img.x*h ), d_xsum( cg_img.x*cg_img.y );
 
 	const int nWm = (w+MTS-1)/MTS, nHm = (h+MTS-1)/MTS;
+    dim3 cg_xbar(1, nHm), cg_ybar(nWm, 1);
 
-    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
-
-    copy_to_symbol("c_height", h);
-	copy_to_symbol("c_width", w);
-
-	copy_to_symbol("c_n_size", n_size);
-    copy_to_symbol("c_m_size", m_size);
-
-    dvector<float> d_xbar(n_size*h), d_ybar(n_size*h), d_xsum(n_size*m_size);
-
-    algorithmSAT_stage1<<< dim3(n_size, m_size), dim3(WS, SOW) >>>( d_img, d_xbar, d_ybar );
-
-    algorithmSAT_stage2<<< dim3(1, nHm), dim3(WS, MW) >>>( d_xbar, d_xsum );
-
-    algorithmSAT_stage3<<< dim3(nWm, 1), dim3(WS, MW) >>>( d_xsum, d_ybar );
-
-    algorithmSAT_stage4<<< dim3(n_size, m_size), dim3(WS, SOW) >>>( d_img, d_xbar, d_ybar );
+    algorithmSAT( d_img, d_xbar, d_ybar, d_xsum, cg_img, cg_xbar, cg_ybar );
 
     d_img.copy_to( inout, h*w );
 

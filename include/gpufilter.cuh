@@ -27,12 +27,12 @@ namespace gpufilter {
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_inout The input and output image
+ *  @param[in,out] g_in The input 2D image
  *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
  */
 __global__
-void algorithm4_stage1( float *g_inout,
+void algorithm4_stage1( const float *g_inout,
                         float2 *g_transp_ybar,
                         float2 *g_transp_zhat );
 
@@ -93,7 +93,7 @@ void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_inout The input and output image
+ *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
  *  @param[out] g_ubar All \f$P^T_{m,n}(\bar{U})\f$
@@ -122,7 +122,7 @@ void algorithm4_stage4( float *g_inout,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_inout The input and output image
+ *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
  */
@@ -145,7 +145,7 @@ void algorithm4_stage7( float *g_inout,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in] g_in The input image
+ *  @param[in] g_in The input 2D image
  *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
  *  @param[out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
@@ -265,7 +265,7 @@ void algorithm5_stage4_5_step2( float *g_ubar,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_inout The input and output image
+ *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
  *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
@@ -289,7 +289,7 @@ void algorithm5_stage6( float *g_inout,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_inout The input and output image
+ *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
  *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
