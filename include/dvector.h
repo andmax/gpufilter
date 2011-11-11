@@ -55,6 +55,20 @@ public:
     }
 
     /**
+     *  Constructor
+     *  @param[in] data Vector data to be copied into this object
+     *  @param[in] size Vector data size
+     *  @param[in] copy Data size to copy to this vector
+     */
+    dvector( const T *data,
+             size_t size,
+             size_t copy ) : m_size(0), m_capacity(0), m_data(0) {
+        resize(size);
+        cudaMemcpy(this->data(), const_cast<T *>(data), copy*sizeof(T), cudaMemcpyHostToDevice);
+        cuda_error("Error during memcpy from host to device");
+    }
+
+    /**
      *  Copy Constructor
      *  @param[in] that Copy that object to this object
      */

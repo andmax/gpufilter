@@ -12,7 +12,7 @@
 
 namespace gpufilter {
 
-//== EXTERNS ==================================================================
+//== PROTOTYPES ===============================================================
 
 /**
  *  @ingroup gpu
@@ -102,15 +102,6 @@ __global__
 void algorithmSAT_stage4( float *g_inout,
                           const float *g_y,
                           const float *g_v );
-
-__host__
-void algorithmSAT( dvector<float>& d_img,
-                   dvector<float>& d_xbar,
-                   dvector<float>& d_ybar,
-                   dvector<float>& d_xsum,
-                   const dim3& cg_img,
-                   const dim3& cg_xbar,
-                   const dim3& cg_ybar );
 
 //=============================================================================
 } // namespace gpufilter

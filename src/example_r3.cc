@@ -38,7 +38,7 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float b0 = 1.f, a1 = .6f, a2 = .3f;
+    const float b0 = .0417f, a1 = -1.704f, a2 = .746f;
 
     std::cout << "[r3] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 

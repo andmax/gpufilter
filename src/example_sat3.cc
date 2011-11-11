@@ -6,6 +6,7 @@
  */
 
 #include <ctime>
+#include <cstdio>
 #include <cstdlib>
 
 #include <iostream>
@@ -42,7 +43,9 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    const int w_in = 1024, h_in = 1024;
+    int w_in = 4096, h_in = 4096;
+
+    if( argc == 3 ) { sscanf(argv[1], "%d", &w_in); sscanf(argv[2], "%d", &h_in); }
 
     std::cout << "[sat3] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
@@ -56,8 +59,6 @@ int main(int argc, char *argv[]) {
 
     std::cout << "done!\n[sat3] Computing summed-area table in the CPU ... " << std::flush;
 
-    std::cout << std::fixed << std::setprecision(2);
-
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU", h_in*w_in, "iP") );
 
@@ -67,25 +68,36 @@ int main(int argc, char *argv[]) {
     std::cout << "done!\n[sat3] Configuring the GPU to run ... " << std::flush;
 
     dim3 cg_img;
-    gpufilter::constants_sizes( cg_img, h_in, w_in );
+    gpufilter::up_constants_sizes( cg_img, h_in, w_in );
 
     gpufilter::dvector<float> d_in_gpu( in_gpu, h_in*w_in );
-    gpufilter::dvector<float> d_xbar( cg_img.x*h_in ), d_ybar( cg_img.x*h_in ), d_xsum( cg_img.x*cg_img.y );
+    gpufilter::dvector<float> d_ybar( cg_img.x*h_in ), d_vhat( cg_img.x*h_in ), d_ysum( cg_img.x*cg_img.y );
 
 	const int nWm = (w_in+MTS-1)/MTS, nHm = (h_in+MTS-1)/MTS;
-    dim3 cg_xbar(1, nHm), cg_ybar(nWm, 1);
+    dim3 cg_ybar(1, nHm), cg_vhat(nWm, 1);
 
     std::cout << "done!\n[sat3] Computing summed-area table in the GPU ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in, "iP") );
 
-        gpufilter::algorithmSAT( d_in_gpu, d_xbar, d_ybar, d_xsum, cg_img, cg_xbar, cg_ybar );
+        gpufilter::algorithmSAT( d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
     }
 
     std::cout << "done![sat3] Timings:\n";
 
     gpufilter::timers.flush();
+
+    gpufilter::dvector<float> d_in_gpu2( in_gpu, h_in*w_in );
+
+    {
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in, "iP") );
+
+        for (int i = 0; i < 100; ++i)
+            gpufilter::algorithmSAT( d_in_gpu2, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+
+        std::cout << "[sat3] GPU 100x Timing: " << sts.elapsed()*10 << " ms\n";
+    }
 
     std::cout << "[sat3] Copying result back from the GPU ... " << std::flush;
 
@@ -96,8 +108,6 @@ int main(int argc, char *argv[]) {
     float me, mre;
 
     check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
-
-    std::cout << std::resetiosflags( std::ios_base::floatfield );
 
     std::cout << "[sat3] Big values in SAT may lead to big maximum error (look at relative error instead)\n";
 

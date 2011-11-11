@@ -61,7 +61,7 @@ float2 addgpu(const float2& u, const float2& v, const float2& w)
 //-- Algorithm 4_2 ------------------------------------------------------------
 
 __global__ __launch_bounds__(WS*SOW, MBO)
-void algorithm4_stage1( const float *g_inout,
+void algorithm4_stage1( const float *g_in,
                         float2 *g_transp_ybar,
                         float2 *g_transp_zhat )
 {
@@ -70,17 +70,17 @@ void algorithm4_stage1( const float *g_inout,
 
     __shared__ float block[WS][WS+1];
 
-    g_inout += (m*WS + ty)*c_width + n*WS + tx;
+    g_in += (m*WS + ty)*c_width + n*WS + tx;
 
 #pragma unroll
     for(int i=0; i<WS-2; i+=SOW)
     {
-        block[ty+i][tx] = g_inout[i*c_width];
+        block[ty+i][tx] = g_in[i*c_width];
     }
 
     if(ty < 2)
     {
-        block[ty+WS-2][tx] = g_inout[(WS-2)*c_width];
+        block[ty+WS-2][tx] = g_in[(WS-2)*c_width];
     }
 
     __syncthreads();
@@ -159,8 +159,7 @@ void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
 
     int row = m*blockDim.x + tx;
 
-    if(row >= c_height) 
-        return;
+    if(row >= c_height) return;
 
     g_transp_ybar += row;
     g_transp_zhat += row;
@@ -1403,44 +1402,38 @@ void algorithm4( float *inout,
                  const float& a1,
                  const float& a2 )
 {
+    up_constants_coefficients2( b0, a1, a2 );
+
+    dim3 cg_img;
+    up_constants_sizes( cg_img, h, w );
+
     dvector<float> d_img(inout, h*w);
 
-    constants_coefficients2( b0, a1, a2 );
-
-    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
-
-    copy_to_symbol("c_height", h);
-    copy_to_symbol("c_width", w);
-    copy_to_symbol("c_m_size", m_size);
-    copy_to_symbol("c_n_size", n_size);
-
-    dvector<float2> d_transp_ybar(m_size*w),
-        d_transp_zhat(m_size*w),
-        d_ubar(n_size*h),
-        d_vhat(n_size*h);
+    dvector<float2> d_transp_ybar(cg_img.y*w),
+        d_transp_zhat(cg_img.y*w),
+        d_ubar(cg_img.x*h),
+        d_vhat(cg_img.x*h);
 
     dvector<float2> d_transp_y, d_transp_z, d_u, d_v;
 
-    algorithm4_stage1<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
-        d_img, d_transp_ybar, d_transp_zhat );
+    algorithm4_stage1<<< cg_img, dim3(WS, SOW) >>>( d_img, d_transp_ybar, d_transp_zhat );
 
-    algorithm4_stage2_3_or_5_6<<< dim3(m_size, 1), dim3(MTS, 1) >>>(
+    algorithm4_stage2_3_or_5_6<<< dim3((h+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
         d_transp_ybar, d_transp_zhat );
 
     swap( d_transp_ybar, d_transp_y );
     swap( d_transp_zhat, d_transp_z );
 
-    algorithm4_stage4<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, SOW) >>>(
+    algorithm4_stage4<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, SOW) >>>(
         d_img, d_transp_y, d_transp_z, d_ubar, d_vhat );
 
-    algorithm4_stage2_3_or_5_6<<< dim3(n_size, 1), dim3(MTS, 1) >>>(
+    algorithm4_stage2_3_or_5_6<<< dim3((w+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
         d_ubar, d_vhat );
 
     swap( d_ubar, d_u );
     swap( d_vhat, d_v );
 
-    algorithm4_stage7<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
-        d_img, d_u, d_v );
+    algorithm4_stage7<<< cg_img, dim3(WS, SOW) >>>( d_img, d_u, d_v );
 
     d_img.copy_to(inout, h*w);
 }
@@ -1452,46 +1445,42 @@ void algorithm5( float *inout,
                  const float& b0,
                  const float& a1 )
 {
+    up_constants_coefficients1( b0, a1 );
+
+    dim3 cg_img;
+    up_constants_sizes( cg_img, h, w );
+
     dvector<float> d_img(inout, h*w);
 
-    constants_coefficients1( b0, a1 );
-
-    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
-
-    copy_to_symbol("c_height", h);
-    copy_to_symbol("c_width", w);
-    copy_to_symbol("c_m_size", m_size);
-    copy_to_symbol("c_n_size", n_size);
-
-    dvector<float> d_transp_ybar(n_size*h),
-        d_transp_zhat(n_size*h),
-        d_ucheck(m_size*w),
-        d_vtilde(m_size*w);
+    dvector<float> d_transp_ybar(cg_img.x*h),
+        d_transp_zhat(cg_img.x*h),
+        d_ucheck(cg_img.y*w),
+        d_vtilde(cg_img.y*w);
                    
     dvector<float> d_transp_y, d_transp_z, d_ubar, d_vcheck, d_u, d_v;
 
-    algorithm5_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+    algorithm5_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
         d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
 
-    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>(
+    algorithm5_stage2_3<<< dim3(1, (cg_img.y+2-1)/2), dim3(WS, std::min((int)cg_img.x, DW)) >>>(
         d_transp_ybar, d_transp_zhat );
 
     swap(d_transp_ybar, d_transp_y);
     swap(d_transp_zhat, d_transp_z);
 
-    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), dim3(WS, OW) >>>(
+    algorithm5_stage4_5_step1<<< dim3((cg_img.x+OW-1)/OW, cg_img.y), dim3(WS, OW) >>>(
         d_ucheck, d_vtilde, d_transp_y, d_transp_z );
 
     swap(d_ucheck, d_ubar);
     swap(d_vtilde, d_vcheck);
 
-    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2), dim3(WS, std::min(m_size, DW)) >>>(
+    algorithm5_stage4_5_step2<<< dim3((cg_img.x+2-1)/2), dim3(WS, std::min((int)cg_img.y, DW)) >>>(
         d_ubar, d_vcheck );
 
     swap(d_ubar, d_u);
     swap(d_vcheck, d_v);
 
-    algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+    algorithm5_stage6<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
         d_img, d_transp_y, d_transp_z, d_u, d_v );
 
     d_img.copy_to(inout, h*w);
@@ -1503,88 +1492,77 @@ void gaussian_gpu( float *inout,
                    const int& w,
                    const float& s )
 {
-    dvector<float> d_img(inout, h*w);
-
     float b10, a11, b20, a21, a22;
 
     weights1( s, b10, a11 );
         
-    constants_coefficients1( b10, a11 );
+    up_constants_coefficients1( b10, a11 );
 
     weights2( s, b20, a21, a22 );
 
-    constants_coefficients2( b20, a21, a22 );
+    up_constants_coefficients2( b20, a21, a22 );
 
-    const int m_size = (h+WS-1)/WS, n_size = (w+WS-1)/WS;
+    dim3 cg_img; // computational grid of input image
+    up_constants_sizes( cg_img, h, w );
 
-    copy_to_symbol("c_height", h);
-    copy_to_symbol("c_width", w);
-    copy_to_symbol("c_m_size", m_size);
-    copy_to_symbol("c_n_size", n_size);
+    dvector<float> d_img(inout, h*w);
 
     // for order 1
-    dvector<float> d_transp_ybar1(n_size*h),
-        d_transp_zhat1(n_size*h),
-        d_ucheck1(m_size*w),
-        d_vtilde1(m_size*w);
+    dvector<float> d_transp_ybar1(cg_img.x*h),
+        d_transp_zhat1(cg_img.x*h),
+        d_ucheck1(cg_img.y*w),
+        d_vtilde1(cg_img.y*w);
 
     dvector<float> d_transp_y1, d_transp_z1, d_ubar1, d_vcheck1, d_u1, d_v1;
 
     // for order 2
-    dvector<float2> d_transp_ybar2(m_size*w),
-        d_transp_zhat2(m_size*w),
-        d_ubar2(n_size*h),
-        d_vhat2(n_size*h);
+    dvector<float2> d_transp_ybar2(cg_img.y*w),
+        d_transp_zhat2(cg_img.y*w),
+        d_ubar2(cg_img.x*h),
+        d_vhat2(cg_img.x*h);
 
     dvector<float2> d_transp_y2, d_transp_z2, d_u2, d_v2;
    
-    algorithm5_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+    algorithm5_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
         d_img, d_transp_ybar1, d_transp_zhat1, d_ucheck1, d_vtilde1 );
 
-    algorithm5_stage2_3<<< dim3(1, (m_size+2-1)/2), dim3(WS, std::min(n_size, DW)) >>>(
+    algorithm5_stage2_3<<< dim3(1, (cg_img.y+2-1)/2), dim3(WS, std::min((int)cg_img.x, DW)) >>>(
         d_transp_ybar1, d_transp_zhat1 );
 	    
     swap(d_transp_ybar1, d_transp_y1);
     swap(d_transp_zhat1, d_transp_z1);
 
-    algorithm5_stage4_5_step1<<< dim3((n_size+OW-1)/OW, m_size), dim3(WS, OW) >>>(
+    algorithm5_stage4_5_step1<<< dim3((cg_img.x+OW-1)/OW, cg_img.y), dim3(WS, OW) >>>(
         d_ucheck1, d_vtilde1, d_transp_y1, d_transp_z1 );
 
     swap(d_ucheck1, d_ubar1);
     swap(d_vtilde1, d_vcheck1);
 
-    algorithm5_stage4_5_step2<<< dim3((n_size+2-1)/2), dim3(WS, std::min(m_size, DW)) >>>(
+    algorithm5_stage4_5_step2<<< dim3((cg_img.x+2-1)/2, 1), dim3(WS, std::min((int)cg_img.y, DW)) >>>(
         d_ubar1, d_vcheck1 );
 
     swap(d_ubar1, d_u1);
     swap(d_vcheck1, d_v1);
 
-    algorithm5_stage6_fusion_algorithm4_stage1<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
+    algorithm5_stage6_fusion_algorithm4_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
         d_img, d_transp_y1, d_transp_z1, d_u1, d_v1, d_transp_ybar2, d_transp_zhat2 );
 
-    // algorithm5_stage6<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, DW) >>>(
-    //     d_img, d_transp_y1, d_transp_z1, d_u1, d_v1 );
-
-    // algorithm4_stage1<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
-    //     d_img, d_transp_ybar2, d_transp_zhat2 );
-
-    algorithm4_stage2_3_or_5_6<<< dim3(m_size, 1), dim3(MTS, 1) >>>(
+    algorithm4_stage2_3_or_5_6<<< dim3((h+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
         d_transp_ybar2, d_transp_zhat2 );
 
     swap( d_transp_ybar2, d_transp_y2 );
     swap( d_transp_zhat2, d_transp_z2 );
 
-    algorithm4_stage4<<< dim3(n_size, (m_size+2-1)/2), dim3(WS, SOW) >>>(
+    algorithm4_stage4<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, SOW) >>>(
         d_img, d_transp_y2, d_transp_z2, d_ubar2, d_vhat2 );
 
-    algorithm4_stage2_3_or_5_6<<< dim3(n_size, 1), dim3(MTS, 1) >>>(
+    algorithm4_stage2_3_or_5_6<<< dim3((w+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
         d_ubar2, d_vhat2 );
 
     swap( d_ubar2, d_u2 );
     swap( d_vhat2, d_v2 );
 
-    algorithm4_stage7<<< dim3(n_size, m_size), dim3(WS, SOW) >>>(
-        d_img, d_u2, d_v2 );
+    algorithm4_stage7<<< cg_img, dim3(WS, SOW) >>>( d_img, d_u2, d_v2 );
 
     d_img.copy_to(inout, h*w);
 

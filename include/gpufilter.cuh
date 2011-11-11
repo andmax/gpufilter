@@ -12,7 +12,7 @@
 
 namespace gpufilter {
 
-//== EXTERNS ==================================================================
+//== PROTOTYPES ===============================================================
 
 /**
  *  @ingroup gpu
@@ -32,7 +32,7 @@ namespace gpufilter {
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
  */
 __global__
-void algorithm4_stage1( const float *g_inout,
+void algorithm4_stage1( const float *g_in,
                         float2 *g_transp_ybar,
                         float2 *g_transp_zhat );
 

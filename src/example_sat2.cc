@@ -6,6 +6,7 @@
  */
 
 #include <ctime>
+#include <cstdio>
 #include <cstdlib>
 
 #include <iostream>
@@ -37,7 +38,9 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    const int w_in = 1024, h_in = 1024;
+    int w_in = 1024, h_in = 1024;
+
+    if( argc == 3 ) { sscanf(argv[1], "%d", &w_in); sscanf(argv[2], "%d", &h_in); }
 
     std::cout << "[sat2] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 

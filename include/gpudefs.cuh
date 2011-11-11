@@ -32,19 +32,49 @@ namespace gpufilter {
 
 //== PROTOTYPES ===============================================================
 
-__host__
-void constants_sizes( dim3& g,
-                      const int& h,
-                      const int& w );
+/**
+ *  @ingroup api_gpu
+ *  @brief Upload device constants sizes
+ *
+ *  Given the dimensions of the 2D input image, upload in device
+ *  constant memory all values related to size.
+ *
+ *  @param[out] g Computation grid dimension considering a b x b block size where b = 32
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ */
+void up_constants_sizes( dim3& g,
+                         const int& h,
+                         const int& w );
 
-__host__
-void constants_coefficients1( const float& b0,
-                              const float& a1 );
+/**
+ *  @ingroup api_gpu
+ *  @brief Upload device constants first-order coefficients
+ *
+ *  Given the first-order coefficients of the recursive filter, upload
+ *  in device constant memory all values related to the coefficients.
+ *
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback first-order coefficient
+ */
+void up_constants_coefficients1( const float& b0,
+                                 const float& a1 );
 
-__host__
-void constants_coefficients2( const float& b0,
-                              const float& a1,
-                              const float& a2 );
+/**
+ *  @ingroup api_gpu
+ *  @brief Upload device constants second-order coefficients
+ *
+ *  Given the second-order coefficients of the recursive filter,
+ *  upload in device constant memory all values related to the
+ *  coefficients.
+ *
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback first-order coefficient
+ *  @param[in] a2 Feedback second-order coefficient
+ */
+void up_constants_coefficients2( const float& b0,
+                                 const float& a1,
+                                 const float& a2 );
 
 //=============================================================================
 } // namespace gpufilter

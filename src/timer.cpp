@@ -245,13 +245,16 @@ void timer_pool::flush()
         while(parent_totals.size() > it->level)
             parent_totals.pop();
 
-        std::cout << std::setprecision(3) << std::setw(4)
-                  << (parent_totals.empty() ? 100 : it->timer->elapsed()/parent_totals.top()*100) << "% - ";
+        std::cout << std::setw(4)
+                  << (int)(parent_totals.empty() ? 100 : it->timer->elapsed()/parent_totals.top()*100)
+                  << "% - " << std::flush;
 
         std::cout << it->label << ": ";
         if(!it->timer->is_stopped())
             std::cout << "FORCED STOP - ";
-        std::cout << it->timer->elapsed() << " s";
+        std::cout << std::scientific
+                  << it->timer->elapsed() << " s"
+                  << std::resetiosflags( std::ios_base::floatfield );
 
         if(it->timer->data_size() != 0)
         {

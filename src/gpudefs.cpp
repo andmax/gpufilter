@@ -18,9 +18,9 @@ namespace gpufilter {
 
 //== IMPLEMENTATION ===========================================================
 
-void constants_sizes( dim3& g,
-                      const int& h,
-                      const int& w ) {
+void up_constants_sizes( dim3& g,
+                         const int& h,
+                         const int& w ) {
 
     g.x = (w+WS-1)/WS;
     g.y = (h+WS-1)/WS;
@@ -33,7 +33,6 @@ void constants_sizes( dim3& g,
 }
 
 template <class T>
-
 void mul(T R[2][2], const T A[2][2], const T B[2][2])
 {
     T aux[2][2];
@@ -48,7 +47,6 @@ void mul(T R[2][2], const T A[2][2], const T B[2][2])
     R[1][0] = aux[1][0];
     R[1][1] = aux[1][1];
 }
-
 
 void calc_forward_matrix(float T[2][2], float n, float L, float M)
 {
@@ -84,7 +82,6 @@ void calc_forward_matrix(float T[2][2], float n, float L, float M)
     T[1][1] = real(cT[1][1]);
 }
 
-
 void calc_reverse_matrix(float T[2][2], float n, float L, float N)
 {
     if(n == 1)
@@ -119,7 +116,6 @@ void calc_reverse_matrix(float T[2][2], float n, float L, float N)
     T[1][1] = real(cT[1][1]);
 }
 
-
 void calc_forward_reverse_matrix(float T[2][2], int n, float L, float M, float N)
 {
     using std::swap;
@@ -146,9 +142,8 @@ void calc_forward_reverse_matrix(float T[2][2], int n, float L, float M, float N
     }
 }
 
-
-void constants_coefficients1( const float& b0,
-                              const float& a1 )
+void up_constants_coefficients1( const float& b0,
+                                 const float& a1 )
 {
     const float Linf = a1, iR = b0*b0*b0*b0/Linf/Linf;
 
@@ -197,10 +192,9 @@ void constants_coefficients1( const float& b0,
     copy_to_symbol("c_Delta_y", delta_y);
 }
 
-
-void constants_coefficients2( const float& b0,
-                              const float& a1,
-                              const float& a2 )
+void up_constants_coefficients2( const float& b0,
+                                 const float& a1,
+                                 const float& a2 )
 {
     const float Linf = a2, Ninf = a1/a2, Minf = a1, iR = b0*b0*b0*b0/Linf/Linf;
 

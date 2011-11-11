@@ -7,7 +7,6 @@
 
 //== INCLUDES =================================================================
 
-#include <symbol.h>
 #include <dvector.h>
 
 #include <gpufilter.h>
@@ -35,27 +34,38 @@ void algorithmSAT_stage1( const float *g_in,
 	g_ybar += bx*c_height+row0+tx;
 	g_vhat += by*c_width+col;
 
-	block[ty][tx] = *g_in; g_in += 5*c_width;
-	block[ty+5][tx] = *g_in; g_in += 5*c_width;
-	block[ty+10][tx] = *g_in; g_in += 5*c_width;
-	block[ty+15][tx] = *g_in; g_in += 5*c_width;
-	block[ty+20][tx] = *g_in; g_in += 5*c_width;
-	block[ty+25][tx] = *g_in; g_in += 5*c_width;
-	if( ty == 0 || ty == 1 ) block[ty+30][tx] = *g_in;
+#pragma unroll
+    for (int i = 0; i < WS/SOW; ++i) {
+        block[ty+i*SOW][tx] = *g_in;
+        g_in += SOW * c_width;
+    }
+    if( ty < (WS-((WS/SOW)*SOW)) ) {
+        block[ty+((WS/SOW)*SOW)][tx] = *g_in;
+    }
 
 	__syncthreads();
 
 	if( ty == 0 ) {
 
+        // if( c_width-bx*WS < WS ) {
+        //     for (int i = 1; i < c_width-bx*WS; ++i)
+        //         block[tx][i] += block[tx][i-1];
+        // } else
 #pragma unroll
-		for (int i = 1; i < WS; ++i)
-			block[tx][i] += block[tx][i-1];
-		*g_ybar = block[tx][31];
+            for (int i = 1; i < WS; ++i)
+                block[tx][i] += block[tx][i-1];
 
+		*g_ybar = block[tx][WS-1];
+
+        // if( c_height-by*WS < WS ) {
+        //     for (int i = 1; i < c_height-by*WS; ++i)
+        //         block[i][tx] += block[i-1][tx];
+        // } else
 #pragma unroll
-		for (int i = 1; i < WS; ++i)
-			block[i][tx] += block[i-1][tx];
-		*g_vhat = block[31][tx];
+            for (int i = 1; i < WS; ++i)
+                block[i][tx] += block[i-1][tx];
+
+		*g_vhat = block[WS-1][tx];
 
 	}
 
@@ -73,7 +83,7 @@ void algorithmSAT_stage2( float *g_ybar,
 	float y = *g_ybar;
 	int ln = HWS+tx;
 
-	if( tx == 31 )
+	if( tx == WS-1 )
 		g_ysum += row0;
 
 	volatile __shared__ float block[ MW ][ HWS+WS+1 ];
@@ -91,7 +101,7 @@ void algorithmSAT_stage2( float *g_ybar,
 		block[ty][ln] += block[ty][ln-8];
 		block[ty][ln] += block[ty][ln-16];
 
-		if( tx == 31 ) {
+		if( tx == WS-1 ) {
 			*g_ysum = block[ty][ln];
 			g_ysum += c_m_size;
 		}
@@ -144,74 +154,74 @@ void algorithmSAT_stage4( float *g_inout,
 	if( bx > 0 ) g_y += (bx-1)*c_height+row0+tx;
 	if( by > 0 ) g_v += (by-1)*c_width+col;
 
-	block[ty+1][tx+1] = *g_inout; g_inout += 5*c_width;
-	block[ty+6][tx+1] = *g_inout; g_inout += 5*c_width;
-	block[ty+11][tx+1] = *g_inout; g_inout += 5*c_width;
-	block[ty+16][tx+1] = *g_inout; g_inout += 5*c_width;
-	block[ty+21][tx+1] = *g_inout; g_inout += 5*c_width;
-	block[ty+26][tx+1] = *g_inout; g_inout += 5*c_width;
-
-	if( ty == 0 || ty == 1 ) {
-
-        block[ty+31][tx+1] = *g_inout;
-
-    } else if( ty == 2 ) {
-
+#pragma unroll
+    for (int i = 0; i < WS/SOW; ++i) {
+        block[ty+1+i*SOW][tx+1] = *g_inout;
+        g_inout += SOW * c_width;
+    }
+    if( ty < (WS-((WS/SOW)*SOW)) ) {
+        block[ty+1+((WS/SOW)*SOW)][tx+1] = *g_inout;
+    } else if( ty == (WS-((WS/SOW)*SOW)) ) {
 		if( bx > 0 ) block[tx+1][0] = *g_y;
 		else block[tx+1][0] = 0.f;
-
-	} else if( ty == 3 ) {
-
+    } else if( ty == 1+(WS-((WS/SOW)*SOW)) ) {
 		if( by > 0 ) block[0][tx+1] = *g_v;
 		else block[0][tx+1] = 0.f;
-
-	}
-
-	g_inout -= 30*c_width;
+    }
 
 	__syncthreads();
 
 	if( ty == 0 ) {
 
+        // if( c_width-bx*WS < WS ) {
+        //     for (int i = 1; i < c_width-bx*WS+1; ++i)
+        //         block[tx+1][i] += block[tx+1][i-1];
+        // } else
 #pragma unroll
-		for (int i = 1; i < 33; ++i)
-			block[tx+1][i] += block[tx+1][i-1];
+            for (int i = 1; i < WS+1; ++i)
+                block[tx+1][i] += block[tx+1][i-1];
 
+        // if( c_height-by*WS < WS ) {
+        //     for (int i = 1; i < c_height-by*WS+1; ++i)
+        //         block[i][tx+1] += block[i-1][tx+1];
+        // } else
 #pragma unroll
-		for (int i = 1; i < 33; ++i)
-			block[i][tx+1] += block[i-1][tx+1];
+            for (int i = 1; i < WS+1; ++i)
+                block[i][tx+1] += block[i-1][tx+1];
 
 	}
 
 	__syncthreads();
 
-	*g_inout = block[ty+1][tx+1]; g_inout += 5*c_width;
-	*g_inout = block[ty+6][tx+1]; g_inout += 5*c_width;
-	*g_inout = block[ty+11][tx+1]; g_inout += 5*c_width;
-	*g_inout = block[ty+16][tx+1]; g_inout += 5*c_width;
-	*g_inout = block[ty+21][tx+1]; g_inout += 5*c_width;
-	*g_inout = block[ty+26][tx+1]; g_inout += 5*c_width;
+	g_inout -= 30*c_width;
 
-	if( ty == 0 || ty == 1 ) *g_inout = block[ty+31][tx+1];
+#pragma unroll
+    for (int i = 0; i < WS/SOW; ++i) {
+        *g_inout = block[ty+1+i*SOW][tx+1];
+        g_inout += SOW * c_width;
+    }
+    if( ty < (WS-((WS/SOW)*SOW)) ) {
+        *g_inout = block[ty+1+((WS/SOW)*SOW)][tx+1];
+    }
 
 }
 
 __host__
 void algorithmSAT( dvector<float>& d_img,
-                   dvector<float>& d_xbar,
                    dvector<float>& d_ybar,
-                   dvector<float>& d_xsum,
+                   dvector<float>& d_vhat,
+                   dvector<float>& d_ysum,
                    const dim3& cg_img,
-                   const dim3& cg_xbar,
-                   const dim3& cg_ybar ) {
+                   const dim3& cg_ybar,
+                   const dim3& cg_vhat ) {
 
-    algorithmSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_img, d_xbar, d_ybar );
+    algorithmSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_img, d_ybar, d_vhat );
 
-    algorithmSAT_stage2<<< cg_xbar, dim3(WS, MW) >>>( d_xbar, d_xsum );
+    algorithmSAT_stage2<<< cg_ybar, dim3(WS, MW) >>>( d_ybar, d_ysum );
 
-    algorithmSAT_stage3<<< cg_ybar, dim3(WS, MW) >>>( d_xsum, d_ybar );
+    algorithmSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
 
-    algorithmSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_img, d_xbar, d_ybar );
+    algorithmSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_img, d_ybar, d_vhat );
 
 }
 
@@ -220,18 +230,46 @@ void algorithmSAT( float *inout,
                    const int& h,
                    const int& w ) {
 
+    int h_out = h, w_out = w;
+
+    if( h % 32 > 0 ) h_out += (32 - (h % 32));
+    if( w % 32 > 0 ) w_out += (32 - (w % 32));
+
+    float *co_inout = inout; // coalesced inout
+
+    if( w_out > w or h_out > h ) {
+        
+        co_inout = new float[ h_out * w_out ];
+
+        for (int i = 0; i < h; ++i)
+            for (int j = 0; j < w; ++j)
+                co_inout[i*w_out+j] = inout[i*w+j];
+
+    }
+
     dim3 cg_img; // computational grid of input image
-    constants_sizes( cg_img, h, w );
+    up_constants_sizes( cg_img, h_out, w_out );
 
-    dvector<float> d_img( inout, h*w );
-    dvector<float> d_xbar( cg_img.x*h ), d_ybar( cg_img.x*h ), d_xsum( cg_img.x*cg_img.y );
+    dvector<float> d_out( co_inout, h_out * w_out );
 
-	const int nWm = (w+MTS-1)/MTS, nHm = (h+MTS-1)/MTS;
-    dim3 cg_xbar(1, nHm), cg_ybar(nWm, 1);
+    dvector<float> d_ybar( cg_img.x * h_out ), d_vhat( cg_img.x * h_out ), d_ysum( cg_img.x * cg_img.y );
 
-    algorithmSAT( d_img, d_xbar, d_ybar, d_xsum, cg_img, cg_xbar, cg_ybar );
+	const int nWm = (w_out+MTS-1)/MTS, nHm = (h_out+MTS-1)/MTS;
+    dim3 cg_ybar(1, nHm), cg_vhat(nWm, 1);
 
-    d_img.copy_to( inout, h*w );
+    algorithmSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+
+    d_out.copy_to( co_inout, h_out * w_out );
+
+    if( co_inout != inout ) {
+
+        for (int i = 0; i < h; ++i)
+            for (int j = 0; j < w; ++j)
+                inout[i*w+j] = co_inout[i*w_out+j];
+
+        delete [] co_inout;
+
+    }
 
 }
 

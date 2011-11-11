@@ -133,6 +133,8 @@ The people involved in the ::gpufilter project are listed below:
 #include <cmath>
 #include <complex>
 
+#include <dvector.h>
+
 //== NAMESPACES ===============================================================
 
 /**
@@ -280,7 +282,7 @@ void weights2( const T1& s,
  *  this function only works with \f$64^2\f$ minimum image resolution,
  *  and only in multiples of 64 in each dimension.
  *
- *  @param[in] inout The input 2D image to compute recursive filtering
+ *  @param[in,out] inout The input 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
@@ -294,6 +296,15 @@ void algorithm4( float *inout,
                  const float& b0,
                  const float& a1,
                  const float& a2 );
+/**
+ *  @example example_r3.cc
+ *
+ *  This is an example of how to use the algorithm4() function in the
+ *  GPU and the r_0() function in the CPU, as well as the
+ *  gpufilter::scoped_timer_stop class.
+ *
+ *  @see gpufilter.h
+ */
 
 /**
  *  @ingroup api_gpu
@@ -322,7 +333,7 @@ void algorithm4( float *inout,
  *  this function only works with \f$64^2\f$ minimum image resolution,
  *  and only in multiples of 64 in each dimension.
  *
- *  @param[in] inout The input 2D image to compute recursive filtering
+ *  @param[in,out] inout The input 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
@@ -369,11 +380,10 @@ void algorithm5( float *inout,
  *  summed-area table.
  *
  *  @note For performance purposes (in CUDA kernels implementation)
- *  this function only works with \f$32^2\f$ minimum image resolution,
- *  and only in multiples of 32 in each dimension.
+ *  this function works better in multiples of 32 in each dimension.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in] inout The input 2D image to compute SAT
+ *  @param[in,out] inout The input 2D image to compute SAT
  *  @param[in] h Image height
  *  @param[in] w Image width
  */
@@ -383,6 +393,40 @@ void algorithmSAT( float *inout,
                    const int& w );
 /**
  *  @example example_sat2.cc
+ *
+ *  This is an example of how to use the algorithmSAT() function in
+ *  the GPU.
+ *
+ *  @see gpufilter.h
+ */
+
+/**
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute Algorithm SAT
+ *
+ *  @note The pre-allocated device memory should match the values in
+ *  the computational grids.
+ *
+ *  @see Base algorithmSAT() function
+ *  @param[out] d_img The input 2D image allocated in device memory
+ *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
+ *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
+ *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
+ *  @param[in] cg_img Computation grid for SAT Stage 1 and 4
+ *  @param[in] cg_ybar Computation grid for SAT Stage 2
+ *  @param[in] cg_vhat Computation grid for SAT Stage 3
+ */
+extern
+void algorithmSAT( dvector<float>& d_img,
+                   dvector<float>& d_ybar,
+                   dvector<float>& d_vhat,
+                   dvector<float>& d_ysum,
+                   const dim3& cg_img,
+                   const dim3& cg_ybar,
+                   const dim3& cg_vhat );
+/**
+ *  @example example_sat3.cc
  *
  *  This is an example of how to use the algorithmSAT() function in
  *  the GPU.
