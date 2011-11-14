@@ -67,13 +67,19 @@ int main(int argc, char *argv[]) {
 
     std::cout << "done!\n[sat3] Configuring the GPU to run ... " << std::flush;
 
+    int h_out = h_in, w_out = w_in;
+
+    if( h_in % 32 > 0 ) h_out += (32 - (h_in % 32));
+    if( w_in % 32 > 0 ) w_out += (32 - (w_in % 32));
+
     dim3 cg_img;
-    gpufilter::up_constants_sizes( cg_img, h_in, w_in );
+    gpufilter::up_constants_sizes( cg_img, h_out, w_out );
 
-    gpufilter::dvector<float> d_in_gpu( in_gpu, h_in*w_in );
-    gpufilter::dvector<float> d_ybar( cg_img.x*h_in ), d_vhat( cg_img.x*h_in ), d_ysum( cg_img.x*cg_img.y );
+    gpufilter::dvector<float> d_in_gpu( in_gpu, h_in, w_in, h_out, w_out );
 
-	const int nWm = (w_in+MTS-1)/MTS, nHm = (h_in+MTS-1)/MTS;
+    gpufilter::dvector<float> d_ybar( cg_img.x * h_out ), d_vhat( cg_img.x * h_out ), d_ysum( cg_img.x * cg_img.y );
+
+	const int nWm = (w_out+MTS-1)/MTS, nHm = (h_out+MTS-1)/MTS;
     dim3 cg_ybar(1, nHm), cg_vhat(nWm, 1);
 
     std::cout << "done!\n[sat3] Computing summed-area table in the GPU ... " << std::flush;
@@ -88,7 +94,7 @@ int main(int argc, char *argv[]) {
 
     gpufilter::timers.flush();
 
-    gpufilter::dvector<float> d_in_gpu2( in_gpu, h_in*w_in );
+    gpufilter::dvector<float> d_in_gpu2( in_gpu, h_in, w_in, h_out, w_out );
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in, "iP") );
@@ -101,7 +107,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[sat3] Copying result back from the GPU ... " << std::flush;
 
-    d_in_gpu.copy_to( in_gpu, h_in*w_in );
+    d_in_gpu.copy_to( in_gpu, h_out, w_out, h_in, w_in );
 
     std::cout << "done!\n[sat3] Checking GPU result with CPU reference values\n";
 

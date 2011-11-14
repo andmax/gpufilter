@@ -235,22 +235,10 @@ void algorithmSAT( float *inout,
     if( h % 32 > 0 ) h_out += (32 - (h % 32));
     if( w % 32 > 0 ) w_out += (32 - (w % 32));
 
-    float *co_inout = inout; // coalesced inout
-
-    if( w_out > w or h_out > h ) {
-        
-        co_inout = new float[ h_out * w_out ];
-
-        for (int i = 0; i < h; ++i)
-            for (int j = 0; j < w; ++j)
-                co_inout[i*w_out+j] = inout[i*w+j];
-
-    }
-
     dim3 cg_img; // computational grid of input image
     up_constants_sizes( cg_img, h_out, w_out );
 
-    dvector<float> d_out( co_inout, h_out * w_out );
+    dvector<float> d_out( inout, h, w, h_out, w_out );
 
     dvector<float> d_ybar( cg_img.x * h_out ), d_vhat( cg_img.x * h_out ), d_ysum( cg_img.x * cg_img.y );
 
@@ -259,17 +247,7 @@ void algorithmSAT( float *inout,
 
     algorithmSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
 
-    d_out.copy_to( co_inout, h_out * w_out );
-
-    if( co_inout != inout ) {
-
-        for (int i = 0; i < h; ++i)
-            for (int j = 0; j < w; ++j)
-                inout[i*w+j] = co_inout[i*w_out+j];
-
-        delete [] co_inout;
-
-    }
+    d_out.copy_to( inout, h_out, w_out, h, w );
 
 }
 
