@@ -282,7 +282,7 @@ void weights2( const T1& s,
  *  this function only works with \f$64^2\f$ minimum image resolution,
  *  and only in multiples of 64 in each dimension.
  *
- *  @param[in,out] inout The input 2D image to compute recursive filtering
+ *  @param[in,out] inout The input and output 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
@@ -333,7 +333,7 @@ void algorithm4( float *inout,
  *  this function only works with \f$64^2\f$ minimum image resolution,
  *  and only in multiples of 64 in each dimension.
  *
- *  @param[in,out] inout The input 2D image to compute recursive filtering
+ *  @param[in,out] inout The input and output 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
@@ -351,6 +351,53 @@ void algorithm5( float *inout,
  *  This is an example of how to use the algorithm5() function in the
  *  GPU and the r_0() function in the CPU, as well as the
  *  gpufilter::scoped_timer_stop class.
+ *
+ *  @see gpufilter.h
+ */
+
+/**
+ *  @ingroup api_gpu
+ *  @brief Prepare for Algorithm SAT
+ *
+ *  This function prepares the data structures used by the summed-area
+ *  table (SAT) algorithm of an input 2D image.
+ *
+ *  The algorithm SAT is discussed in depth in our paper (see
+ *  [Nehab:2011] in algorithm5() function) and it is implemented in
+ *  algorithmSAT() function.
+ *
+ *  @see [Nehab:2011] cited in algorithm5() and algorithmSAT() function
+ *  @param[out] d_in The input 2D image to be allocated in device memory
+ *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
+ *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
+ *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ to be allocated in device memory
+ *  @param[out] cg_img Computation grid for SAT Stage 1 and 4
+ *  @param[out] cg_ybar Computation grid for SAT Stage 2
+ *  @param[out] cg_vhat Computation grid for SAT Stage 3
+ *  @param[out] h_out Height (multiple of 32) of the output image
+ *  @param[out] w_out Width (multiple of 32) of the output image
+ *  @param[in] in The input 2D image to compute SAT
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ */
+extern
+void prepareSAT( dvector<float>& d_in,
+                 dvector<float>& d_ybar,
+                 dvector<float>& d_vhat,
+                 dvector<float>& d_ysum,
+                 dim3& cg_img,
+                 dim3& cg_ybar,
+                 dim3& cg_vhat,
+                 int& h_out,
+                 int& w_out,
+                 const float *in,
+                 const int& h,
+                 const int& w );
+/**
+ *  @example example_sat3.cc
+ *
+ *  This is an example of how to use the prepareSAT() function and
+ *  algorithmSAT() function in the GPU.
  *
  *  @see gpufilter.h
  */
@@ -383,7 +430,7 @@ void algorithm5( float *inout,
  *  this function works better in multiples of 32 in each dimension.
  *
  *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] inout The input 2D image to compute SAT
+ *  @param[in,out] inout The input and output 2D image to compute SAT
  *  @param[in] h Image height
  *  @param[in] w Image width
  */
@@ -409,7 +456,7 @@ void algorithmSAT( float *inout,
  *  the computational grids.
  *
  *  @see Base algorithmSAT() function
- *  @param[out] d_img The input 2D image allocated in device memory
+ *  @param[in,out] d_inout The input and output 2D image allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
  *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
@@ -418,21 +465,41 @@ void algorithmSAT( float *inout,
  *  @param[in] cg_vhat Computation grid for SAT Stage 3
  */
 extern
-void algorithmSAT( dvector<float>& d_img,
+void algorithmSAT( dvector<float>& d_inout,
                    dvector<float>& d_ybar,
                    dvector<float>& d_vhat,
                    dvector<float>& d_ysum,
                    const dim3& cg_img,
                    const dim3& cg_ybar,
                    const dim3& cg_vhat );
+
 /**
- *  @example example_sat3.cc
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute Algorithm SAT
  *
- *  This is an example of how to use the algorithmSAT() function in
- *  the GPU.
+ *  @note The pre-allocated device memory should match the values in
+ *  the computational grids.
  *
- *  @see gpufilter.h
+ *  @see Base algorithmSAT() function
+ *  @param[out] d_out The output 2D image allocated in device memory
+ *  @param[in] d_in The input 2D image allocated in device memory
+ *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
+ *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
+ *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
+ *  @param[in] cg_img Computation grid for SAT Stage 1 and 4
+ *  @param[in] cg_ybar Computation grid for SAT Stage 2
+ *  @param[in] cg_vhat Computation grid for SAT Stage 3
  */
+extern
+void algorithmSAT( dvector<float>& d_out,
+                   const dvector<float>& d_in,
+                   dvector<float>& d_ybar,
+                   dvector<float>& d_vhat,
+                   dvector<float>& d_ysum,
+                   const dim3& cg_img,
+                   const dim3& cg_ybar,
+                   const dim3& cg_vhat );
 
 /**
  *  @ingroup api_gpu

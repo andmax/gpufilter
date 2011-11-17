@@ -94,12 +94,32 @@ void algorithmSAT_stage3( const float *g_ysum,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
- *  @param[in] g_inout The input and output image
- *  @param[out] g_y All \f$P_{m,n}(Y)\f$
- *  @param[out] g_v All \f$P^T_{m,n}(V)\f$
+ *  @param[in,out] g_inout The input and output image
+ *  @param[in] g_y All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_v All \f$P^T_{m,n}(V)\f$
  */
 __global__
 void algorithmSAT_stage4( float *g_inout,
+                          const float *g_y,
+                          const float *g_v );
+
+/**
+ *  @ingroup gpu
+ *  @overload
+ *  @brief Algorithm SAT stage 4 (not-in-place computation)
+ *
+ *  @note The CUDA kernel functions (as this one) have many
+ *  idiosyncrasies and should not be used lightly.
+ *
+ *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
+ *  @param[out] g_out The output image
+ *  @param[in] g_in The input image
+ *  @param[in] g_y All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_v All \f$P^T_{m,n}(V)\f$
+ */
+__global__
+void algorithmSAT_stage4( float *g_out,
+                          const float *g_in,
                           const float *g_y,
                           const float *g_v );
 

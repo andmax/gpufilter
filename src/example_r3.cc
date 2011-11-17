@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << std::scientific;
 
-    std::cout << "[r3] Maximum error: " << me << " ; Maximum relative error: " << mre << "\n";
+    std::cout << "[r3] Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

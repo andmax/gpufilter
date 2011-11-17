@@ -84,9 +84,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << std::resetiosflags( std::ios_base::floatfield );
 
-    std::cout << "[sat2] Big values in SAT may lead to big maximum error (look at relative error instead)\n";
-
-    std::cout << "[sat2] Maximum error: " << me << " ; Maximum relative error: " << mre << "\n";
+    std::cout << "[sat2] Maximum relative error: " << mre << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;
