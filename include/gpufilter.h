@@ -37,6 +37,10 @@
 /**
  *  @mainpage gpufilter Library
 
+\htmlonly <font color="red"><i><b>The source code in this project is
+still under development (for cleaning and better
+documentation).</b></i></font> \endhtmlonly
+
 \section introduction Introduction
 
 The GPU-Efficient Recursive Filtering and Summed-Area Tables

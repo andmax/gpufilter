@@ -166,7 +166,7 @@ void algorithm5_stage1( const float *g_in,
  *
  *  \li In parallel for all \f$n\f$, sequentially for each \f$m\f$,
  *  compute and store the \f$P_{m,n}(Y)\f$ and using the previously
- *  computed \f$P_{m-1,n}(\bar{Y})\f$.
+ *  computed \f$P_{m,n}(\bar{Y})\f$.
  *
  *  with simple kernel fusioned (going thorough global memory):
  *
