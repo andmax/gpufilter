@@ -2,7 +2,6 @@
  *  @file error.h
  *  @brief Device Error Management definition
  *  @author Rodolfo Lima
- *  @author Andre Maximo
  *  @date February, 2011
  */
 

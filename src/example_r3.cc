@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r_0( in_cpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::r( in_cpu, h_in, w_in, b0, a1, a2 );
 
         std::cout << "done!\n[r3] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }

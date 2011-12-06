@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     std::cout << "[r1] This is equivalent to an inclusive multi-scan with the plus operator\n";
     std::cout << "[r1] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
 
-    gpufilter::rrfr_0( in, h_in, w_in, b0, a1, true );
+    gpufilter::rrfr( in, h_in, w_in, b0, a1, true );
 
     std::cout << "done!\n[r1] Output matrix " << w_in << " x " << h_in << " :\n";
 

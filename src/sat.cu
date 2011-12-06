@@ -23,7 +23,7 @@ namespace gpufilter {
 
 //-- Algorithm SAT ------------------------------------------------------------
 
-__global__ __launch_bounds__( WS * SOW, MBO )
+__global__
 void algorithmSAT_stage1( const float *g_in,
                           float *g_ybar,
                           float *g_vhat ) {
@@ -82,7 +82,7 @@ void algorithmSAT_stage1( const float *g_in,
 
 }
 
-__global__ __launch_bounds__( WS * MW, MBO )
+__global__
 void algorithmSAT_stage2( float *g_ybar,
                           float *g_ysum ) {
 
@@ -128,7 +128,7 @@ void algorithmSAT_stage2( float *g_ybar,
 
 }
 
-__global__ __launch_bounds__( WS * MW, MBO )
+__global__
 void algorithmSAT_stage3( const float *g_ysum,
                           float *g_vhat ) {
 
@@ -158,7 +158,7 @@ void algorithmSAT_stage3( const float *g_ysum,
 
 }
 
-__global__ __launch_bounds__( WS * SOW, MBO )
+__global__
 void algorithmSAT_stage4( float *g_inout,
                           const float *g_y,
                           const float *g_v ) {
@@ -231,7 +231,7 @@ void algorithmSAT_stage4( float *g_inout,
 
 }
 
-__global__ __launch_bounds__( WS * SOW, MBO )
+__global__
 void algorithmSAT_stage4( float *g_out,
                           const float *g_in,
                           const float *g_y,

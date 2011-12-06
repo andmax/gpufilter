@@ -2,6 +2,7 @@
  *  @file dvector.h
  *  @brief Device Vector Class definition
  *  @author Rodolfo Lima
+ *  @author Andre Maximo
  *  @date February, 2011
  */
 
@@ -181,7 +182,7 @@ public:
                   const size_t& h_data,
                   const size_t& w_data ) const {
         cudaMemcpy2D(data, w_data*sizeof(T), this->data(), w*sizeof(T), w_data*sizeof(T), h_data, cudaMemcpyDeviceToHost);
-        cuda_error("Error during memcpy from device to host");
+        cuda_error("Error during memcpy2D from device to host");
     }
 
     /**
@@ -214,7 +215,7 @@ public:
         cudaMemcpy2D(this->data(), w*sizeof(T),
                      const_cast<T *>(data), w_data*sizeof(T), w_data*sizeof(T),
                      h_data, cudaMemcpyHostToDevice);
-        cuda_error("Error during memcpy from host to device");
+        cuda_error("Error during memcpy2D from host to device");
     }
 
     /**

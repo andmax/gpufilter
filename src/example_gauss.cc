@@ -61,15 +61,12 @@ int main(int argc, char *argv[]) {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
         float b10, a11;
-
         gpufilter::weights1(sigma, b10, a11);
-
         float b20, a21, a22;
-
         gpufilter::weights2(sigma, b20, a21, a22);
 
-        gpufilter::r_0(in_cpu, h_in, w_in, b10, a11);
-        gpufilter::r_0(in_cpu, h_in, w_in, b20, a21, a22);
+        gpufilter::r(in_cpu, h_in, w_in, b10, a11);
+        gpufilter::r(in_cpu, h_in, w_in, b20, a21, a22);
 
         std::cout << "done!\n[gauss] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }

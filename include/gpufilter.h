@@ -304,7 +304,7 @@ void algorithm4( float *inout,
  *  @example example_r3.cc
  *
  *  This is an example of how to use the algorithm4() function in the
- *  GPU and the r_0() function in the CPU, as well as the
+ *  GPU and the r() function in the CPU, as well as the
  *  gpufilter::scoped_timer_stop class.
  *
  *  @see gpufilter.h
@@ -353,7 +353,7 @@ void algorithm5( float *inout,
  *  @example example_r2.cc
  *
  *  This is an example of how to use the algorithm5() function in the
- *  GPU and the r_0() function in the CPU, as well as the
+ *  GPU and the r() function in the CPU, as well as the
  *  gpufilter::scoped_timer_stop class.
  *
  *  @see gpufilter.h
