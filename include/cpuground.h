@@ -234,7 +234,6 @@ void rcfr( T *inout,
            const bool& ff = false,
            const int& ext = 2,
            const initcond& ic = zero ) {
-
     for (int j = 0; j < w; j++, inout += 1) {
         int i = -ext;
         T pp = lookat( inout, i, h, ic, w );
@@ -298,7 +297,6 @@ void rrfr( T *inout,
            const bool& ff = false,
            const int& ext = 2,
            const initcond& ic = zero ) {
-
     for (int i = 0; i < h; i++, inout += w) {
         int j = -ext;
         T pp = lookat( inout, j, w, ic );

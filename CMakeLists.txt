@@ -11,15 +11,9 @@ endif()
 
 set(CUDA_NVCC_FLAGS
   -gencode arch=compute_20,code=sm_20
-  #--ptxas-options=-v
+  --ptxas-options=-v
   -ftz=true -prec-div=false -prec-sqrt=false
 )
-
-set(CMAKE_VERBOSE_MAKEFILE TRUE)
-
-if(CMAKE_VERBOSE_MAKEFILE)
-  set(CUDA_NVCC_FLAGS --ptxas-options=-v)
-endif()
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

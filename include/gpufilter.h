@@ -5,7 +5,7 @@
  *  @author Andre Maximo
  *  @author Rodolfo Lima
  *  @date October, 2010
- *  @date September, 2011
+ *  @date December, 2011
  *  @note The MIT License
  */
 
@@ -280,7 +280,7 @@ void weights2( const T1& s,
  *  algorithm \f$4_2\f$.
  *
  *  The algorithm 4 is discussed in depth in our paper ([Nehab:2011]
- *  cited in algorithm5() function).
+ *  cited in alg5() function).
  *
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function only works with \f$64^2\f$ minimum image resolution,
@@ -344,16 +344,16 @@ void algorithm4( float *inout,
  *  @param[in] a1 Feedback coefficient
  */
 extern
-void algorithm5( float *inout,
-                 const int& h,
-                 const int& w,
-                 const float& b0,
-                 const float& a1 );
+void alg5( float *inout,
+           const int& h,
+           const int& w,
+           const float& b0,
+           const float& a1 );
 /**
  *  @example example_r2.cc
  *
- *  This is an example of how to use the algorithm5() function in the
- *  GPU and the r() function in the CPU, as well as the
+ *  This is an example of how to use the alg5() function in the GPU
+ *  and the r() function in the CPU, as well as the
  *  gpufilter::scoped_timer_stop class.
  *
  *  @see gpufilter.h
@@ -367,10 +367,10 @@ void algorithm5( float *inout,
  *  table (SAT) algorithm of an input 2D image.
  *
  *  The algorithm SAT is discussed in depth in our paper (see
- *  [Nehab:2011] in algorithm5() function) and it is implemented in
+ *  [Nehab:2011] in alg5() function) and it is implemented in
  *  algorithmSAT() function.
  *
- *  @see [Nehab:2011] cited in algorithm5() and algorithmSAT() function
+ *  @see [Nehab:2011] cited in alg5() and algorithmSAT() function
  *  @param[out] d_in The input 2D image to be allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
@@ -414,7 +414,7 @@ void prepareSAT( dvector<float>& d_in,
  *  image using algorithm SAT.
  *
  *  The algorithm SAT is discussed in depth in our paper (see
- *  [Nehab:2011] in algorithm5() function) where the following image
+ *  [Nehab:2011] in alg5() function) where the following image
  *  illustrates the process:
  *
  *  @image html sat-stages.png
@@ -433,7 +433,7 @@ void prepareSAT( dvector<float>& d_in,
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function works better in multiples of 32 in each dimension.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] inout The input and output 2D image to compute SAT
  *  @param[in] h Image height
  *  @param[in] w Image width
@@ -510,9 +510,9 @@ void algorithmSAT( dvector<float>& d_out,
  *  @brief Gaussian blur a single-channel image in the GPU
  *
  *  Given an input single-channel 2D image compute the Gaussian blur
- *  of it by applying a first-order recursive filter (using
- *  algorithm5()) followed by a second-order recursive filter (using
- *  algorithm4()) and zero-border initial condition.
+ *  of it by applying a first-order recursive filter (using alg5())
+ *  followed by a second-order recursive filter (using algorithm4())
+ *  and zero-border initial condition.
  *
  *  @param[in,out] inout The single-channel 2D image to compute Gaussian blur
  *  @param[in] h Height of the input image

@@ -26,7 +26,7 @@ namespace gpufilter {
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_in The input 2D image
  *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
@@ -68,7 +68,7 @@ void algorithm4_stage1( const float *g_in,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$ fixed to \f$P_{m,n}(Y)\f$
  *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$ fixed to \f$E_{m,n}(Z)\f$
  */
@@ -92,7 +92,7 @@ void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
@@ -121,7 +121,7 @@ void algorithm4_stage4( float *g_inout,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
@@ -144,19 +144,19 @@ void algorithm4_stage7( float *g_inout,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in] g_in The input 2D image
- *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
- *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
- *  @param[out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$
- *  @param[out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$
+ *  @param[out] g_transp_pybar All \f$P_{m,n}(\bar{Y})\f$
+ *  @param[out] g_transp_ezhat All \f$E_{m,n}(\hat{Z})\f$
+ *  @param[out] g_ptucheck All \f$P^T_{m,n}(\check{U})\f$
+ *  @param[out] g_etvtilde All \f$E^T_{m,n}(\tilde{V})\f$
  */
 __global__
-void algorithm5_stage1( const float *g_in,
-                        float *g_transp_ybar,
-                        float *g_transp_zhat,
-                        float *g_ucheck,
-                        float *g_vtilde );
+void alg5_stage1( const float *g_in,
+                  float *g_transp_pybar,
+                  float *g_transp_ezhat,
+                  float *g_ptucheck,
+                  float *g_etvtilde );
 
 /**
  *  @ingroup gpu
@@ -177,20 +177,19 @@ void algorithm5_stage1( const float *g_in,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$ fixed to \f$P_{m,n}(Y)\f$
  *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$ fixed to \f$E_{m,n}(Z)\f$
  */
 __global__
-void algorithm5_stage2_3( float *g_transp_ybar,
-                          float *g_transp_zhat );
+void alg5_stage2_3( float *g_transp_ybar,
+                    float *g_transp_zhat );
 
 /**
  *  @ingroup gpu
  *  @brief Algorithm 5 stage 4 and 5 (fusioned) step 1
  *
- *  This function computes the first part of the algorithm stages 5.4
- *  and 5.5 following:
+ *  This function computes the algorithm stages 5.4 and 5.5 following:
  *
  *  \li In parallel for all \f$m\f$, sequentially for each \f$n\f$,
  *  compute and store \f$P^T_{m,n}(U)\f$ and using the previously
@@ -207,47 +206,17 @@ void algorithm5_stage2_3( float *g_transp_ybar,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$ fixed to \f$P^T_{m,n}(\bar{U})\f$
  *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$ fixed to \f$E^T_{m,n}(\check{V})\f$
- *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
+ *  @param[in] g_transp_py All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_transp_ez All \f$E_{m,n}(Z)\f$
  */
 __global__
-void algorithm5_stage4_5_step1( float *g_ucheck,
-                                float *g_vtilde,
-                                const float *g_transp_y,
-                                const float *g_transp_z );
-
-/**
- *  @ingroup gpu
- *  @brief Algorithm 5 stage 4 and 5 (fusioned) step 2
- *
- *  This function computes the second part of the algorithm stages 5.4
- *  and 5.5 following:
- *
- *  \li In parallel for all \f$m\f$, sequentially for each \f$n\f$,
- *  compute and store \f$P^T_{m,n}(U)\f$ and using the previously
- *  computed \f$P^T_{m,n}(\check{U})\f$, \f$P_{m-1,n}(Y)\f$, and
- *  \f$E_{m+1,n}(Z)\f$.
- *
- *  with simple kernel fusioned (going thorough global memory):
- *
- *  In parallel for all \f$m\f$, sequentially for each \f$n\f$,
- *  compute and store \f$E^T_{m,n}(V)\f$ and using the previously
- *  computed \f$E^T_{m,n}(\tilde{V})\f$, \f$P^T_{m,n-1}(U)\f$,
- *  \f$P_{m-1,n}(Y)\f$, and \f$E_{m+1,n}(Z)\f$.
- *
- *  @note The CUDA kernel functions (as this one) have many
- *  idiosyncrasies and should not be used lightly.
- *
- *  @see [Nehab:2011] cited in algorithm5()
- *  @param[in,out] g_ubar All \f$P^T_{m,n}(\bar{U})\f$ fixed to \f$P^T_{m,n}(U)\f$
- *  @param[in,out] g_vcheck All \f$E^T_{m,n}(\check{V})\f$ fixed to \f$E^T_{m,n}(V)\f$
- */
-__global__
-void algorithm5_stage4_5_step2( float *g_ubar,
-                                float *g_vcheck );
+void alg5_stage4_5( float *g_ptucheck,
+                    float *g_etvtilde,
+                    const float *g_transp_py,
+                    const float *g_transp_ez );
 
 /**
  *  @ingroup gpu
@@ -264,31 +233,31 @@ void algorithm5_stage4_5_step2( float *g_ubar,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_inout The input and output 2D image
- *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
- *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
- *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
+ *  @param[in] g_transp_py All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_transp_ez All \f$E_{m,n}(Z)\f$
+ *  @param[in] g_ptu All \f$P^T_{m,n}(U)\f$
+ *  @param[in] g_etv All \f$E^T_{m,n}(V)\f$
  */
 __global__
-void algorithm5_stage6( float *g_inout,
-                        const float *g_transp_y,
-                        const float *g_transp_z,
-                        const float *g_u,
-                        const float *g_v );
+void alg5_stage6( float *g_inout,
+                  const float *g_transp_py,
+                  const float *g_transp_ez,
+                  const float *g_ptu,
+                  const float *g_etv );
 /**
  *  @ingroup gpu
  *  @brief Algorithm 5 stage 6 fusioned with algorithm 4 stage 1
  *
  *  This function computes the algorithm stage 5.6 (as the function
- *  algorithm5_stage6()) and, in the sequence, computes the algorithm
- *  stage 4.1 (as the function algorithm4_stage1()).
+ *  alg5_stage6()) and, in the sequence, computes the algorithm stage
+ *  4.1 (as the function algorithm4_stage1()).
  *
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5()
+ *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] g_inout The input and output 2D image
  *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$

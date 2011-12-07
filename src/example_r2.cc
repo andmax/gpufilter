@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::algorithm5( in_gpu, h_in, w_in, b0, a1 );
+        gpufilter::alg5( in_gpu, h_in, w_in, b0, a1 );
 
         std::cout << "done!\n[r2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }

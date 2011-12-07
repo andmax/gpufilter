@@ -25,6 +25,7 @@
 #define MW 6 // Maximum number of warps per block with 8 blocks per SM (with all warps computing)
 #define SOW 5 // Dual-scheduler optimized number of warps per block (with 8 blocks per SM and to use the dual scheduler with 1 computing warp)
 #define MBH 3 // Maximum number of blocks per SM using half-warp size
+#define CFW 7 // Carry-fixing number of warps per block
 
 //== NAMESPACES ===============================================================
 

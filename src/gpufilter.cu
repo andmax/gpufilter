@@ -480,762 +480,725 @@ void algorithm4_stage7( float *g_inout,
 
 //-- Algorithm 5_1 ------------------------------------------------------------
 
-__global__ __launch_bounds__(WS*DW, ONB)
-void algorithm5_stage1( const float *g_in,
-                        float *g_transp_ybar,
-                        float *g_transp_zhat,
-                        float *g_ucheck,
-                        float *g_vtilde )
+__global__ __launch_bounds__(WS*SOW, MBO)
+void alg5_stage1( const float *g_in,
+                  float *g_transp_pybar,
+                  float *g_transp_ezhat,
+                  float *g_ptucheck,
+                  float *g_etvtilde )
 {
-    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
-
-    // each cuda block will work on two WSxWS input data blocks, so allocate
-    // enough shared memory for these.
-    __shared__ float block[WS*2][WS+1];
+    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y;
+    __shared__ float block[WS][WS+1];
 
     // make g_in point to the data we'll work with
-    g_in += (m*WS + ty)*c_width + n*WS + tx;
+    g_in += (n*WS+ty)*c_width + m*WS+tx;
+
+    float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
 
     // load data into shared memory
+    int i;
 #pragma unroll
-    for(int i=0; i<WS; i+=DW)
+    for(i=0; i<WS-(WS%SOW); i+=SOW)
     {
-        // load data for the first warp
-        block[ty+i][tx] = g_in[i*c_width];
-
-        // load data for the second warp
-        block[ty+i+WS][tx] = g_in[(i+WS)*c_width];
+        **bdata = *g_in;
+        bdata += SOW;
+        g_in += SOW*c_width;
     }
+
+    if(ty < WS%SOW)
+    {
+        **bdata = *g_in;
+    }
+
+    // We use a transposed matrix for pybar and ezhat to have
+    // coalesced memory accesses. This is the movement for these
+    // transposed buffers.
+    g_transp_pybar += m*c_height + n*WS + tx; 
+    g_transp_ezhat += m*c_height + n*WS + tx;
+    g_ptucheck += n*c_width + m*WS + tx;
+    g_etvtilde += n*c_width + m*WS + tx;
 
     __syncthreads();
 
-    // use 2 warps for calculations, one for each scheduler of sm_20
-    if(ty < 2)
+    float prev;
+
+    if(ty == 0)
     {
-        // adjust 'm' for the second warp
-        m += ty;
-
+        // scan columns
         {
-            // ty*WS makes this warp's bdata point to the right data
-            float *bdata = block[tx+ty*WS];
+            float *bdata = block[tx];
 
-            // We use a transposed matrix for ybar and zhat to have
-            // coalesced memory operations. This is the index for these
-            // transposed buffers.
-            int outidx = n*c_height + m*WS + tx;
+            // calculate pybar, scan left -> right
 
-            float prev;
-
-            // calculate ybar --------------------------------
-
-            prev = bdata[0];
+            prev = *bdata++;
 
 #pragma unroll
-            for(int j=1; j<WS; ++j)
-                prev = bdata[j] -= prev*c_Linf1;
+            for(int j=1; j<WS; ++j, ++bdata)
+                prev = *bdata += prev*c_a1;
 
-            g_transp_ybar[outidx] = prev;
+            *g_transp_pybar = prev*c_b0;
+            
+            // calculate ezhat, scan right -> left
 
-            // calculate zhat --------------------------------
+            prev = *--bdata;
+            --bdata;
 
-            prev = bdata[WS-1] *= c_Linf1;
+#pragma unroll
+            for(int j=WS-2; j>=0; --j, --bdata)
+                prev = *bdata += prev*c_a1;
 
-            for(int j=WS-2; j>=0; --j)
-                bdata[j] = prev = (bdata[j] - prev)*c_Linf1;
-
-            g_transp_zhat[outidx] = prev;
+            *g_transp_ezhat = prev*c_b0*c_b0;
         }
 
+        // scan rows
         {
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty*WS][tx];
-            int outidx = m*c_width + n*WS+tx;
-            float prev;
+            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
 
-            // calculate ucheck ------------------------------
+            // calculate ptucheck, scan top -> down
 
-            prev = bdata[0][0];
+            prev = **bdata++;
 
 #pragma unroll
-            for(int i=1; i<WS; ++i)
-                prev = bdata[i][0] -= prev*c_Linf1;
+            for(int i=1; i<WS; ++i, ++bdata)
+                prev = **bdata += prev*c_a1;
 
-            g_ucheck[outidx] = prev;
+            *g_ptucheck = prev*c_b0*c_b0*c_b0;
 
-            // calculate vtilde ------------------------------
+            // calculate etvtilde, scan bottom -> up
 
-            prev = bdata[WS-1][0] *= c_Linf1;
+            prev = **--bdata;
+            --bdata;
 
-            for(int i=WS-2; i>=0; --i)
-                bdata[i][0] = prev = (bdata[i][0] - prev)*c_Linf1;
+            for(int i=WS-2; i>=0; --i, --bdata)
+                prev = **bdata + prev*c_a1;
 
-            g_vtilde[outidx] = prev;
+            *g_etvtilde = prev*c_b0*c_b0*c_b0*c_b0;
         }
     }
 }
 
 __global__ __launch_bounds__(WS*DW, DNB)
-void algorithm5_stage2_3( float *g_transp_ybar,
-                          float *g_transp_zhat )
+void alg5_stage2_3( float *g_transp_pybar,
+                    float *g_transp_ezhat )
 {
-    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2;
+    int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.y;
 
-    __shared__ float block[DW][WS*2];
+    __shared__ float transp_block[DW][WS];
+    float *bdata = &transp_block[ty][tx];
 
-    // ybar -> y processing --------------------------------------
+    // P(ybar) -> P(y) processing --------------------------------------
 
-    g_transp_ybar += m*WS+tx + ty*c_height;
+    float *transp_pybar = g_transp_pybar + ty*c_height + n*WS+tx;
 
-    // first column-block
+    // first column-transp_block
 
-    block[ty][tx] = g_transp_ybar[0];
-    block[ty][tx+WS] = g_transp_ybar[WS];
-
-    __syncthreads();
+    // read P(ybar)
+    *bdata = *transp_pybar;
 
     float py; // P(Y)
-    if(ty < 2)
+
+    __syncthreads();
+
+    if(ty == 0)
     {
-        int i = tx+ty*WS;
-        py = block[0][i];
+        float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+
+        // (24): P_m(y) = P_m(ybar) + A^b_F * P_{m-1}(y)
+        py = **bdata++;
 
 #pragma unroll
-        for(int j=1; j<blockDim.y; ++j)
-            block[j][i] = py = block[j][i] + c_Svm*py;
-
+        for(int m=1; m<blockDim.y; ++m, ++bdata)
+            **bdata = py = **bdata + c_AbF*py;
     }
 
     __syncthreads();
 
+    // write P(y)
+    if(ty > 0) // first one doesn't need fixing
+        *transp_pybar = *bdata;
 
-    if(ty > 0)
-    {
-        g_transp_ybar[0] = block[ty][tx];
-        g_transp_ybar[WS] = block[ty][tx+WS];
-    }
-
-    g_transp_ybar += c_height*blockDim.y;
+    transp_pybar += c_height*blockDim.y;
 
     // middle column-blocks
 
-    int n = blockDim.y;
-    if(blockDim.y == DW)
+    int m = blockDim.y;
+    if(m == DW)
     {
-        for(; n<c_n_size-DW; 
-            n+=DW, g_transp_ybar+=c_height*DW)
+        for(; m<c_m_size-(c_m_size%DW); m+=DW)
         {
-            block[ty][tx] = g_transp_ybar[0];
-            block[ty][tx+WS] = g_transp_ybar[WS];
+            *bdata = *transp_pybar;
 
             __syncthreads();
 
-            if(ty < 2)
+            if(ty == 0)
             {
-                int i = tx+ty*WS;
+                float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
 #pragma unroll
-                for(int j=0; j<DW; ++j)
-                    block[j][i] = py = block[j][i] + c_Svm*py;
+                for(int dm=0; dm<DW; ++dm, ++bdata)
+                    **bdata = py = **bdata + c_AbF*py;
             }
 
             __syncthreads();
 
-            g_transp_ybar[0] = block[ty][tx];
-            g_transp_ybar[WS] = block[ty][tx+WS];
+            *transp_pybar = *bdata;
+            transp_pybar += c_height*DW;
+        }
+    }
+
+    // remaining column-transp_blocks
+
+    if(m < c_m_size)
+    {
+        int remaining = c_m_size - m;
+
+        if(remaining > 0)
+            *bdata = *transp_pybar;
+
+        __syncthreads();
+
+        if(ty == 0)
+        {
+            float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+#pragma unroll
+            for(int dm=0; dm<remaining; ++dm, ++bdata)
+                **bdata = py = **bdata + c_AbF*py;
+
+        }
+
+        __syncthreads();
+
+        if(remaining > 0)
+            *transp_pybar = *bdata;
+    }
+
+    // E(zhat) -> E(z) processing --------------------------------------
+
+    int idx = (c_m_size-1-ty)*c_height + n*WS+tx;
+
+    const float *transp_pm1y = g_transp_pybar + idx - c_height;
+
+    // last column-transp_block
+
+    float *transp_ezhat = g_transp_ezhat + idx;
+
+    // all pybars must be updated!
+    __syncthreads();
+
+    float ez;
+
+    {
+        *bdata = *transp_ezhat;
+
+        if(m-ty > 0)
+            *bdata += *transp_pm1y*c_HARB_AFP;
+
+        __syncthreads();
+
+        if(ty == 0)
+        {
+            float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+            ez = **bdata++;
+
+#pragma unroll
+            for(int dm=1; dm<blockDim.y; ++dm, ++bdata)
+                **bdata = ez = **bdata + c_AbR*ez;
+        }
+
+        __syncthreads();
+
+        *transp_ezhat = *bdata;
+
+        transp_ezhat -= c_height*blockDim.y;
+        transp_pm1y -= c_height*blockDim.y;
+    }
+
+    // middle column-transp_blocks
+    m = c_m_size-1 - blockDim.y;
+    if(blockDim.y == DW)
+    {
+        for(; m>=c_m_size%DW; m-=DW)
+        {
+            *bdata = *transp_ezhat;
+
+            if(m-ty > 0)
+                *bdata += *transp_pm1y*c_HARB_AFP;
+
+            __syncthreads();
+
+            if(ty == 0)
+            {
+                float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+#pragma unroll
+                for(int dm=0; dm<DW; ++dm, ++bdata)
+                    **bdata = ez = **bdata + c_AbR*ez;
+            }
+
+            __syncthreads();
+
+            *transp_ezhat = *bdata;
+
+            transp_ezhat -= DW*c_height;
+            transp_pm1y -= DW*c_height;
         }
     }
 
     // remaining column-blocks
 
-    if(c_n_size > n)
+    if(m >= 0)
     {
-        int remaining = c_n_size-n;
-        if(ty < remaining)
+        int remaining = m+1;
+
+        if(m-ty >= 0)
         {
-            block[ty][tx] = g_transp_ybar[0];
-            block[ty][tx+WS] = g_transp_ybar[WS];
+            *bdata = *transp_ezhat;
+        
+            if(m-ty > 0)
+                *bdata += *transp_pm1y*c_HARB_AFP;
         }
 
         __syncthreads();
 
-        if(ty < 2)
+        if(ty == 0)
         {
-            int i = tx+ty*WS;
+            float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+            // (24): P_m(y) = P_m(ybar) + A^b_F * P_{m-1}(y)
 #pragma unroll
-            for(int j=0; j<remaining; ++j)
-                block[j][i] = py = block[j][i] + c_Svm*py;
-
+            for(int dm=0; dm<remaining; ++dm, ++bdata)
+                **bdata = ez = **bdata + c_AbR*ez;
         }
 
         __syncthreads();
 
-        if(ty < remaining)
-        {
-            g_transp_ybar[0] = block[ty][tx];
-            g_transp_ybar[WS] = block[ty][tx+WS];
-        }
-
-        g_transp_ybar += remaining*c_height;
-    }
-
-    // zhat -> z processing --------------------------------------
-
-    const float *g_y = g_transp_ybar - (2*ty+2)*c_height;
-
-    __shared__ float block_y[DW][WS*2];
-
-    float ez; // E(Z)
-
-    // last column-block
-
-    g_transp_zhat += m*WS+tx + (c_n_size-(ty+1))*c_height;
-
-    block[ty][tx] = g_transp_zhat[0];
-    block[ty][tx+WS] = g_transp_zhat[WS];
-
-    block_y[ty][tx] = g_y[0];
-    block_y[ty][tx+WS] = g_y[WS];
-
-    __syncthreads();
-
-    if(ty < 2)
-    {
-        int i = tx+ty*WS;
-        block[0][i] = ez = block[0][i] - block_y[0][i]*c_Alpha;
-
-#pragma unroll
-        for(int j=1; j<blockDim.y; ++j)
-        {
-            float ezhat = block[j][i] - block_y[j][i]*c_Alpha;
-            block[j][i] = ez = ezhat + c_Stm*ez;
-        }
-    }
-
-    __syncthreads();
-
-    g_transp_zhat[0] = block[ty][tx];
-    g_transp_zhat[WS] = block[ty][tx+WS];
-
-    g_transp_zhat -= c_height*blockDim.y;
-    g_y -= c_height*blockDim.y;
-
-    // middle column-blocks
-    n = c_n_size-blockDim.y-1;
-    if(blockDim.y == DW)
-    {
-        for(; n>=DW; n-=DW, g_transp_zhat-=DW*c_height,
-                g_y-=DW*c_height)
-        {
-            block[ty][tx] = g_transp_zhat[0];
-            block[ty][tx+WS] = g_transp_zhat[WS];
-
-            block_y[ty][tx] = g_y[0];
-            block_y[ty][tx+WS] = g_y[WS];
-
-            __syncthreads();
-
-            if(ty < 2)
-            {
-                int i = tx+ty*WS;
-#pragma unroll
-                for(int j=0; j<DW; ++j)
-                {
-                    float ezhat = block[j][i] - block_y[j][i]*c_Alpha;
-                    block[j][i] = ez = ezhat + c_Stm*ez;
-                }
-            }
-
-            __syncthreads();
-
-            g_transp_zhat[0] = block[ty][tx];
-            g_transp_zhat[WS] = block[ty][tx+WS];
-        }
-    }
-
-    // remaining column-blocks
-
-    if(n > 0)
-    {
-        int remaining = n;
-        if(ty < remaining)
-        {
-            block[ty][tx] = g_transp_zhat[0];
-            block[ty][tx+WS] = g_transp_zhat[WS];
-
-            block_y[ty][tx] = g_y[0];
-            block_y[ty][tx+WS] = g_y[WS];
-        }
-
-        __syncthreads();
-
-        if(ty < 2)
-        {
-            int i = tx+ty*WS;
-#pragma unroll
-            for(int j=0; j<remaining; ++j)
-            {
-                float ezhat = block[j][i] - block_y[j][i]*c_Alpha;
-                block[j][i] = ez = ezhat + c_Stm*ez;
-            }
-        }
-
-        __syncthreads();
-
-        if(ty < remaining)
-        {
-            g_transp_zhat[0] = block[ty][tx];
-            g_transp_zhat[WS] = block[ty][tx+WS];
-        }
+        if(m-ty >= 0)
+            *transp_ezhat = *bdata;
     }
 }
 
-__global__ __launch_bounds__(WS*OW, DNB)
-void algorithm5_stage4_5_step1( float *g_ucheck,
-                                float *g_vtilde,
-                                const float *g_transp_y,
-                                const float *g_transp_z )
+__global__ __launch_bounds__(WS*CFW, ONB)
+void alg5_stage4_5( float *g_ptucheck,
+                    float *g_etvtilde,
+                    const float *g_transp_py,
+                    const float *g_transp_ez )
 {
-    int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.x*OW + ty, m = blockIdx.y;
+    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x;
 
-    if(n >= c_n_size)
-        return;
+    __shared__ float block[CFW][WS];
+    float *bdata = &block[ty][tx];
 
-    __shared__ float shared_yimb1[OW][WS], shared_zim1b[OW][WS];
+    // P(ucheck) -> P(u) processing --------------------------------------
 
-    float delta_x, delta_y;
+	volatile __shared__ float block_RD_raw[CFW][16+32+1];
+	volatile float (*block_RD)[16+32+1] 
+        = (float (*)[16+32+1]) &block_RD_raw[0][16];
+    if(ty < CFW)
+        block_RD_raw[ty][tx] = 0;
 
-    delta_x = c_Delta_x_tail[tx];
-    delta_y = c_Delta_y[tx];
+#define CALC_DOT(RES, V1, V2) \
+    block_RD[ty][tx] = V1*V2; \
+    block_RD[ty][tx] += block_RD[ty][tx-1]; \
+    block_RD[ty][tx] += block_RD[ty][tx-2]; \
+    block_RD[ty][tx] += block_RD[ty][tx-4]; \
+    block_RD[ty][tx] += block_RD[ty][tx-8]; \
+    block_RD[ty][tx] += block_RD[ty][tx-16]; \
+    float RES = block_RD[ty][31];
 
-    g_transp_y += (n-1)*c_height + m*WS; 
-    g_transp_z += (n+1)*c_height + m*WS;
-
-    float *yimb1 = shared_yimb1[ty], *zim1b = shared_zim1b[ty];
-
-    if(n > 0)
-        yimb1[tx] = g_transp_y[tx];
-    
-    if(n < c_n_size-1)
-        zim1b[tx] = g_transp_z[tx];
-
-    int e;
-
-    if(m == c_m_size-1)
-    {
-        e = c_height%WS;
-        if(e == 0)
-            e = WS;
-    }
-    else
-        e = WS;
-
-    g_vtilde += m*c_width + n*WS+tx;
-    g_ucheck += m*c_width + n*WS+tx;
-
-    // update vtilde to vcheck
-    float sum_vtilde = *g_vtilde, sum_ucheck = *g_ucheck, inner_sum_vtilde = 0;
-    float sign = 1;
-
-    if(n == 0)
-    {
-        if(m == c_m_size-1)
-        {
-#pragma unroll
-            for(int i=0; i<e; ++i)
-            {
-                float delta = zim1b[i]*delta_x;
-                if(i>0)
-                    inner_sum_vtilde = inner_sum_vtilde*c_Linf1;
-                inner_sum_vtilde += delta*sign;
-                sum_vtilde += inner_sum_vtilde*c_ProdLinf[i];
-                sum_ucheck += delta*c_SignRevProdLinf[i];
-
-                sign *= -1;
-            }
-        }
-        else
-        {
-#pragma unroll
-            for(int i=0; i<WS; ++i)
-            {
-                float delta = zim1b[i]*delta_x;
-                if(i>0)
-                    inner_sum_vtilde = inner_sum_vtilde*c_Linf1;
-                inner_sum_vtilde += delta*sign;
-                sum_vtilde += inner_sum_vtilde*c_ProdLinf[i];
-                sum_ucheck += delta*c_SignRevProdLinf[i];
-
-                sign *= -1;
-            }
-        }
-    }
-    else if(n == c_n_size-1)
-    {
-        if(m == c_m_size-1)
-        {
-#pragma unroll
-            for(int i=0; i<e; ++i)
-            {
-                float delta = yimb1[i]*delta_y;
-                if(i>0)
-                    inner_sum_vtilde = inner_sum_vtilde*c_Linf1;
-                inner_sum_vtilde += delta*sign;
-                sum_vtilde += inner_sum_vtilde*c_ProdLinf[i];
-                sum_ucheck += delta*c_SignRevProdLinf[i];
-
-                sign *= -1;
-            }
-        }
-        else
-        {
-#pragma unroll
-            for(int i=0; i<WS; ++i)
-            {
-                float delta = yimb1[i]*delta_y;
-                if(i>0)
-                    inner_sum_vtilde = inner_sum_vtilde*c_Linf1;
-                inner_sum_vtilde += delta*sign;
-                sum_vtilde += inner_sum_vtilde*c_ProdLinf[i];
-                sum_ucheck += delta*c_SignRevProdLinf[i];
-
-                sign *= -1;
-            }
-        }
-    }
-    else
-    {
-        if(m == c_m_size-1)
-        {
-#pragma unroll
-            for(int i=0; i<e; ++i)
-            {
-                float delta = zim1b[i]*delta_x + yimb1[i]*delta_y;
-                if(i>0)
-                    inner_sum_vtilde = inner_sum_vtilde*c_Linf1;
-                inner_sum_vtilde += delta*sign;
-                sum_vtilde += inner_sum_vtilde*c_ProdLinf[i];
-                sum_ucheck += delta*c_SignRevProdLinf[i];
-
-                sign *= -1;
-            }
-        }
-        else
-        {
-            float inner_sum_vtilde = zim1b[0]*delta_x + yimb1[0]*delta_y;
-            sum_vtilde += inner_sum_vtilde*c_Linf1;
-            float sign = -1;
-#pragma unroll
-            for(int i=1; i<WS; ++i)
-            {
-                float delta = zim1b[i]*delta_x + yimb1[i]*delta_y;
-                inner_sum_vtilde = inner_sum_vtilde*c_Linf1 + delta*sign;
-                sum_vtilde += inner_sum_vtilde*c_ProdLinf[i];
-                sum_ucheck += delta*c_SignRevProdLinf[i];
-
-                sign *= -1;
-            }
-        }
-    }
-
-    *g_vtilde = sum_vtilde;
-    *g_ucheck = sum_ucheck;
-}
-
-__global__ __launch_bounds__(WS*DW, DNB)
-void algorithm5_stage4_5_step2( float *g_ubar,
-                                float *g_vcheck )
-{
-    int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.x*2;
-
-    __shared__ float block[DW][WS*2];
-
-    // ubar -> u processing --------------------------------------
-
-    g_ubar += n*WS+tx + ty*c_width;
-
-    float u;
+    float *ptucheck = g_ptucheck + m*WS+tx + ty*c_width;
 
     // first row-block
 
-    block[ty][tx] = g_ubar[0];
-    block[ty][tx+WS] = g_ubar[WS];
+    int idx = m*c_height + ty*WS+tx;
 
-    __syncthreads();
+    const float *transp_pm1ybar = g_transp_py + idx - c_height,
+                *transp_em1zhat = g_transp_ez + idx + c_height;
 
-    if(ty < 2)
+    float ptu;
+
     {
-        int j = tx+ty*WS;
-        u = block[0][j];
+        // read P(ucheck)
+        *bdata = *ptucheck;
+
+        if(m > 0)
+        {
+            CALC_DOT(dot, *transp_pm1ybar, c_TAFB[tx]);
+            *bdata += dot*c_ARB_AFP_T[tx];
+        }
+
+        if(m < c_m_size-1)
+        {
+            CALC_DOT(dot, *transp_em1zhat, c_TAFB[tx]);
+            *bdata += dot*c_ARE_T[tx];
+        }
+
+        transp_pm1ybar += WS*blockDim.y;
+        transp_em1zhat += WS*blockDim.y;
+
+        __syncthreads();
+
+        if(ty == 0)
+        {
+            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+
+            ptu = **bdata2++;
+
 #pragma unroll
-        for(int i=1; i<blockDim.y; ++i)
-            block[i][j] = u = block[i][j] + c_Svm*u;
+            for(int n=1; n<blockDim.y; ++n, ++bdata2)
+                **bdata2 = ptu = **bdata2 + c_AbF*ptu;
+        }
+
+        __syncthreads();
+
+        // write P(u)
+        *ptucheck = *bdata;
+
+        ptucheck += blockDim.y*c_width;
     }
-
-    __syncthreads();
-
-    if(ty > 0)
-    {
-        g_ubar[0] = block[ty][tx];
-        g_ubar[WS] = block[ty][tx+WS];
-    }
-
-    g_ubar += c_width*blockDim.y;
 
     // middle row-blocks
 
-    int m = blockDim.y;
-    if(blockDim.y == DW)
+    int n = blockDim.y;
+    if(n == CFW)
     {
-        for(; m<c_m_size-DW; 
-            m+=DW, g_ubar+=c_width*DW)
+        int nmax = c_n_size-(c_n_size%CFW);
+        for(; n<nmax; n+=CFW)
         {
-            block[ty][tx] = g_ubar[0];
-            block[ty][tx+WS] = g_ubar[WS];
+            *bdata = *ptucheck;
+
+            if(m > 0)
+            {
+                CALC_DOT(dot, *transp_pm1ybar, c_TAFB[tx]);
+                *bdata += dot*c_ARB_AFP_T[tx];
+            }
+
+            if(m < c_m_size-1)
+            {
+                CALC_DOT(dot, *transp_em1zhat, c_TAFB[tx]);
+                *bdata += dot*c_ARE_T[tx];
+            }
+
+            transp_pm1ybar += WS*CFW;
+            transp_em1zhat += WS*CFW;
 
             __syncthreads();
 
-            if(ty < 2)
+            if(ty == 0)
             {
-                int j = tx+ty*WS;
+                float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+
 #pragma unroll
-                for(int i=0; i<DW; ++i)
-                    block[i][j] = u = block[i][j] + c_Svm*u;
+                for(int dn=0; dn<CFW; ++dn, ++bdata2)
+                    **bdata2 = ptu = **bdata2 + c_AbF*ptu;
             }
 
             __syncthreads();
 
-            g_ubar[0] = block[ty][tx];
-            g_ubar[WS] = block[ty][tx+WS];
+            *ptucheck = *bdata;
+
+            ptucheck += CFW*c_width;
+
         }
     }
 
     // remaining row-blocks
 
-    if(c_m_size > m)
+    if(n < c_n_size)
     {
-        int remaining = c_m_size-m;
-        if(ty < remaining)
+
+        if(n+ty < c_n_size)
         {
-            block[ty][tx] = g_ubar[0];
-            block[ty][tx+WS] = g_ubar[WS];
+            *bdata = *ptucheck;
+
+            if(m > 0)
+            {
+                CALC_DOT(dot, *transp_pm1ybar, c_TAFB[tx]);
+                *bdata += dot*c_ARB_AFP_T[tx];
+            }
+
+            if(m < c_m_size-1)
+            {
+                CALC_DOT(dot, *transp_em1zhat, c_TAFB[tx]);
+                *bdata += dot*c_ARE_T[tx];
+            }
         }
 
+        int remaining = c_n_size-n;
         __syncthreads();
 
-        if(ty < 2)
+        if(ty == 0)
         {
-            int j = tx+ty*WS;
+            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
 #pragma unroll
-            for(int i=0; i<remaining; ++i)
-                block[i][j] = u = block[i][j] + c_Svm*u;
+            for(int dn=0; dn<remaining; ++dn, ++bdata2)
+                **bdata2 = ptu = **bdata2 + c_AbF*ptu;
         }
 
         __syncthreads();
 
-        if(ty < remaining)
-        {
-            g_ubar[0] = block[ty][tx];
-            g_ubar[WS] = block[ty][tx+WS];
-        }
-
-        g_ubar += remaining*c_width;
+        if(n+ty < c_n_size)
+            *ptucheck = *bdata;
     }
 
-    // vcheck -> v processing --------------------------------------
-
-    const float *g_u = g_ubar - (2*ty+2)*c_width;
-
-    __shared__ float block_y[DW][WS*2];
-
-    float v;
+    // E(utilde) -> E(u) processing --------------------------------------
 
     // last row-block
 
-    g_vcheck += n*WS+tx + (c_m_size-(ty+1))*c_width;
+    idx = (c_n_size-1-ty)*c_width + m*WS+tx;
+    int transp_idx = m*c_height + (c_n_size-1-ty)*WS+tx;
 
-    block[ty][tx] = g_vcheck[0];
-    block[ty][tx+WS] = g_vcheck[WS];
+    float *etvtilde = g_etvtilde + idx;
 
-    block_y[ty][tx] = g_u[0];
-    block_y[ty][tx+WS] = g_u[WS];
+    transp_pm1ybar = g_transp_py + transp_idx-c_height;
+    transp_em1zhat = g_transp_ez + transp_idx+c_height;
 
+    const float *ptmn1u = g_ptucheck + idx - c_width;
+
+    // all ptuchecks must be updated!
     __syncthreads();
 
-    if(ty < 2)
+    float etv;
+
+    n = c_n_size-1;
+
     {
-        int j = tx+ty*WS;
-        block[0][j] = v = block[0][j] - block_y[0][j]*c_Alpha;
+        block[ty][tx] = *etvtilde;
+
+
+        if(m > 0)
+        {
+            CALC_DOT(dot, *transp_pm1ybar, c_HARB_AFB[tx]);
+            *bdata += dot*c_ARB_AFP_T[tx];
+        }
+
+        if(m < c_m_size-1)
+        {
+            CALC_DOT(dot, *transp_em1zhat, c_HARB_AFB[tx]);
+            *bdata += dot*c_ARE_T[tx];
+        }
+
+        if(n-ty > 0)
+            *bdata += *ptmn1u*c_HARB_AFP;
+
+        transp_pm1ybar -= WS*blockDim.y;
+        transp_em1zhat -= WS*blockDim.y;
+        ptmn1u -= c_width*blockDim.y;
+
+        __syncthreads();
+
+        if(ty == 0)
+        {
+            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+
+            etv = **bdata2++;
 
 #pragma unroll
-        for(int i=1; i<blockDim.y; ++i)
-        {
-            float vimb = block[i][j] - block_y[i][j]*c_Alpha;
-            block[i][j] = v = vimb + c_Stm*v;
+            for(int dn=1; dn<blockDim.y; ++dn, ++bdata2)
+                **bdata2 = etv = **bdata2 + c_AbR*etv;
         }
+
+        __syncthreads();
+
+        *etvtilde = *bdata;
+
+        etvtilde -= c_width*blockDim.y;
+
+        n -= blockDim.y;
     }
 
-    __syncthreads();
-
-    g_vcheck[0] = block[ty][tx];
-    g_vcheck[WS] = block[ty][tx+WS];
-
-    g_vcheck -= c_width*blockDim.y;
-    g_u -= c_width*blockDim.y;
-
     // middle row-blocks
-
-    m = c_m_size-blockDim.y-1;
-    if(blockDim.y == DW)
+    if(blockDim.y == CFW)
     {
-        for(; m>=DW; m-=DW, g_vcheck-=DW*c_width,
-                g_u-=DW*c_width)
+        int nmin = c_n_size%CFW;
+        for(; n>=nmin; n-=CFW)
         {
-            block[ty][tx] = g_vcheck[0];
-            block[ty][tx+WS] = g_vcheck[WS];
 
-            block_y[ty][tx] = g_u[0];
-            block_y[ty][tx+WS] = g_u[WS];
+            *bdata = *etvtilde;
+
+
+            if(m > 0)
+            {
+                CALC_DOT(dot, *transp_pm1ybar, c_HARB_AFB[tx]);
+                *bdata += dot*c_ARB_AFP_T[tx];
+            }
+
+            if(m < c_m_size-1)
+            {
+                CALC_DOT(dot, *transp_em1zhat, c_HARB_AFB[tx]);
+                *bdata += dot*c_ARE_T[tx];
+            }
+
+            if(n-ty > 0)
+                *bdata += *ptmn1u*c_HARB_AFP;
+
+            transp_pm1ybar -= WS*CFW;
+            transp_em1zhat -= WS*CFW;
+            ptmn1u -= CFW*c_width;
 
             __syncthreads();
 
-            if(ty < 2)
+            if(ty == 0)
             {
-                int j = tx+ty*WS;
+                float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
 #pragma unroll
-                for(int i=0; i<DW; ++i)
-                {
-                    float vimb = block[i][j] - block_y[i][j]*c_Alpha;
-                    block[i][j] = v = vimb + c_Stm*v;
-                }
+                for(int dn=0; dn<CFW; ++dn, ++bdata2)
+                    **bdata2 = etv = **bdata2 + c_AbR*etv;
             }
 
             __syncthreads();
 
-            g_vcheck[0] = block[ty][tx];
-            g_vcheck[WS] = block[ty][tx+WS];
+            *etvtilde = *bdata;
+
+            etvtilde -= CFW*c_width;
         }
     }
 
     // remaining row-blocks
 
-    if(m > 0)
+    if(n >= 0)
     {
-        int remaining = m;
-        if(ty < remaining)
+
+        if(n-ty >= 0)
         {
-            block[ty][tx] = g_vcheck[0];
-            block[ty][tx+WS] = g_vcheck[WS];
+            *bdata = *etvtilde;
+            if(n-ty > 0)
+                *bdata += *ptmn1u*c_HARB_AFP;
 
-            block_y[ty][tx] = g_u[0];
-            block_y[ty][tx+WS] = g_u[WS];
-        }
-
-        __syncthreads();
-
-        if(ty < 2)
-        {
-            int j = tx+ty*WS;
-#pragma unroll
-            for(int i=0; i<remaining; ++i)
+            if(m > 0)
             {
-                float vimb = block[i][j] - block_y[i][j]*c_Alpha;
-                block[i][j] = v = vimb + c_Stm*v;
+                CALC_DOT(dot, *transp_pm1ybar, c_HARB_AFB[tx]);
+                *bdata += dot*c_ARB_AFP_T[tx];
+            }
+
+            if(m < c_m_size-1)
+            {
+                CALC_DOT(dot, *transp_em1zhat, c_HARB_AFB[tx]);
+                *bdata += dot*c_ARE_T[tx];
             }
         }
 
+        int remaining = n+1;
         __syncthreads();
 
-        if(ty < remaining)
+        if(ty == 0)
         {
-            g_vcheck[0] = block[ty][tx];
-            g_vcheck[WS] = block[ty][tx+WS];
+            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+#pragma unroll
+            for(int dn=0; dn<remaining; ++dn, ++bdata2)
+                **bdata2 = etv = **bdata2 + c_AbR*etv;
         }
+
+        __syncthreads();
+
+        if(n-ty >= 0)
+            *etvtilde = *bdata;
     }
+#undef CALC_DOT
 }
 
-__global__ __launch_bounds__(WS*DW, ONB)
-void algorithm5_stage6( float *g_inout,
-                        const float *g_transp_y,
-                        const float *g_transp_z,
-                        const float *g_u,
-                        const float *g_v )
+__global__ __launch_bounds__(WS*SOW, MBO)
+void alg5_stage6( float *g_inout,
+                  const float *g_transp_py,
+                  const float *g_transp_ez,
+                  const float *g_ptu,
+                  const float *g_etv )
 {
-    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
+    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y;
 
-    __shared__ float block[WS*2][WS+1];
+    __shared__ float block[WS][WS+1];
 
-    const float *in_data = g_inout + (m*WS + ty)*c_width + n*WS + tx;
+    const float *in = g_inout + (n*WS+ty)*c_width + m*WS+tx;
 
+    float (*curb)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
+
+    // load data into shared memory
+    int i;
 #pragma unroll
-    for(int i=0; i<WS; i+=DW)
+    for(i=0; i<WS-(WS%SOW); i+=SOW)
     {
-        block[ty+i][tx] = in_data[i*c_width];
-        block[ty+i+WS][tx] = in_data[(i+WS)*c_width];
+        **curb = *in;
+        in += SOW*c_width;
+        curb += SOW;
+    }
+
+    if(ty < WS%SOW)
+    {
+        **curb = *in;
+    }
+
+    __shared__ float py[WS], ez[WS], ptu[WS], etv[WS];
+
+    switch(ty)
+    {
+    case 0:
+        if(m > 0)
+            py[tx] = g_transp_py[(n*WS + tx) + (m-1)*c_height] / c_b0;
+        else
+            py[tx] = 0;
+        break;
+    case 1:
+        if(m < c_m_size-1)
+            ez[tx] = g_transp_ez[(n*WS + tx) + (m+1)*c_height];
+        else
+            ez[tx] = 0;
+        break;
+    case 2:
+        if(n > 0)
+            ptu[tx] = g_ptu[(m*WS + tx) + (n-1)*c_width] / c_b0;
+        else
+            ptu[tx] = 0;
+        break;
+    case 3:
+        if(n < c_n_size-1)
+            etv[tx] = g_etv[(m*WS + tx) + (n+1)*c_width];
+        else
+            etv[tx] = 0;
+        break;
     }
 
     __syncthreads();
 
-    if(ty < 2)
+    if(ty == 0)
     {
-
-        m += ty;
-
+        float b0_2 = c_b0*c_b0;
         {
-            float *bdata = block[tx+ty*WS];
-            float prev;
+            float *bdata = block[tx];
 
             // calculate y ---------------------
 
-            prev = bdata[0];
+            float prev = py[tx];
 
-            if(n > 0)
-                bdata[0] = prev -= g_transp_y[(n-1)*c_height + m*WS+tx]*c_Linf1;
 #pragma unroll
-            for(int j=1; j<WS; ++j)
-                prev = bdata[j] -= prev*c_Linf1;
+            for(int j=0; j<WS; ++j, ++bdata)
+                *bdata = prev = *bdata + prev*c_a1;
 
             // calculate z ---------------------
 
-            if(n < c_n_size-1)
-                bdata[WS-1] = prev = (bdata[WS-1] - g_transp_z[(n+1)*c_height+m*WS+tx])*c_Linf1;
-            else
-                prev = bdata[WS-1] *= c_Linf1;
+            prev = ez[tx];
 
-            for(int j=WS-2; j>=0; --j)
-                bdata[j] = prev = (bdata[j] - prev)*c_Linf1;
+            --bdata;
+            for(int j=WS-1; j>=0; --j, --bdata)
+                *bdata = prev = *bdata*b0_2 + prev*c_a1;
         }
 
         {
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty*WS][tx];
-            float prev;
+            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
 
             // calculate u ---------------------
 
-            prev = bdata[0][0];
-
-            if(m > 0)
-                bdata[0][0] = prev -= g_u[(m-1)*c_width + n*WS+tx]*c_Linf1;
+            float prev = ptu[tx];
 
 #pragma unroll
-            for(int i=1; i<WS; ++i)
-                prev = bdata[i][0] -= prev*c_Linf1;
+            for(int i=0; i<WS; ++i, ++bdata)
+                **bdata = prev = **bdata + prev*c_a1;
 
             // calculate v ---------------------
+            float *out = g_inout + ((n+1)*WS-1)*c_width + m*WS+tx;
 
-            float *out_data = g_inout + (m*WS+WS-1)*c_width + n*WS + tx;
+            prev = etv[tx];
 
-            prev = bdata[WS-1][0];
-            if(m == c_m_size-1)
-                prev *= c_Linf1;
-            else
-                prev = (prev - g_v[(m+1)*c_width + n*WS+tx])*c_Linf1;
-
-            prev *= c_iR1;
-
-            *out_data = prev;
-
-            for(int i=WS-2; i>=0; --i)
+            --bdata;
+            for(int i=WS-1; i>=0; --i) 
             {
-                out_data -= c_width;
-                *out_data = prev = (bdata[i][0]*c_iR1 - prev)*c_Linf1;
+                *out = prev = **bdata-- *b0_2 + prev*c_a1;
+                out -= c_width;
             }
         }
     }
@@ -1278,18 +1241,18 @@ void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
             prev = bdata[0];
 
             if(n > 0)
-                bdata[0] = prev -= g_transp_y[(n-1)*c_height + m*WS+tx]*c_Linf1;
+                bdata[0] = prev -= g_transp_y[(n-1)*c_height + m*WS+tx]*c_a1;
 #pragma unroll
             for(int j=1; j<WS; ++j)
-                prev = bdata[j] -= prev*c_Linf1;
+                prev = bdata[j] -= prev*c_a1;
 
             if(n < c_n_size-1)
-                bdata[WS-1] = prev = (bdata[WS-1] - g_transp_z[(n+1)*c_height+m*WS+tx])*c_Linf1;
+                bdata[WS-1] = prev = (bdata[WS-1] - g_transp_z[(n+1)*c_height+m*WS+tx])*c_a1;
             else
-                prev = bdata[WS-1] *= c_Linf1;
+                prev = bdata[WS-1] *= c_a1;
 
             for(int j=WS-2; j>=0; --j)
-                bdata[j] = prev = (bdata[j] - prev)*c_Linf1;
+                bdata[j] = prev = (bdata[j] - prev)*c_a1;
         }
 
         {
@@ -1299,28 +1262,28 @@ void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
             prev = bdata[0][0];
 
             if(m > 0)
-                bdata[0][0] = prev -= g_u[(m-1)*c_width + n*WS+tx]*c_Linf1;
+                bdata[0][0] = prev -= g_u[(m-1)*c_width + n*WS+tx]*c_a1;
 
 #pragma unroll
             for(int i=1; i<WS; ++i)
-                prev = bdata[i][0] -= prev*c_Linf1;
+                prev = bdata[i][0] -= prev*c_a1;
 
             float *out_data = g_inout + (m*WS+WS-1)*c_width + n*WS + tx;
 
             prev = bdata[WS-1][0];
             if(m == c_m_size-1)
-                prev *= c_Linf1;
+                prev *= c_a1;
             else
-                prev = (prev - g_v[(m+1)*c_width + n*WS+tx])*c_Linf1;
+                prev = (prev - g_v[(m+1)*c_width + n*WS+tx])*c_a1;
 
-            bdata[WS-1][0] = prev *= c_iR1;
+            bdata[WS-1][0] = prev *= ((c_b0*c_b0*c_b0*c_b0)/c_a1/c_a1);
 
             *out_data = prev;
 
             for(int i=WS-2; i>=0; --i)
             {
                 out_data -= c_width;
-                *out_data = bdata[i][0] = prev = (bdata[i][0]*c_iR1 - prev)*c_Linf1;
+                *out_data = bdata[i][0] = prev = (bdata[i][0]*((c_b0*c_b0*c_b0*c_b0)/c_a1/c_a1) - prev)*c_a1;
             }
         }
     }
@@ -1439,11 +1402,11 @@ void algorithm4( float *inout,
 }
 
 __host__
-void algorithm5( float *inout,
-                 const int& h,
-                 const int& w,
-                 const float& b0,
-                 const float& a1 )
+void alg5( float *inout,
+           const int& h,
+           const int& w,
+           const float& b0,
+           const float& a1 )
 {
     up_constants_coefficients1( b0, a1 );
 
@@ -1452,36 +1415,30 @@ void algorithm5( float *inout,
 
     dvector<float> d_img(inout, h*w);
 
-    dvector<float> d_transp_ybar(cg_img.x*h),
-        d_transp_zhat(cg_img.x*h),
-        d_ucheck(cg_img.y*w),
-        d_vtilde(cg_img.y*w);
+    dvector<float> d_transp_pybar(cg_img.x*h),
+        d_transp_ezhat(cg_img.x*h),
+        d_ptucheck(cg_img.y*w),
+        d_etvtilde(cg_img.y*w);
                    
-    dvector<float> d_transp_y, d_transp_z, d_ubar, d_vcheck, d_u, d_v;
+    dvector<float> d_transp_py, d_transp_ez, d_ptu, d_etv;
 
-    algorithm5_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
-        d_img, d_transp_ybar, d_transp_zhat, d_ucheck, d_vtilde );
+    alg5_stage1<<< cg_img, dim3(WS, SOW) >>>(
+        d_img, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde );
 
-    algorithm5_stage2_3<<< dim3(1, (cg_img.y+2-1)/2), dim3(WS, std::min((int)cg_img.x, DW)) >>>(
-        d_transp_ybar, d_transp_zhat );
+    alg5_stage2_3<<< dim3(1, cg_img.y), dim3(WS, std::min<int>(cg_img.x, DW)) >>>(
+        d_transp_pybar, d_transp_ezhat );
 
-    swap(d_transp_ybar, d_transp_y);
-    swap(d_transp_zhat, d_transp_z);
+    swap(d_transp_pybar, d_transp_py);
+    swap(d_transp_ezhat, d_transp_ez);
 
-    algorithm5_stage4_5_step1<<< dim3((cg_img.x+OW-1)/OW, cg_img.y), dim3(WS, OW) >>>(
-        d_ucheck, d_vtilde, d_transp_y, d_transp_z );
+    alg5_stage4_5<<< dim3(cg_img.x, 1), dim3(WS, std::min<int>(cg_img.y, CFW)) >>>(
+        d_ptucheck, d_etvtilde, d_transp_py, d_transp_ez );
 
-    swap(d_ucheck, d_ubar);
-    swap(d_vtilde, d_vcheck);
+    swap(d_ptucheck, d_ptu);
+    swap(d_etvtilde, d_etv);
 
-    algorithm5_stage4_5_step2<<< dim3((cg_img.x+2-1)/2), dim3(WS, std::min((int)cg_img.y, DW)) >>>(
-        d_ubar, d_vcheck );
-
-    swap(d_ubar, d_u);
-    swap(d_vcheck, d_v);
-
-    algorithm5_stage6<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
-        d_img, d_transp_y, d_transp_z, d_u, d_v );
+    alg5_stage6<<< cg_img, dim3(WS, SOW) >>>(
+        d_img, d_transp_py, d_transp_ez, d_ptu, d_etv );
 
     d_img.copy_to(inout, h*w);
 }
@@ -1513,7 +1470,7 @@ void gaussian_gpu( float *inout,
         d_ucheck1(cg_img.y*w),
         d_vtilde1(cg_img.y*w);
 
-    dvector<float> d_transp_y1, d_transp_z1, d_ubar1, d_vcheck1, d_u1, d_v1;
+    dvector<float> d_transp_y1, d_transp_z1, d_u1, d_v1;
 
     // for order 2
     dvector<float2> d_transp_ybar2(cg_img.y*w),
@@ -1523,26 +1480,20 @@ void gaussian_gpu( float *inout,
 
     dvector<float2> d_transp_y2, d_transp_z2, d_u2, d_v2;
    
-    algorithm5_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
+    alg5_stage1<<< cg_img, dim3(WS, DW) >>>(
         d_img, d_transp_ybar1, d_transp_zhat1, d_ucheck1, d_vtilde1 );
 
-    algorithm5_stage2_3<<< dim3(1, (cg_img.y+2-1)/2), dim3(WS, std::min((int)cg_img.x, DW)) >>>(
+    alg5_stage2_3<<< dim3(1, cg_img.y), dim3(WS, std::min((int)cg_img.x, DW)) >>>(
         d_transp_ybar1, d_transp_zhat1 );
-	    
+
     swap(d_transp_ybar1, d_transp_y1);
     swap(d_transp_zhat1, d_transp_z1);
 
-    algorithm5_stage4_5_step1<<< dim3((cg_img.x+OW-1)/OW, cg_img.y), dim3(WS, OW) >>>(
+    alg5_stage4_5<<< dim3(cg_img.x, 1), dim3(WS, std::min((int)cg_img.y, CFW)) >>>(
         d_ucheck1, d_vtilde1, d_transp_y1, d_transp_z1 );
 
-    swap(d_ucheck1, d_ubar1);
-    swap(d_vtilde1, d_vcheck1);
-
-    algorithm5_stage4_5_step2<<< dim3((cg_img.x+2-1)/2, 1), dim3(WS, std::min((int)cg_img.y, DW)) >>>(
-        d_ubar1, d_vcheck1 );
-
-    swap(d_ubar1, d_u1);
-    swap(d_vcheck1, d_v1);
+    swap(d_ucheck1, d_u1);
+    swap(d_vtilde1, d_v1);
 
     algorithm5_stage6_fusion_algorithm4_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
         d_img, d_transp_y1, d_transp_z1, d_u1, d_v1, d_transp_ybar2, d_transp_zhat2 );

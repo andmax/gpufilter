@@ -8,6 +8,7 @@
 #include <vector>
 #include <complex>
 
+#include <util.h>
 #include <symbol.h>
 
 #include <gpudefs.cuh>
@@ -145,51 +146,42 @@ void calc_forward_reverse_matrix(float T[2][2], int n, float L, float M, float N
 void up_constants_coefficients1( const float& b0,
                                  const float& a1 )
 {
-    const float Linf = a1, iR = b0*b0*b0*b0/Linf/Linf;
+    copy_to_symbol("c_b0", b0);
+    copy_to_symbol("c_a1", a1);
 
-    std::vector<float> signrevprodLinf(WS);
+    const int B = 32, R = 1;
 
-    signrevprodLinf[WS-1] = 1;
+    Vector<R+1> w;
+    w[0] = b0;
+    w[1] = a1;
 
-    for(int i=WS-2; i>=0; --i)
-        signrevprodLinf[i] = -signrevprodLinf[i+1]*Linf;
+    Matrix<R,R> Ir = identity<R,R,float>();
+    Matrix<B,R> Zbr = zeros<B,R,float>();
+    Matrix<R,B> Zrb = zeros<R,B,float>();
+    Matrix<B,B> Ib = identity<B,B,float>();
 
-    copy_to_symbol("c_SignRevProdLinf", signrevprodLinf);
+    Matrix<B,R> AFP = fwd(Ir, Zbr, w),
+                ARE = rev(Zbr, Ir, w);
+    Matrix<B,B> AFB = fwd(Zrb, Ib, w),
+                ARB = rev(Ib, Zrb, w);
 
-    std::vector<float> prodLinf(WS);
+    Matrix<R,R> AbF = tail<R>(AFP),
+                AbR = head<R>(ARE),
+                HARB_AFP = head<R>(ARB)*AFP;
+    Matrix<R,B> ARE_T = transp(ARE),
+                ARB_AFP_T = transp(ARB*AFP),
+                TAFB = tail<R>(AFB),
+                HARB_AFB = head<R>(ARB)*AFB;
 
-    prodLinf[0] = Linf;
-    for(int i=1; i<WS; ++i)
-        prodLinf[i] = prodLinf[i-1]*Linf;
+    copy_to_symbol("c_AbF", AbF[0][0]);
+    copy_to_symbol("c_AbR", AbR[0][0]);
+    copy_to_symbol("c_HARB_AFP", HARB_AFP[0][0]);
+    copy_to_symbol("c_HARB_AFP_T", HARB_AFP[0][0]);
 
-    copy_to_symbol("c_ProdLinf", prodLinf);
-
-    copy_to_symbol("c_iR1", iR);
-    copy_to_symbol("c_Linf1", Linf);
-
-    const float Linf2 = Linf*Linf,
-                alpha = Linf2*(1-pow(Linf2,WS))/(1-Linf2),
-                stm = (WS & 1 ? -1 : 1)*pow(Linf, WS);
-
-    copy_to_symbol("c_Stm", stm);
-    copy_to_symbol("c_Svm", stm);
-    copy_to_symbol("c_Alpha", alpha);
-
-    std::vector<float> delta_x_tail(WS), delta_y(WS);
-
-    delta_x_tail[WS-1] = -Linf;
-    for(int j=WS-2; j>=0; --j)
-        delta_x_tail[j] = -delta_x_tail[j+1]*Linf;
-
-    float sign = WS & 1 ? -1 : 1;
-    for(int j=WS-1; j>=0; --j)
-    {
-        delta_y[j] = sign*pow(Linf,2+j)*(1-pow(Linf,2*(WS+1-j)))/(1-Linf*Linf);
-        sign *= -1;
-    }
-
-    copy_to_symbol("c_Delta_x_tail", delta_x_tail);
-    copy_to_symbol("c_Delta_y", delta_y);
+    copy_to_symbol("c_ARE_T", ARE_T[0].to_vector());
+    copy_to_symbol("c_ARB_AFP_T", ARB_AFP_T[0].to_vector());
+    copy_to_symbol("c_TAFB", TAFB[0].to_vector());
+    copy_to_symbol("c_HARB_AFB", HARB_AFB[0].to_vector());
 }
 
 void up_constants_coefficients2( const float& b0,

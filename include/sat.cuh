@@ -26,7 +26,7 @@ namespace gpufilter {
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
  *  @param[in] g_in Input image
  *  @param[out] g_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_vhat All \f$P^T_{m,n}(\hat{V})\f$
@@ -50,7 +50,7 @@ void algorithmSAT_stage1( const float *g_in,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
  *  @param[in,out] g_ybar All \f$P_{m,n}(\bar{Y})\f$ fixed to \f$P_{m,n}(Y)\f$
  *  @param[out] g_ysum All \f$s(P_{m,n}(Y))\f$
  */
@@ -72,7 +72,7 @@ void algorithmSAT_stage2( float *g_ybar,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
  *  @param[in] g_ysum All \f$s(P_{m,n}(Y))\f$
  *  @param[in,out] g_vhat All \f$P^T_{m,n}(\hat{V})\f$ fixed to \f$P^T_{m,n}(V)\f$
  */
@@ -93,7 +93,7 @@ void algorithmSAT_stage3( const float *g_ysum,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
  *  @param[in,out] g_inout The input and output image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_v All \f$P^T_{m,n}(V)\f$
@@ -111,7 +111,7 @@ void algorithmSAT_stage4( float *g_inout,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in algorithm5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
  *  @param[out] g_out The output image
  *  @param[in] g_in The input image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
