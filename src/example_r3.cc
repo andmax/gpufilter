@@ -31,6 +31,7 @@ void check_reference( const float *ref,
             mre = b > mre ? b : mre;
         }
         me = a > me ? a : me;
+        //std::cout << res[i] << " x " << ref[i] << "\n";
     }
 }
 
@@ -38,7 +39,7 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float b0 = .0417f, a1 = -1.704f, a2 = .746f;
+    const float b0 = 0.0060625f, a1 = -1.89282f, a2 = 0.89888f;
 
     std::cout << "[r3] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
@@ -70,7 +71,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::algorithm4( in_gpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::alg4( in_gpu, h_in, w_in, b0, a1, a2 );
 
         std::cout << "done!\n[r3] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }

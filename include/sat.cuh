@@ -26,15 +26,15 @@ namespace gpufilter {
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algSAT()
  *  @param[in] g_in Input image
  *  @param[out] g_ybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_vhat All \f$P^T_{m,n}(\hat{V})\f$
  */
 __global__
-void algorithmSAT_stage1( const float *g_in,
-                          float *g_ybar,
-                          float *g_vhat );
+void algSAT_stage1( const float *g_in,
+                    float *g_ybar,
+                    float *g_vhat );
 
 /**
  *  @ingroup gpu
@@ -50,13 +50,13 @@ void algorithmSAT_stage1( const float *g_in,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algSAT()
  *  @param[in,out] g_ybar All \f$P_{m,n}(\bar{Y})\f$ fixed to \f$P_{m,n}(Y)\f$
  *  @param[out] g_ysum All \f$s(P_{m,n}(Y))\f$
  */
 __global__
-void algorithmSAT_stage2( float *g_ybar,
-                          float *g_ysum );
+void algSAT_stage2( float *g_ybar,
+                    float *g_ysum );
 
 /**
  *  @ingroup gpu
@@ -72,13 +72,13 @@ void algorithmSAT_stage2( float *g_ybar,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algSAT()
  *  @param[in] g_ysum All \f$s(P_{m,n}(Y))\f$
  *  @param[in,out] g_vhat All \f$P^T_{m,n}(\hat{V})\f$ fixed to \f$P^T_{m,n}(V)\f$
  */
 __global__
-void algorithmSAT_stage3( const float *g_ysum,
-                          float *g_vhat );
+void algSAT_stage3( const float *g_ysum,
+                    float *g_vhat );
 
 /**
  *  @ingroup gpu
@@ -93,15 +93,15 @@ void algorithmSAT_stage3( const float *g_ysum,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algSAT()
  *  @param[in,out] g_inout The input and output image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_v All \f$P^T_{m,n}(V)\f$
  */
 __global__
-void algorithmSAT_stage4( float *g_inout,
-                          const float *g_y,
-                          const float *g_v );
+void algSAT_stage4( float *g_inout,
+                    const float *g_y,
+                    const float *g_v );
 
 /**
  *  @ingroup gpu
@@ -111,17 +111,17 @@ void algorithmSAT_stage4( float *g_inout,
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
- *  @see [Nehab:2011] cited in alg5() and figure in algorithmSAT()
+ *  @see [Nehab:2011] cited in alg5() and figure in algSAT()
  *  @param[out] g_out The output image
  *  @param[in] g_in The input image
  *  @param[in] g_y All \f$P_{m,n}(Y)\f$
  *  @param[in] g_v All \f$P^T_{m,n}(V)\f$
  */
 __global__
-void algorithmSAT_stage4( float *g_out,
-                          const float *g_in,
-                          const float *g_y,
-                          const float *g_v );
+void algSAT_stage4( float *g_out,
+                    const float *g_in,
+                    const float *g_y,
+                    const float *g_v );
 
 //=============================================================================
 } // namespace gpufilter

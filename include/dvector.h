@@ -1,6 +1,6 @@
 /**
  *  @file dvector.h
- *  @brief Device Vector Class definition
+ *  @brief Device Vector utility class definition
  *  @author Rodolfo Lima
  *  @author Andre Maximo
  *  @date February, 2011

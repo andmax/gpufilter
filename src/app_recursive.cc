@@ -1,7 +1,8 @@
 /**
- *  @file app_recursive_cpu.cc
- *  @brief Example of an application of recursive filtering in the CPU
+ *  @file app_recursive.cc
+ *  @brief Example of an application of recursive filtering in the CPU and the GPU
  *  @author Diego Nehab
+ *  @author Andre Maximo
  *  @date November, 2011
  */
 
@@ -29,12 +30,6 @@ void errorf(const char *fmt, ...) {
 }
 
 //-----------------------------------------------------------------------------
-// Clamp values between 0.f and 1.f 
-static inline float clamp(float f) {
-    return f > 1.f? 1.f: (f < 0.f? 0.f: f);
-}
-
-//-----------------------------------------------------------------------------
 // Runs a given filter
 int main(int argc, char *argv[]) {
     if( argc < 3 )
@@ -42,15 +37,19 @@ int main(int argc, char *argv[]) {
             "Usage:\n"
             "  recursive [options] <input image> <output image>\n"
             "where options are:\n"
+            "  -unit:<cpu/gpu>\n"
+            "    default: cpu\n"
             "  -filter:<method>\n"
             "    gaussian\n"
             "    bspline3i\n"
             "  -sigma:<value> (for Gaussian)\n"
+            "    default: 1.0"
             );
 
     // process options
     const char *filter = "gaussian";
     const char *file_in = 0, *file_out = 0;
+    const char *unit = "cpu";
 
     float sigma = 1.f;
     int end = 0;
@@ -58,6 +57,8 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "-filter:", sizeof("-filter:")-1) == 0) {
             filter = argv[i]+sizeof("-filter:")-1;
+        } else if (strncmp(argv[i], "-unit:", sizeof("-unit:")-1) == 0) {
+            unit = argv[i]+sizeof("-unit:")-1;
         } else if (sscanf(argv[i], "-sigma:%f%n", &sigma, &end) == 1) {
             if (argv[i][end] != '\0' || sigma < 0.f)
                 errorf("Invalid argument '%s'", argv[i]);
@@ -117,15 +118,21 @@ int main(int argc, char *argv[]) {
 
     if( strcmp(filter, "gaussian") == 0 ) {
 
-        printf("Applying filter gaussian (sigma = %g)\n", sigma);
+        printf("Applying filter gaussian in the %s (sigma = %g)\n", unit, sigma);
 
-        gpufilter::gaussian_cpu(flat_in, h_in, w_in, depth, sigma);
+        if( strcmp(unit, "cpu") == 0 )
+            gpufilter::gaussian_cpu(flat_in, h_in, w_in, depth, sigma);
+        else if( strcmp(unit, "gpu") == 0 )
+            gpufilter::gaussian_gpu(flat_in, h_in, w_in, depth, sigma);
 
     } else if (strcmp(filter, "bspline3i") == 0) {
 
-        printf("Applying filter bspline3i\n");
+        printf("Applying filter bspline3i in the %s\n", unit);
 
-        gpufilter::bspline3i_cpu(flat_in, h_in, w_in, depth);
+        if( strcmp(unit, "cpu") == 0 )
+            gpufilter::bspline3i_cpu(flat_in, h_in, w_in, depth);
+        else if( strcmp(unit, "gpu") == 0 )
+            gpufilter::bspline3i_gpu(flat_in, h_in, w_in, depth);
 
     } else {
 
@@ -137,6 +144,7 @@ int main(int argc, char *argv[]) {
 
     IplImage *out_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_8U, depth);
 
+    gpufilter::_clamp clamp;
     for (int c = 0; c < depth; c++)
         for (int i = 0; i < h_in; ++i)
             for (int j = 0; j < w_in; ++j)

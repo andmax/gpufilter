@@ -26,8 +26,5 @@ target_link_libraries(ex7 gpufilter)
 
 include_directories(${OPENCV_DIR})
 
-add_executable(recursive_cpu app_recursive_cpu.cc)
-target_link_libraries(recursive_cpu cv highgui)
-
-cuda_add_executable(recursive_gpu app_recursive_gpu.cc)
-target_link_libraries(recursive_gpu gpufilter cv highgui)
+cuda_add_executable(recursive app_recursive.cc)
+target_link_libraries(recursive cv highgui gpufilter)

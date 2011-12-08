@@ -38,7 +38,7 @@ enum initcond {
 struct _clamp {
     /**
      *  @brief Functor operator
-     *  @param t Float parameter in range [0,1]
+     *  @param t Float value in range [0,1]
      *  @return Correct float parameter with clamp-to-border
      */
     float operator () ( float t ) const {
@@ -67,7 +67,7 @@ struct _clamp {
 struct _repeat {
     /**
      *  @brief Functor operator
-     *  @param t Float parameter in range [0,1]
+     *  @param t Float value in range [0,1]
      *  @return Correct float parameter with repeat
      */
     float operator () ( float t ) const {
@@ -94,7 +94,7 @@ struct _repeat {
 struct _mirror {
     /**
      *  @brief Functor operator
-     *  @param t Float parameter in range [0,1]
+     *  @param t Float value in range [0,1]
      *  @return Correct float parameter with mirror
      */
     float operator () ( float t ) const {

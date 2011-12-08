@@ -1,6 +1,6 @@
 /**
  *  @file timer.h
- *  @brief Timer class definition
+ *  @brief Timer utility class definition
  *  @author Rodolfo Lima
  *  @date January, 2011
  */

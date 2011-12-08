@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in*REPEATS, "iP") );
 
         for (int i = 0; i < REPEATS; ++i)
-            gpufilter::algorithmSAT( d_out_gpu, d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+            gpufilter::algSAT( d_out_gpu, d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
     }
 
     std::cout << "done!\n";

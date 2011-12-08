@@ -61,9 +61,9 @@ float2 addgpu(const float2& u, const float2& v, const float2& w)
 //-- Algorithm 4_2 ------------------------------------------------------------
 
 __global__ __launch_bounds__(WS*SOW, MBO)
-void algorithm4_stage1( const float *g_in,
-                        float2 *g_transp_ybar,
-                        float2 *g_transp_zhat )
+void alg4_stage1( const float *g_in,
+                  float2 *g_transp_ybar,
+                  float2 *g_transp_zhat )
 {
     int m = blockIdx.y, n = blockIdx.x;
     int tx = threadIdx.x, ty = threadIdx.y;
@@ -151,8 +151,8 @@ void algorithm4_stage1( const float *g_in,
 }
 
 __global__ __launch_bounds__(MTS, MBO)
-void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
-                                 float2 *g_transp_zhat )
+void alg4_stage2_3_or_5_6( float2 *g_transp_ybar,
+                           float2 *g_transp_zhat )
 {
     int m = blockIdx.x;
     int tx = threadIdx.x;
@@ -192,11 +192,11 @@ void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
 }
 
 __global__ __launch_bounds__(WS*SOW, ONB)
-void algorithm4_stage4( float *g_inout,
-                        const float2 *g_transp_y,
-                        const float2 *g_transp_z,
-                        float2 *g_ubar,
-                        float2 *g_vhat )
+void alg4_stage4( float *g_inout,
+                  const float2 *g_transp_y,
+                  const float2 *g_transp_z,
+                  float2 *g_ubar,
+                  float2 *g_vhat )
 {
     int m = blockIdx.y*2, n = blockIdx.x;
     int tx = threadIdx.x, ty = threadIdx.y;
@@ -374,9 +374,9 @@ void algorithm4_stage4( float *g_inout,
 }
 
 __global__ __launch_bounds__(WS*SOW, DNB)
-void algorithm4_stage7( float *g_inout,
-                        const float2 *g_u,
-                        const float2 *g_v )
+void alg4_stage7( float *g_inout,
+                  const float2 *g_u,
+                  const float2 *g_v )
 {
     int m = blockIdx.y, n = blockIdx.x;
     int tx = threadIdx.x, ty = threadIdx.y;
@@ -534,7 +534,7 @@ void alg5_stage1( const float *g_in,
 
 #pragma unroll
             for(int j=1; j<WS; ++j, ++bdata)
-                prev = *bdata += prev*c_a1;
+                prev = *bdata -= prev*c_a1;
 
             *g_transp_pybar = prev*c_b0;
             
@@ -545,7 +545,7 @@ void alg5_stage1( const float *g_in,
 
 #pragma unroll
             for(int j=WS-2; j>=0; --j, --bdata)
-                prev = *bdata += prev*c_a1;
+                prev = *bdata -= prev*c_a1;
 
             *g_transp_ezhat = prev*c_b0*c_b0;
         }
@@ -560,7 +560,7 @@ void alg5_stage1( const float *g_in,
 
 #pragma unroll
             for(int i=1; i<WS; ++i, ++bdata)
-                prev = **bdata += prev*c_a1;
+                prev = **bdata -= prev*c_a1;
 
             *g_ptucheck = prev*c_b0*c_b0*c_b0;
 
@@ -570,7 +570,7 @@ void alg5_stage1( const float *g_in,
             --bdata;
 
             for(int i=WS-2; i>=0; --i, --bdata)
-                prev = **bdata + prev*c_a1;
+                prev = **bdata - prev*c_a1;
 
             *g_etvtilde = prev*c_b0*c_b0*c_b0*c_b0;
         }
@@ -1167,7 +1167,7 @@ void alg5_stage6( float *g_inout,
 
 #pragma unroll
             for(int j=0; j<WS; ++j, ++bdata)
-                *bdata = prev = *bdata + prev*c_a1;
+                *bdata = prev = *bdata - prev*c_a1;
 
             // calculate z ---------------------
 
@@ -1175,7 +1175,7 @@ void alg5_stage6( float *g_inout,
 
             --bdata;
             for(int j=WS-1; j>=0; --j, --bdata)
-                *bdata = prev = *bdata*b0_2 + prev*c_a1;
+                *bdata = prev = *bdata*b0_2 - prev*c_a1;
         }
 
         {
@@ -1187,7 +1187,7 @@ void alg5_stage6( float *g_inout,
 
 #pragma unroll
             for(int i=0; i<WS; ++i, ++bdata)
-                **bdata = prev = **bdata + prev*c_a1;
+                **bdata = prev = **bdata - prev*c_a1;
 
             // calculate v ---------------------
             float *out = g_inout + ((n+1)*WS-1)*c_width + m*WS+tx;
@@ -1197,173 +1197,22 @@ void alg5_stage6( float *g_inout,
             --bdata;
             for(int i=WS-1; i>=0; --i) 
             {
-                *out = prev = **bdata-- *b0_2 + prev*c_a1;
+                *out = prev = **bdata-- *b0_2 - prev*c_a1;
                 out -= c_width;
             }
         }
     }
 }
 
-//-- Fusion -------------------------------------------------------------------
-
-__global__ __launch_bounds__(WS*DW, ONB)
-void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
-                                                 const float *g_transp_y,
-                                                 const float *g_transp_z,
-                                                 const float *g_u,
-                                                 const float *g_v,
-                                                 float2 *g_transp_ybar,
-                                                 float2 *g_transp_zhat )
-{
-    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.y*2, n = blockIdx.x;
-
-    __shared__ float block[WS*2][WS+1];
-
-    float *in_data = g_inout + (m*WS + ty)*c_width + n*WS + tx;
-
-#pragma unroll
-    for(int i=0; i<WS; i+=DW)
-    {
-        block[ty+i][tx] = in_data[i*c_width];
-        block[ty+i+WS][tx] = in_data[(i+WS)*c_width];
-    }
-
-    __syncthreads();
-
-    if(ty < 2)
-    {
-        // 1st ORDER ENDING ----------------------------
-        m += ty;
-        {
-            float *bdata = block[tx+ty*WS];
-            float prev;
-
-            prev = bdata[0];
-
-            if(n > 0)
-                bdata[0] = prev -= g_transp_y[(n-1)*c_height + m*WS+tx]*c_a1;
-#pragma unroll
-            for(int j=1; j<WS; ++j)
-                prev = bdata[j] -= prev*c_a1;
-
-            if(n < c_n_size-1)
-                bdata[WS-1] = prev = (bdata[WS-1] - g_transp_z[(n+1)*c_height+m*WS+tx])*c_a1;
-            else
-                prev = bdata[WS-1] *= c_a1;
-
-            for(int j=WS-2; j>=0; --j)
-                bdata[j] = prev = (bdata[j] - prev)*c_a1;
-        }
-
-        {
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty*WS][tx];
-            float prev;
-
-            prev = bdata[0][0];
-
-            if(m > 0)
-                bdata[0][0] = prev -= g_u[(m-1)*c_width + n*WS+tx]*c_a1;
-
-#pragma unroll
-            for(int i=1; i<WS; ++i)
-                prev = bdata[i][0] -= prev*c_a1;
-
-            float *out_data = g_inout + (m*WS+WS-1)*c_width + n*WS + tx;
-
-            prev = bdata[WS-1][0];
-            if(m == c_m_size-1)
-                prev *= c_a1;
-            else
-                prev = (prev - g_v[(m+1)*c_width + n*WS+tx])*c_a1;
-
-            bdata[WS-1][0] = prev *= ((c_b0*c_b0*c_b0*c_b0)/c_a1/c_a1);
-
-            *out_data = prev;
-
-            for(int i=WS-2; i>=0; --i)
-            {
-                out_data -= c_width;
-                *out_data = bdata[i][0] = prev = (bdata[i][0]*((c_b0*c_b0*c_b0*c_b0)/c_a1/c_a1) - prev)*c_a1;
-            }
-        }
-    }
-
-    // 2nd ORDER BEGINNING ----------------------------
-    if(ty < 2)
-    {
-        float *bdata = block[tx+ty*WS];
-        int outidx = n*c_height + m*WS + tx; // transposed!
-
-        float2 accum;
-
-        if(n < c_n_size-1)
-        {
-            accum.x = bdata[0];
-            accum.y = bdata[1] -= c_Minf*accum.x;
-
-            for(int i=2; i<WS; ++i)
-            {
-                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
-                swap(accum.x, accum.y);
-            }
-        }
-        else
-        {
-            accum.x = bdata[0];
-            accum.y = bdata[1] -= c_Minf*accum.x;
-
-            for(int i=2; i<WS-1; ++i)
-            {
-                accum.x = bdata[i] -= c_Minf*accum.y + c_Linf2*accum.x;
-                swap(accum.x, accum.y);
-            }
-            accum.x = bdata[WS-1] -= c_Minf*accum.y + c_Linf2*accum.x;
-            swap(accum.x, accum.y);
-        }
-
-        g_transp_ybar[outidx] = accum;
-
-        if(n < c_n_size-1)
-        {
-            accum.y = bdata[WS-1] * c_Linf2;
-            accum.x = (bdata[WS-2] - accum.y*c_Ninf)*c_Linf2;
-
-#pragma unroll
-            for(int i=WS-3; i>=0; --i)
-            {
-                accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
-                swap(accum.x, accum.y);
-            }
-
-        }
-        else // last block
-        {
-            int i = WS-1;
-
-            accum.y = bdata[i--] * c_Llast2;
-            accum.x = (bdata[i--] - accum.y*c_Ninf)*c_Linf2;
-
-            for(; i>=0; --i)
-            {
-                accum.y = (bdata[i] - accum.x*c_Ninf - accum.y)*c_Linf2;
-                swap(accum.x, accum.y);
-            }
-
-        }
-
-        g_transp_zhat[outidx] = accum;
-    }
-}
-
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void algorithm4( float *inout,
-                 const int& h,
-                 const int& w,
-                 const float& b0,
-                 const float& a1,
-                 const float& a2 )
+void alg4( float *inout,
+           const int& h,
+           const int& w,
+           const float& b0,
+           const float& a1,
+           const float& a2 )
 {
     up_constants_coefficients2( b0, a1, a2 );
 
@@ -1379,24 +1228,26 @@ void algorithm4( float *inout,
 
     dvector<float2> d_transp_y, d_transp_z, d_u, d_v;
 
-    algorithm4_stage1<<< cg_img, dim3(WS, SOW) >>>( d_img, d_transp_ybar, d_transp_zhat );
+    alg4_stage1<<< cg_img, dim3(WS, SOW) >>>(
+        d_img, d_transp_ybar, d_transp_zhat );
 
-    algorithm4_stage2_3_or_5_6<<< dim3((h+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
+    alg4_stage2_3_or_5_6<<< dim3((h+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
         d_transp_ybar, d_transp_zhat );
 
     swap( d_transp_ybar, d_transp_y );
     swap( d_transp_zhat, d_transp_z );
 
-    algorithm4_stage4<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, SOW) >>>(
+    alg4_stage4<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, SOW) >>>(
         d_img, d_transp_y, d_transp_z, d_ubar, d_vhat );
 
-    algorithm4_stage2_3_or_5_6<<< dim3((w+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
+    alg4_stage2_3_or_5_6<<< dim3((w+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
         d_ubar, d_vhat );
 
     swap( d_ubar, d_u );
     swap( d_vhat, d_v );
 
-    algorithm4_stage7<<< cg_img, dim3(WS, SOW) >>>( d_img, d_u, d_v );
+    alg4_stage7<<< cg_img, dim3(WS, SOW) >>>(
+        d_img, d_u, d_v );
 
     d_img.copy_to(inout, h*w);
 }
@@ -1444,79 +1295,53 @@ void alg5( float *inout,
 }
 
 __host__
+void gaussian_gpu( float **inout,
+                   const int& h,
+                   const int& w,
+                   const int& d,
+                   const float& s )
+{
+    float b10, a11, b20, a21, a22;
+    weights1( s, b10, a11 );
+    weights2( s, b20, a21, a22 );
+    for (int c = 0; c < d; c++) {
+        alg5( inout[c], h, w, b10, a11 );
+        alg4( inout[c], h, w, b20, a21, a22 );
+    }
+}
+
+__host__
 void gaussian_gpu( float *inout,
                    const int& h,
                    const int& w,
                    const float& s )
 {
     float b10, a11, b20, a21, a22;
-
     weights1( s, b10, a11 );
-        
-    up_constants_coefficients1( b10, a11 );
-
     weights2( s, b20, a21, a22 );
+    alg5( inout, h, w, b10, a11 );
+    alg4( inout, h, w, b20, a21, a22 );
+}
 
-    up_constants_coefficients2( b20, a21, a22 );
+__host__
+void bspline3i_gpu( float **inout,
+                    const int& h,
+                    const int& w,
+                    const int& d )
+{
+    const float alpha = 2.f - sqrt(3.f);
+    for (int c = 0; c < d; c++) {
+        alg5( inout[c], h, w, 1.f+alpha, alpha );
+    }
+}
 
-    dim3 cg_img; // computational grid of input image
-    up_constants_sizes( cg_img, h, w );
-
-    dvector<float> d_img(inout, h*w);
-
-    // for order 1
-    dvector<float> d_transp_ybar1(cg_img.x*h),
-        d_transp_zhat1(cg_img.x*h),
-        d_ucheck1(cg_img.y*w),
-        d_vtilde1(cg_img.y*w);
-
-    dvector<float> d_transp_y1, d_transp_z1, d_u1, d_v1;
-
-    // for order 2
-    dvector<float2> d_transp_ybar2(cg_img.y*w),
-        d_transp_zhat2(cg_img.y*w),
-        d_ubar2(cg_img.x*h),
-        d_vhat2(cg_img.x*h);
-
-    dvector<float2> d_transp_y2, d_transp_z2, d_u2, d_v2;
-   
-    alg5_stage1<<< cg_img, dim3(WS, DW) >>>(
-        d_img, d_transp_ybar1, d_transp_zhat1, d_ucheck1, d_vtilde1 );
-
-    alg5_stage2_3<<< dim3(1, cg_img.y), dim3(WS, std::min((int)cg_img.x, DW)) >>>(
-        d_transp_ybar1, d_transp_zhat1 );
-
-    swap(d_transp_ybar1, d_transp_y1);
-    swap(d_transp_zhat1, d_transp_z1);
-
-    alg5_stage4_5<<< dim3(cg_img.x, 1), dim3(WS, std::min((int)cg_img.y, CFW)) >>>(
-        d_ucheck1, d_vtilde1, d_transp_y1, d_transp_z1 );
-
-    swap(d_ucheck1, d_u1);
-    swap(d_vtilde1, d_v1);
-
-    algorithm5_stage6_fusion_algorithm4_stage1<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, DW) >>>(
-        d_img, d_transp_y1, d_transp_z1, d_u1, d_v1, d_transp_ybar2, d_transp_zhat2 );
-
-    algorithm4_stage2_3_or_5_6<<< dim3((h+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
-        d_transp_ybar2, d_transp_zhat2 );
-
-    swap( d_transp_ybar2, d_transp_y2 );
-    swap( d_transp_zhat2, d_transp_z2 );
-
-    algorithm4_stage4<<< dim3(cg_img.x, (cg_img.y+2-1)/2), dim3(WS, SOW) >>>(
-        d_img, d_transp_y2, d_transp_z2, d_ubar2, d_vhat2 );
-
-    algorithm4_stage2_3_or_5_6<<< dim3((w+MTS-1)/MTS, 1), dim3(MTS, 1) >>>(
-        d_ubar2, d_vhat2 );
-
-    swap( d_ubar2, d_u2 );
-    swap( d_vhat2, d_v2 );
-
-    algorithm4_stage7<<< cg_img, dim3(WS, SOW) >>>( d_img, d_u2, d_v2 );
-
-    d_img.copy_to(inout, h*w);
-
+__host__
+void bspline3i_gpu( float *inout,
+                    const int& h,
+                    const int& w )
+{
+    const float alpha = 2.f - sqrt(3.f);
+    alg5( inout, h, w, 1.f+alpha, alpha );
 }
 
 //=============================================================================

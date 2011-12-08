@@ -32,9 +32,9 @@ namespace gpufilter {
  *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
  */
 __global__
-void algorithm4_stage1( const float *g_in,
-                        float2 *g_transp_ybar,
-                        float2 *g_transp_zhat );
+void alg4_stage1( const float *g_in,
+                  float2 *g_transp_ybar,
+                  float2 *g_transp_zhat );
 
 /**
  *  @ingroup gpu
@@ -52,9 +52,9 @@ void algorithm4_stage1( const float *g_in,
  *  previously computed \f$P_{m-1,n}(Y)\f$ and \f$E_{m,n}(\hat{Z})\f$.
  *
  *  By considering g_transp_ybar as g_ubar and g_transp_zhat as g_vhat
- *  (cf. algorithm4_stage4() function), they can also be fixed to
- *  become g_u and g_v by using this function.  In this scenario, the
- *  function works exactly the same but follows:
+ *  (cf. alg4_stage4() function), they can also be fixed to become g_u
+ *  and g_v by using this function.  In this scenario, the function
+ *  works exactly the same but follows:
  *
  *  \li Sequentially for each \f$n\f$, but in parallel for each
  *  \f$m\f$, compute and store the \f$P^T_{m,n}(U)\f$ from
@@ -73,8 +73,8 @@ void algorithm4_stage1( const float *g_in,
  *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$ fixed to \f$E_{m,n}(Z)\f$
  */
 __global__
-void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
-                                 float2 *g_transp_zhat );
+void alg4_stage2_3_or_5_6( float2 *g_transp_ybar,
+                           float2 *g_transp_zhat );
 
 /**
  *  @ingroup gpu
@@ -100,11 +100,11 @@ void algorithm4_stage2_3_or_5_6( float2 *g_transp_ybar,
  *  @param[out] g_vhat All \f$E^T_{m,n}(\hat{V})\f$
  */
 __global__
-void algorithm4_stage4( float *g_inout,
-                        const float2 *g_transp_y,
-                        const float2 *g_transp_z,
-                        float2 *g_ubar,
-                        float2 *g_vhat );
+void alg4_stage4( float *g_inout,
+                  const float2 *g_transp_y,
+                  const float2 *g_transp_z,
+                  float2 *g_ubar,
+                  float2 *g_vhat );
 
 /**
  *  @ingroup gpu
@@ -127,9 +127,9 @@ void algorithm4_stage4( float *g_inout,
  *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
  */
 __global__
-void algorithm4_stage7( float *g_inout,
-                        const float2 *g_u,
-                        const float2 *g_v );
+void alg4_stage7( float *g_inout,
+                  const float2 *g_u,
+                  const float2 *g_v );
 
 /**
  *  @ingroup gpu
@@ -207,8 +207,8 @@ void alg5_stage2_3( float *g_transp_ybar,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in alg5()
- *  @param[in,out] g_ucheck All \f$P^T_{m,n}(\check{U})\f$ fixed to \f$P^T_{m,n}(\bar{U})\f$
- *  @param[in,out] g_vtilde All \f$E^T_{m,n}(\tilde{V})\f$ fixed to \f$E^T_{m,n}(\check{V})\f$
+ *  @param[in,out] g_ptucheck All \f$P^T_{m,n}(\check{U})\f$ fixed to \f$P^T_{m,n}(\bar{U})\f$
+ *  @param[in,out] g_etvtilde All \f$E^T_{m,n}(\tilde{V})\f$ fixed to \f$E^T_{m,n}(\check{V})\f$
  *  @param[in] g_transp_py All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_ez All \f$E_{m,n}(Z)\f$
  */
@@ -246,34 +246,6 @@ void alg5_stage6( float *g_inout,
                   const float *g_transp_ez,
                   const float *g_ptu,
                   const float *g_etv );
-/**
- *  @ingroup gpu
- *  @brief Algorithm 5 stage 6 fusioned with algorithm 4 stage 1
- *
- *  This function computes the algorithm stage 5.6 (as the function
- *  alg5_stage6()) and, in the sequence, computes the algorithm stage
- *  4.1 (as the function algorithm4_stage1()).
- *
- *  @note The CUDA kernel functions (as this one) have many
- *  idiosyncrasies and should not be used lightly.
- *
- *  @see [Nehab:2011] cited in alg5()
- *  @param[in,out] g_inout The input and output 2D image
- *  @param[in] g_transp_y All \f$P_{m,n}(Y)\f$
- *  @param[in] g_transp_z All \f$E_{m,n}(Z)\f$
- *  @param[in] g_u All \f$P^T_{m,n}(U)\f$
- *  @param[in] g_v All \f$E^T_{m,n}(V)\f$
- *  @param[out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$
- *  @param[out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$
- */
-__global__
-void algorithm5_stage6_fusion_algorithm4_stage1( float *g_inout,
-                                                 const float *g_transp_y,
-                                                 const float *g_transp_z,
-                                                 const float *g_u,
-                                                 const float *g_v,
-                                                 float2 *g_transp_ybar,
-                                                 float2 *g_transp_zhat );
 
 //=============================================================================
 } // namespace gpufilter

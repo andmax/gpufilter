@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::algorithmSAT( in_gpu, h_in, w_in );
+        gpufilter::algSAT( in_gpu, h_in, w_in );
 
         std::cout << "done!\n[sat2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }

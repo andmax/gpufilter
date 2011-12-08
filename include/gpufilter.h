@@ -273,6 +273,151 @@ void weights2( const T1& s,
 
 /**
  *  @ingroup api_gpu
+ *  @brief Prepare for Algorithm SAT
+ *
+ *  This function prepares the data structures used by the summed-area
+ *  table (SAT) algorithm of an input 2D image.
+ *
+ *  The algorithm SAT is discussed in depth in our paper (see
+ *  [Nehab:2011] in alg5() function) and it is implemented in algSAT()
+ *  function.
+ *
+ *  @see [Nehab:2011] cited in alg5() and algSAT() function
+ *  @param[out] d_in The input 2D image to be allocated in device memory
+ *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
+ *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
+ *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ to be allocated in device memory
+ *  @param[out] cg_img Computation grid for SAT Stage 1 and 4
+ *  @param[out] cg_ybar Computation grid for SAT Stage 2
+ *  @param[out] cg_vhat Computation grid for SAT Stage 3
+ *  @param[out] h_out Height (multiple of 32) of the output image
+ *  @param[out] w_out Width (multiple of 32) of the output image
+ *  @param[in] in The input 2D image to compute SAT
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ */
+extern
+void prepareSAT( dvector<float>& d_in,
+                 dvector<float>& d_ybar,
+                 dvector<float>& d_vhat,
+                 dvector<float>& d_ysum,
+                 dim3& cg_img,
+                 dim3& cg_ybar,
+                 dim3& cg_vhat,
+                 int& h_out,
+                 int& w_out,
+                 const float *in,
+                 const int& h,
+                 const int& w );
+/**
+ *  @example example_sat3.cc
+ *
+ *  This is an example of how to use the prepareSAT() function and
+ *  algSAT() function in the GPU.
+ *
+ *  @see gpufilter.h
+ */
+
+/**
+ *  @ingroup api_gpu
+ *  @brief Compute Algorithm SAT
+ *
+ *  This function computes the summed-area table (SAT) of an input 2D
+ *  image using algorithm SAT.
+ *
+ *  The algorithm SAT is discussed in depth in our paper (see
+ *  [Nehab:2011] in alg5() function) where the following image
+ *  illustrates the process:
+ *
+ *  @image html sat-stages.png "Illustration of Algorithm SAT"
+ *  @image latex sat-stages.eps "Illustration of Algorithm SAT" width=\textwidth
+ *
+ *  Overlapped summed-area table computation according to algorithm
+ *  SAT.  Stage S.1 reads the input (in gray) then computes and stores
+ *  incomplete prologues \f$P_{m,n}(\bar{Y})\f$ (in red) and
+ *  \f$P^T_{m,n}(\hat{V})\f$ (in blue).  Stage S.2 completes prologues
+ *  \f$P_{m,n}(Y)\f$ and computes scalars
+ *  \f$s\big(P_{m-1,n}(Y)\big)\f$ (in yellow).  Stage S.3 completes
+ *  prologues \f$P^T_{m,n}(V)\f$. Finally, stage S.4 reads the input
+ *  and completed prologues, then computes and stores the final
+ *  summed-area table.
+ *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function works better in multiples of 32 in each dimension.
+ *
+ *  @see [Nehab:2011] cited in alg5()
+ *  @param[in,out] inout The input and output 2D image to compute SAT
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ */
+extern
+void algSAT( float *inout,
+             const int& h,
+             const int& w );
+/**
+ *  @example example_sat2.cc
+ *
+ *  This is an example of how to use the algSAT() function in the GPU.
+ *
+ *  @see gpufilter.h
+ */
+
+/**
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute Algorithm SAT
+ *
+ *  @note The pre-allocated device memory should match the values in
+ *  the computational grids.
+ *
+ *  @see Base algSAT() function
+ *  @param[in,out] d_inout The input and output 2D image allocated in device memory
+ *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
+ *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
+ *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
+ *  @param[in] cg_img Computation grid for SAT Stage 1 and 4
+ *  @param[in] cg_ybar Computation grid for SAT Stage 2
+ *  @param[in] cg_vhat Computation grid for SAT Stage 3
+ */
+extern
+void algSAT( dvector<float>& d_inout,
+             dvector<float>& d_ybar,
+             dvector<float>& d_vhat,
+             dvector<float>& d_ysum,
+             const dim3& cg_img,
+             const dim3& cg_ybar,
+             const dim3& cg_vhat );
+
+/**
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute Algorithm SAT
+ *
+ *  @note The pre-allocated device memory should match the values in
+ *  the computational grids.
+ *
+ *  @see Base algSAT() function
+ *  @param[out] d_out The output 2D image allocated in device memory
+ *  @param[in] d_in The input 2D image allocated in device memory
+ *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
+ *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
+ *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
+ *  @param[in] cg_img Computation grid for SAT Stage 1 and 4
+ *  @param[in] cg_ybar Computation grid for SAT Stage 2
+ *  @param[in] cg_vhat Computation grid for SAT Stage 3
+ */
+extern
+void algSAT( dvector<float>& d_out,
+             const dvector<float>& d_in,
+             dvector<float>& d_ybar,
+             dvector<float>& d_vhat,
+             dvector<float>& d_ysum,
+             const dim3& cg_img,
+             const dim3& cg_ybar,
+             const dim3& cg_vhat );
+
+/**
+ *  @ingroup api_gpu
  *  @brief Compute Algorithm 4 (second-order)
  *
  *  This function computes second-order recursive filtering with given
@@ -294,17 +439,17 @@ void weights2( const T1& s,
  *  @param[in] a2 Feedback second-order coefficient
  */
 extern
-void algorithm4( float *inout,
-                 const int& h,
-                 const int& w,
-                 const float& b0,
-                 const float& a1,
-                 const float& a2 );
+void alg4( float *inout,
+           const int& h,
+           const int& w,
+           const float& b0,
+           const float& a1,
+           const float& a2 );
 /**
  *  @example example_r3.cc
  *
- *  This is an example of how to use the algorithm4() function in the
- *  GPU and the r() function in the CPU, as well as the
+ *  This is an example of how to use the alg4() function in the GPU
+ *  and the r() function in the CPU, as well as the
  *  gpufilter::scoped_timer_stop class.
  *
  *  @see gpufilter.h
@@ -361,158 +506,30 @@ void alg5( float *inout,
 
 /**
  *  @ingroup api_gpu
- *  @brief Prepare for Algorithm SAT
- *
- *  This function prepares the data structures used by the summed-area
- *  table (SAT) algorithm of an input 2D image.
- *
- *  The algorithm SAT is discussed in depth in our paper (see
- *  [Nehab:2011] in alg5() function) and it is implemented in
- *  algorithmSAT() function.
- *
- *  @see [Nehab:2011] cited in alg5() and algorithmSAT() function
- *  @param[out] d_in The input 2D image to be allocated in device memory
- *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
- *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
- *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ to be allocated in device memory
- *  @param[out] cg_img Computation grid for SAT Stage 1 and 4
- *  @param[out] cg_ybar Computation grid for SAT Stage 2
- *  @param[out] cg_vhat Computation grid for SAT Stage 3
- *  @param[out] h_out Height (multiple of 32) of the output image
- *  @param[out] w_out Width (multiple of 32) of the output image
- *  @param[in] in The input 2D image to compute SAT
- *  @param[in] h Image height
- *  @param[in] w Image width
- */
-extern
-void prepareSAT( dvector<float>& d_in,
-                 dvector<float>& d_ybar,
-                 dvector<float>& d_vhat,
-                 dvector<float>& d_ysum,
-                 dim3& cg_img,
-                 dim3& cg_ybar,
-                 dim3& cg_vhat,
-                 int& h_out,
-                 int& w_out,
-                 const float *in,
-                 const int& h,
-                 const int& w );
-/**
- *  @example example_sat3.cc
- *
- *  This is an example of how to use the prepareSAT() function and
- *  algorithmSAT() function in the GPU.
- *
- *  @see gpufilter.h
- */
-
-/**
- *  @ingroup api_gpu
- *  @brief Compute Algorithm SAT
- *
- *  This function computes the summed-area table (SAT) of an input 2D
- *  image using algorithm SAT.
- *
- *  The algorithm SAT is discussed in depth in our paper (see
- *  [Nehab:2011] in alg5() function) where the following image
- *  illustrates the process:
- *
- *  @image html sat-stages.png
- *  @image latex sat-stages.eps
- *
- *  Overlapped summed-area table computation according to algorithm
- *  SAT.  Stage S.1 reads the input (in gray) then computes and stores
- *  incomplete prologues \f$P_{m,n}(\bar{Y})\f$ (in red) and
- *  \f$P^T_{m,n}(\hat{V})\f$ (in blue).  Stage S.2 completes prologues
- *  \f$P_{m,n}(Y)\f$ and computes scalars
- *  \f$s\big(P_{m-1,n}(Y)\big)\f$ (in yellow).  Stage S.3 completes
- *  prologues \f$P^T_{m,n}(V)\f$. Finally, stage S.4 reads the input
- *  and completed prologues, then computes and stores the final
- *  summed-area table.
- *
- *  @note For performance purposes (in CUDA kernels implementation)
- *  this function works better in multiples of 32 in each dimension.
- *
- *  @see [Nehab:2011] cited in alg5()
- *  @param[in,out] inout The input and output 2D image to compute SAT
- *  @param[in] h Image height
- *  @param[in] w Image width
- */
-extern
-void algorithmSAT( float *inout,
-                   const int& h,
-                   const int& w );
-/**
- *  @example example_sat2.cc
- *
- *  This is an example of how to use the algorithmSAT() function in
- *  the GPU.
- *
- *  @see gpufilter.h
- */
-
-/**
- *  @ingroup api_gpu
- *  @overload
- *  @brief Compute Algorithm SAT
- *
- *  @note The pre-allocated device memory should match the values in
- *  the computational grids.
- *
- *  @see Base algorithmSAT() function
- *  @param[in,out] d_inout The input and output 2D image allocated in device memory
- *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
- *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
- *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
- *  @param[in] cg_img Computation grid for SAT Stage 1 and 4
- *  @param[in] cg_ybar Computation grid for SAT Stage 2
- *  @param[in] cg_vhat Computation grid for SAT Stage 3
- */
-extern
-void algorithmSAT( dvector<float>& d_inout,
-                   dvector<float>& d_ybar,
-                   dvector<float>& d_vhat,
-                   dvector<float>& d_ysum,
-                   const dim3& cg_img,
-                   const dim3& cg_ybar,
-                   const dim3& cg_vhat );
-
-/**
- *  @ingroup api_gpu
- *  @overload
- *  @brief Compute Algorithm SAT
- *
- *  @note The pre-allocated device memory should match the values in
- *  the computational grids.
- *
- *  @see Base algorithmSAT() function
- *  @param[out] d_out The output 2D image allocated in device memory
- *  @param[in] d_in The input 2D image allocated in device memory
- *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
- *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
- *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
- *  @param[in] cg_img Computation grid for SAT Stage 1 and 4
- *  @param[in] cg_ybar Computation grid for SAT Stage 2
- *  @param[in] cg_vhat Computation grid for SAT Stage 3
- */
-extern
-void algorithmSAT( dvector<float>& d_out,
-                   const dvector<float>& d_in,
-                   dvector<float>& d_ybar,
-                   dvector<float>& d_vhat,
-                   dvector<float>& d_ysum,
-                   const dim3& cg_img,
-                   const dim3& cg_ybar,
-                   const dim3& cg_vhat );
-
-/**
- *  @ingroup api_gpu
- *  @brief Gaussian blur a single-channel image in the GPU
+ *  @brief Gaussian blur an image in the GPU
  *
  *  Given an input single-channel 2D image compute the Gaussian blur
  *  of it by applying a first-order recursive filter (using alg5())
- *  followed by a second-order recursive filter (using algorithm4())
- *  and zero-border initial condition.
+ *  followed by a second-order recursive filter (using alg4()) and
+ *  zero-border initial condition.
+ *
+ *  @param[in,out] inout The 2D image to compute Gaussian blur
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ *  @param[in] d Depth of the input image (color channels)
+ *  @param[in] s Sigma support of Gaussian blur computation
+ */
+extern
+void gaussian_gpu( float **inout,
+                   const int& h,
+                   const int& w,
+                   const int& d,
+                   const float& s );
+
+/**
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Gaussian blur a single-channel image in the GPU
  *
  *  @param[in,out] inout The single-channel 2D image to compute Gaussian blur
  *  @param[in] h Height of the input image
@@ -524,14 +541,40 @@ void gaussian_gpu( float *inout,
                    const int& h,
                    const int& w,
                    const float& s );
+
 /**
- *  @example app_recursive_gpu.cc
+ *  @ingroup api_gpu
+ *  @brief Compute the Bicubic B-Spline interpolation of an image in the GPU
  *
- *  This is an application example of how to use the gaussian_gpu()
- *  function in the GPU.
+ *  Given an input 2D image compute the Bicubic B-Spline interpolation
+ *  of it by applying a first-order recursive filter using zero-border
+ *  initial conditions.
  *
- *  @see gpufilter.h
+ *  @param[in,out] inout The 2D image to compute the Bicubic B-Spline interpolation
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ *  @param[in] d Depth of the input image (color channels)
  */
+extern
+void bspline3i_gpu( float **inout,
+                    const int& h,
+                    const int& w,
+                    const int& d );
+
+/**
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute the Bicubic B-Spline interpolation of a single-channel image in the GPU
+ *
+ *  @param[in,out] inout The single-channel 2D image to compute the Bicubic B-Spline interpolation
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ */
+extern
+void bspline3i_gpu( float *inout,
+                    const int& h,
+                    const int& w );
+
 
 //=============================================================================
 } // namespace gpufilter

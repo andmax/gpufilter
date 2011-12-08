@@ -24,9 +24,9 @@ namespace gpufilter {
 //-- Algorithm SAT ------------------------------------------------------------
 
 __global__ __launch_bounds__( WS * SOW, MBO )
-void algorithmSAT_stage1( const float *g_in,
-                          float *g_ybar,
-                          float *g_vhat ) {
+void algSAT_stage1( const float *g_in,
+                    float *g_ybar,
+                    float *g_vhat ) {
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
@@ -83,8 +83,8 @@ void algorithmSAT_stage1( const float *g_in,
 }
 
 __global__ __launch_bounds__( WS * MW, MBO )
-void algorithmSAT_stage2( float *g_ybar,
-                          float *g_ysum ) {
+void algSAT_stage2( float *g_ybar,
+                    float *g_ysum ) {
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, col0 = bx*MW+ty, col = col0*WS+tx;
 
@@ -129,8 +129,8 @@ void algorithmSAT_stage2( float *g_ybar,
 }
 
 __global__ __launch_bounds__( WS * MW, MBO )
-void algorithmSAT_stage3( const float *g_ysum,
-                          float *g_vhat ) {
+void algSAT_stage3( const float *g_ysum,
+                    float *g_vhat ) {
 
 	const int tx = threadIdx.x, ty = threadIdx.y, by = blockIdx.y, row0 = by*MW+ty, row = row0*WS+tx;
 
@@ -159,9 +159,9 @@ void algorithmSAT_stage3( const float *g_ysum,
 }
 
 __global__ __launch_bounds__( WS * SOW, MBO )
-void algorithmSAT_stage4( float *g_inout,
-                          const float *g_y,
-                          const float *g_v ) {
+void algSAT_stage4( float *g_inout,
+                    const float *g_y,
+                    const float *g_v ) {
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
@@ -232,10 +232,10 @@ void algorithmSAT_stage4( float *g_inout,
 }
 
 __global__ __launch_bounds__( WS * SOW, MBO )
-void algorithmSAT_stage4( float *g_out,
-                          const float *g_in,
-                          const float *g_y,
-                          const float *g_v ) {
+void algSAT_stage4( float *g_out,
+                    const float *g_in,
+                    const float *g_y,
+                    const float *g_v ) {
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
@@ -341,48 +341,48 @@ void prepareSAT( dvector<float>& d_in,
 }
 
 __host__
-void algorithmSAT( dvector<float>& d_out,
-                   const dvector<float>& d_in,
-                   dvector<float>& d_ybar,
-                   dvector<float>& d_vhat,
-                   dvector<float>& d_ysum,
-                   const dim3& cg_img,
-                   const dim3& cg_ybar,
-                   const dim3& cg_vhat ) {
+void algSAT( dvector<float>& d_out,
+             const dvector<float>& d_in,
+             dvector<float>& d_ybar,
+             dvector<float>& d_vhat,
+             dvector<float>& d_ysum,
+             const dim3& cg_img,
+             const dim3& cg_ybar,
+             const dim3& cg_vhat ) {
 
-    algorithmSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_in, d_ybar, d_vhat );
+    algSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_in, d_ybar, d_vhat );
 
-    algorithmSAT_stage2<<< cg_ybar, dim3(WS, MW) >>>( d_ybar, d_ysum );
+    algSAT_stage2<<< cg_ybar, dim3(WS, MW) >>>( d_ybar, d_ysum );
 
-    algorithmSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
+    algSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
 
-    algorithmSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_out, d_in, d_ybar, d_vhat );
-
-}
-
-__host__
-void algorithmSAT( dvector<float>& d_inout,
-                   dvector<float>& d_ybar,
-                   dvector<float>& d_vhat,
-                   dvector<float>& d_ysum,
-                   const dim3& cg_img,
-                   const dim3& cg_ybar,
-                   const dim3& cg_vhat ) {
-
-    algorithmSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
-
-    algorithmSAT_stage2<<< cg_ybar, dim3(WS, MW) >>>( d_ybar, d_ysum );
-
-    algorithmSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
-
-    algorithmSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
+    algSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_out, d_in, d_ybar, d_vhat );
 
 }
 
 __host__
-void algorithmSAT( float *inout,
-                   const int& h,
-                   const int& w ) {
+void algSAT( dvector<float>& d_inout,
+             dvector<float>& d_ybar,
+             dvector<float>& d_vhat,
+             dvector<float>& d_ysum,
+             const dim3& cg_img,
+             const dim3& cg_ybar,
+             const dim3& cg_vhat ) {
+
+    algSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
+
+    algSAT_stage2<<< cg_ybar, dim3(WS, MW) >>>( d_ybar, d_ysum );
+
+    algSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
+
+    algSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
+
+}
+
+__host__
+void algSAT( float *inout,
+             const int& h,
+             const int& w ) {
 
     dim3 cg_img, cg_ybar, cg_vhat;
     dvector<float> d_out, d_ybar, d_vhat, d_ysum;
@@ -390,7 +390,7 @@ void algorithmSAT( float *inout,
 
     prepareSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, inout, h, w );
 
-    algorithmSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+    algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
 
     d_out.copy_to( inout, h_out, w_out, h, w );
 

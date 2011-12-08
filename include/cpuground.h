@@ -63,6 +63,7 @@ void rcfr( T *inout,
                 inout[i*w] = p;
         }
         if( ff ) continue;
+        if( ic == zero and ext == 1 ) p = (T)0; // original algorithms don't go outside
         for (i--; i >= 0; i--) {
             c = lookat( inout, i, h, ic, w );
             p = c*b0 - p*a1;
@@ -114,6 +115,7 @@ void rrfr( T *inout,
                 inout[j] = p;
         }
         if( ff ) continue;
+        if( ic == zero and ext == 1 ) p = (T)0; // original algorithms don't go outside
         for (j--; j >= 0; j--) {
             c = lookat( inout, j, w, ic );
             p = c*b0 - p*a1;
@@ -244,7 +246,7 @@ void rcfr( T *inout,
             c = lookat( inout, i, h, ic, w );
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
-            p = c;            
+            p = c;
             if( i >= 0 and i < h ) // in image range
                 inout[i*w] = p;
         }
@@ -253,6 +255,7 @@ void rcfr( T *inout,
         i--;
         pp = p;
         p = c;
+        if( ic == zero and ext == 2 ) pp = p = (T)0; // original algorithms don't go outside
         for (i--; i >= 0; i--) {
             c = lookat( inout, i, h, ic, w );
             c = c*b0 - p*a1 - pp*a2;
@@ -316,6 +319,7 @@ void rrfr( T *inout,
         j--;
         pp = p;
         p = c;
+        if( ic == zero and ext == 2 ) pp = p = (T)0; // original algorithms don't go outside
         for (j--; j >= 0; j--) {
             c = lookat( inout, j, w, ic );
             c = c*b0 - p*a1 - pp*a2;
@@ -415,9 +419,8 @@ void gaussian_cpu( T **in,
                    const int& win,
                    const int& depth,
                    const T& s ) {
-    T b10, a11;
+    T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
-    T b20, a21, a22;
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
         r(in[c], hin, win, b10, a11, clamp);
@@ -427,10 +430,33 @@ void gaussian_cpu( T **in,
 
 /**
  *  @ingroup api_cpu
+ *  @overload
+ *  @brief Gaussian blur a single-channel image in the CPU
+ *
+ *  @param[in,out] in The single-channel 2D image to compute Gaussian blur
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @param[in] s Sigma support of Gaussian blur computation
+ *  @tparam T Image value type
+ */
+template< class T >
+void gaussian_cpu( T *in,
+                   const int& hin,
+                   const int& win,
+                   const T& s ) {
+    T b10, a11, b20, a21, a22;
+    weights1(s, b10, a11);
+    weights2(s, b20, a21, a22);
+    r(in, hin, win, b10, a11, clamp);
+    r(in, hin, win, b20, a21, a22, clamp);
+}
+
+/**
+ *  @ingroup api_cpu
  *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
  *
  *  Given an input 2D image compute the Bicubic B-Spline interpolation
- *  of it by applying a first-order recursive filters using
+ *  of it by applying a first-order recursive filter using
  *  clamp-to-border initial conditions.
  *
  *  @param[in,out] in The 2D image to compute the Bicubic B-Spline interpolation
@@ -446,17 +472,36 @@ void bspline3i_cpu( T **in,
                     const int& depth ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, (T)1+alpha, alpha, clamp);
+        r(in[c], hin, win, (T)1+alpha, alpha, mirror);
     }
 }
 /**
- *  @example app_recursive_cpu.cc
+ *  @example app_recursive.cc
  *
  *  This is an application example of how to use the gaussian_cpu()
- *  function and bspline3i_cpu() function in the CPU.
+ *  function and bspline3i_cpu() function in the CPU; as well as the
+ *  gaussian_gpu() function and bspline3i_gpu() function in the GPU.
  *
  *  @see cpuground.h
  */
+
+/**
+ *  @ingroup api_cpu
+ *  @overload
+ *  @brief Compute the Bicubic B-Spline interpolation of a single-channel image in the CPU
+ *
+ *  @param[in,out] in The single-channel 2D image to compute the Bicubic B-Spline interpolation
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @tparam T Image value type
+ */
+template< class T >
+void bspline3i_cpu( T *in,
+                    const int& hin,
+                    const int& win ) {
+    const T alpha = (T)2 - sqrt((T)3);
+    r(in, hin, win, (T)1+alpha, alpha, mirror);
+}
 
 /**
  *  @ingroup api_cpu

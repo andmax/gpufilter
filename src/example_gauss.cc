@@ -38,7 +38,7 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float sigma = 8.f;
+    const float sigma = 16.f;
 
     std::cout << "[gauss] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
@@ -60,13 +60,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        float b10, a11;
-        gpufilter::weights1(sigma, b10, a11);
-        float b20, a21, a22;
-        gpufilter::weights2(sigma, b20, a21, a22);
-
-        gpufilter::r(in_cpu, h_in, w_in, b10, a11);
-        gpufilter::r(in_cpu, h_in, w_in, b20, a21, a22);
+        gpufilter::gaussian_cpu( in_cpu, h_in, w_in, sigma );
 
         std::cout << "done!\n[gauss] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
