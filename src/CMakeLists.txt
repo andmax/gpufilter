@@ -2,7 +2,7 @@
 include_directories(${CUDA_INCLUDE_DIRS} ${CUDA_SDK_ROOT_DIR}/common/inc)
 link_directories(${CUDA_SDK_ROOT_DIR}/lib)
 
-cuda_compile(CUDA_SOURCES gpufilter.cu sat.cu)
+cuda_compile(CUDA_SOURCES gpufilter.cu)
 add_library(gpufilter timer.cpp gpudefs.cpp ${CUDA_SOURCES})
 
 add_executable(ex1 example_sat1.cc)
@@ -21,8 +21,11 @@ target_link_libraries(ex5 gpufilter)
 cuda_add_executable(ex6 example_r3.cc)
 target_link_libraries(ex6 gpufilter)
 
-cuda_add_executable(ex7 example_gauss.cc)
+cuda_add_executable(ex7 example_r4.cc)
 target_link_libraries(ex7 gpufilter)
+
+cuda_add_executable(ex8 example_gauss.cc)
+target_link_libraries(ex8 gpufilter)
 
 include_directories(${OPENCV_DIR})
 

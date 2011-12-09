@@ -45,13 +45,14 @@ documentation).</b></i></font> \endhtmlonly
 
 The GPU-Efficient Recursive Filtering and Summed-Area Tables
 (::gpufilter) project is a set of <em>C for CUDA</em> functions to
-compute recursive filters and summed-area tables in GPUs.  This
-project presents a new algorithmic framework for parallel evaluation.
-It partitions the image into 2D blocks, with a small band of data
-buffered along each block perimeter.  A remarkable result is that the
-image data is read only twice and written just once, independent of
-image size, and thus total memory bandwidth is reduced even compared
-to the traditional serial algorithm.
+compute recursive filters and summed-area tables in GPUs (see
+illustrative figure in algSAT()).  This project presents a new
+algorithmic framework for parallel evaluation.  It partitions the
+image into 2D blocks, with a small band of data buffered along each
+block perimeter (see figure in head() for more details).  A remarkable
+result is that the image data is read only twice and written just
+once, independent of image size, and thus total memory bandwidth is
+reduced even compared to the traditional serial algorithm.
 
 The ::gpufilter project is based on the paper: <b>"GPU-Efficient
 Recursive Filtering and Summed-Area Tables"</b> by <b>Diego Nehab</b>,
@@ -282,7 +283,6 @@ void weights2( const T1& s,
  *  [Nehab:2011] in alg5() function) and it is implemented in algSAT()
  *  function.
  *
- *  @see [Nehab:2011] cited in alg5() and algSAT() function
  *  @param[out] d_in The input 2D image to be allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
@@ -297,22 +297,22 @@ void weights2( const T1& s,
  *  @param[in] w Image width
  */
 extern
-void prepareSAT( dvector<float>& d_in,
-                 dvector<float>& d_ybar,
-                 dvector<float>& d_vhat,
-                 dvector<float>& d_ysum,
-                 dim3& cg_img,
-                 dim3& cg_ybar,
-                 dim3& cg_vhat,
-                 int& h_out,
-                 int& w_out,
-                 const float *in,
-                 const int& h,
-                 const int& w );
+void prepare_algSAT( dvector<float>& d_in,
+                     dvector<float>& d_ybar,
+                     dvector<float>& d_vhat,
+                     dvector<float>& d_ysum,
+                     dim3& cg_img,
+                     dim3& cg_ybar,
+                     dim3& cg_vhat,
+                     int& h_out,
+                     int& w_out,
+                     const float *in,
+                     const int& h,
+                     const int& w );
 /**
  *  @example example_sat3.cc
  *
- *  This is an example of how to use the prepareSAT() function and
+ *  This is an example of how to use the prepare_algSAT() function and
  *  algSAT() function in the GPU.
  *
  *  @see gpufilter.h
@@ -345,7 +345,6 @@ void prepareSAT( dvector<float>& d_in,
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function works better in multiples of 32 in each dimension.
  *
- *  @see [Nehab:2011] cited in alg5()
  *  @param[in,out] inout The input and output 2D image to compute SAT
  *  @param[in] h Image height
  *  @param[in] w Image width
@@ -370,7 +369,7 @@ void algSAT( float *inout,
  *  @note The pre-allocated device memory should match the values in
  *  the computational grids.
  *
- *  @see Base algSAT() function
+ *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
  *  @param[in,out] d_inout The input and output 2D image allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
@@ -396,7 +395,7 @@ void algSAT( dvector<float>& d_inout,
  *  @note The pre-allocated device memory should match the values in
  *  the computational grids.
  *
- *  @see Base algSAT() function
+ *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
  *  @param[out] d_out The output 2D image allocated in device memory
  *  @param[in] d_in The input 2D image allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
@@ -446,11 +445,55 @@ void alg4( float *inout,
            const float& a1,
            const float& a2 );
 /**
- *  @example example_r3.cc
+ *  @example example_r4.cc
  *
  *  This is an example of how to use the alg4() function in the GPU
  *  and the r() function in the CPU, as well as the
  *  gpufilter::scoped_timer_stop class.
+ *
+ *  @see gpufilter.h
+ */
+
+/**
+ *  @ingroup api_gpu
+ *  @brief Prepare for Algorithm 5
+ *
+ *  This function prepares the data structures used by the recursive
+ *  filtering algorithm 5 of an input 2D image.
+ *
+ *  The algorithm 5 is discussed in depth in our paper (see
+ *  [Nehab:2011] in alg5() function) and it is implemented in alg5()
+ *  function.
+ *
+ *  @param[out] d_in The input 2D image to be allocated in device memory
+ *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
+ *  @param[out] d_transp_ezhat The \f$E_{m,n}(\hat{Z})\f$ to be allocated in device memory
+ *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ to be allocated in device memory
+ *  @param[out] d_etvtilde The \f$E^T_{m,n}(\tilde{U})\f$ to be allocated in device memory
+ *  @param[out] cg_img Computation grid for algorithm 5
+ *  @param[in] in The input 2D image to compute algorithm 5
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ *  @param[in] b0 Feedforward coefficient
+ *  @param[in] a1 Feedback coefficient
+ */
+extern
+void prepare_alg5( dvector<float>& d_in,
+                   dvector<float>& d_transp_pybar,
+                   dvector<float>& d_transp_ezhat,
+                   dvector<float>& d_ptucheck,
+                   dvector<float>& d_etvtilde,
+                   dim3& cg_img,
+                   const float *in,
+                   const int& h,
+                   const int& w,
+                   const float& b0,
+                   const float& a1 );
+/**
+ *  @example example_r3.cc
+ *
+ *  This is an example of how to use the prepare_alg5() function and
+ *  alg5() function in the GPU.
  *
  *  @see gpufilter.h
  */
@@ -479,8 +522,7 @@ void alg4( float *inout,
 }   @endverbatim
  *
  *  @note For performance purposes (in CUDA kernels implementation)
- *  this function only works with \f$64^2\f$ minimum image resolution,
- *  and only in multiples of 64 in each dimension.
+ *  this function only works with multiples of 32 in each dimension.
  *
  *  @param[in,out] inout The input and output 2D image to compute recursive filtering
  *  @param[in] h Image height
@@ -503,6 +545,29 @@ void alg5( float *inout,
  *
  *  @see gpufilter.h
  */
+
+/**
+ *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute Algorithm 5 (first-order)
+ *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function only works with multiples of 32 in each dimension.
+ *
+ *  @param[in,out] d_inout The input and output 2D image allocated in device memory
+ *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
+ *  @param[out] d_transp_ezhat The \f$E_{m,n}(\hat{Z})\f$ allocated in device memory
+ *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ allocated in device memory
+ *  @param[out] d_etvtilde The \f$E^T_{m,n}(\tilde{U})\f$ allocated in device memory
+ *  @param[in] cg_img Computation grid for algorithm 5
+ */
+extern
+void alg5( dvector<float>& d_inout,
+           dvector<float>& d_transp_pybar,
+           dvector<float>& d_transp_ezhat,
+           dvector<float>& d_ptucheck,
+           dvector<float>& d_etvtilde,
+           const dim3& cg_img );
 
 /**
  *  @ingroup api_gpu

@@ -489,8 +489,8 @@ Matrix<M,N,T> revT( const Matrix<M,N,T>& b,
  *  considering filter order \f$R\f$ (see [Nehab:2011] cited in alg5()
  *  function).  The following image illustrates the concept:
  *
- *  @image html blocks-2d.png
- *  @image latex blocks-2d.eps
+ *  @image html blocks-2d.png "2D Block Notation"
+ *  @image latex blocks-2d.eps "2D Block Notation"
  *
  *  2D block notation showing a block and its boundary data from
  *  adjacent blocks.  Note that the column-epilogue \f$E_{m+1,n}\f$

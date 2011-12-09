@@ -1,6 +1,6 @@
 /**
- *  @file example_r2.cc
- *  @brief Second R (Recursive Filtering) example
+ *  @file example_r3.cc
+ *  @brief Fourth R (Recursive Filtering) example
  *  @author Andre Maximo
  *  @date November, 2011
  */
@@ -38,9 +38,9 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float b0 = 1.f, a1 = -1.f;
+    const float b0 = 0.0060625f, a1 = -1.89282f, a2 = 0.89888f;
 
-    std::cout << "[r2] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[r3] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
     float *in_cpu = new float[h_in*w_in];
     float *in_gpu = new float[h_in*w_in];
@@ -50,42 +50,42 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < h_in*w_in; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
-    std::cout << "done!\n[r2] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
-    std::cout << "[r2] Considering forward and reverse on rows and columns\n";
-    std::cout << "[r2] Feedforward and feedback coefficients are: b0 = " << b0 << " ; a1 = " << a1 << "\n";
-    std::cout << "[r2] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "done!\n[r3] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1} - a2 * y_{i-2}\n";
+    std::cout << "[r3] Considering forward and reverse on rows and columns\n";
+    std::cout << "[r3] Coefficients are: b0 = " << b0 << " ; a1 = " << a1 << " ; a2 = " << a2 << "\n";
+    std::cout << "[r3] CPU Computing second-order recursive filtering with zero-border ... " << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r( in_cpu, h_in, w_in, b0, a1 );
+        gpufilter::r( in_cpu, h_in, w_in, b0, a1, a2 );
 
-        std::cout << "done!\n[r2] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[r3] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
 
-    std::cout << "[r2] GPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "[r3] GPU Computing second-order recursive filtering with zero-border ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::alg5( in_gpu, h_in, w_in, b0, a1 );
+        gpufilter::alg4( in_gpu, h_in, w_in, b0, a1, a2 );
 
-        std::cout << "done!\n[r2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[r3] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
 
-    std::cout << "[r2] GPU Timing includes memory transfers from and to the CPU\n";
+    std::cout << "[r3] GPU Timing includes pre-computation and memory transfers\n";
 
-    std::cout << "[r2] Checking GPU result with CPU reference values\n";
+    std::cout << "[r3] Checking GPU result with CPU reference values\n";
 
     float me, mre;
 
     check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
 
-    std::cout << std::resetiosflags( std::ios_base::floatfield );
+    std::cout << std::scientific;
 
-    std::cout << "[r2] Maximum relative error: " << mre << "\n";
+    std::cout << "[r3] Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

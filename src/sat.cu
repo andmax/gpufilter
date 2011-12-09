@@ -308,18 +308,18 @@ void algSAT_stage4( float *g_out,
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void prepareSAT( dvector<float>& d_in,
-                 dvector<float>& d_ybar,
-                 dvector<float>& d_vhat,
-                 dvector<float>& d_ysum,
-                 dim3& cg_img,
-                 dim3& cg_ybar,
-                 dim3& cg_vhat,
-                 int& h_out,
-                 int& w_out,
-                 const float *in,
-                 const int& h,
-                 const int& w ) {
+void prepare_algSAT( dvector<float>& d_in,
+                     dvector<float>& d_ybar,
+                     dvector<float>& d_vhat,
+                     dvector<float>& d_ysum,
+                     dim3& cg_img,
+                     dim3& cg_ybar,
+                     dim3& cg_vhat,
+                     int& h_out,
+                     int& w_out,
+                     const float *in,
+                     const int& h,
+                     const int& w ) {
 
     h_out = h;
     w_out = w;
@@ -388,7 +388,7 @@ void algSAT( float *inout,
     dvector<float> d_out, d_ybar, d_vhat, d_ysum;
     int h_out, w_out;
 
-    prepareSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, inout, h, w );
+    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, inout, h, w );
 
     algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
 

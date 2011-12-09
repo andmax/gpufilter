@@ -6,14 +6,21 @@
  */
 
 #include <ctime>
+#include <cstdio>
 #include <cstdlib>
 
 #include <iostream>
 #include <iomanip>
 
 #include <timer.h>
+#include <dvector.h>
+
 #include <cpuground.h>
 #include <gpufilter.h>
+
+#include <alg5.cuh>
+
+#define REPEATS 100
 
 // Check computation
 void check_reference( const float *ref,
@@ -31,15 +38,17 @@ void check_reference( const float *ref,
             mre = b > mre ? b : mre;
         }
         me = a > me ? a : me;
-        //std::cout << res[i] << " x " << ref[i] << "\n";
     }
 }
 
 // Main
 int main(int argc, char *argv[]) {
 
-    const int w_in = 1024, h_in = 1024;
-    const float b0 = 0.0060625f, a1 = -1.89282f, a2 = 0.89888f;
+    int w_in = 4096, h_in = 4096;
+
+    if( argc == 3 ) { sscanf(argv[1], "%d", &w_in); sscanf(argv[2], "%d", &h_in); }
+
+    const float b0 = 1.267949192f, a1 = 0.267949192f;
 
     std::cout << "[r3] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
@@ -51,34 +60,48 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < h_in*w_in; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
-    std::cout << "done!\n[r3] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1} - a2 * y_{i-2}\n";
+    std::cout << "done!\n[r3] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
     std::cout << "[r3] Considering forward and reverse on rows and columns\n";
-    std::cout << "[r3] Coefficients are: b0 = " << b0 << " ; a1 = " << a1 << " ; a2 = " << a2 << "\n";
-    std::cout << "[r3] CPU Computing second-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "[r3] Feedforward and feedback coefficients are: b0 = " << b0 << " ; a1 = " << a1 << "\n";
+    std::cout << "[r3] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU", h_in*w_in, "iP") );
 
-        gpufilter::r( in_cpu, h_in, w_in, b0, a1, a2 );
-
-        std::cout << "done!\n[r3] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        gpufilter::r( in_cpu, h_in, w_in, b0, a1 );
     }
 
-    std::cout << "[r3] GPU Computing second-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "done!\n[r3] Configuring the GPU to run ... " << std::flush;
+
+    dim3 cg_img;
+    gpufilter::dvector<float> d_in_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
+
+    gpufilter::prepare_alg5( d_in_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, in_gpu, h_in, w_in, b0, a1 );
+
+    gpufilter::dvector<float> d_out_gpu( d_in_gpu );
+
+    std::cout << "done!\n[r3] GPU Computing first-order recursive filtering with zero-border ... " << std::flush;
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in*REPEATS, "iP") );
 
-        gpufilter::alg4( in_gpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::alg5( d_out_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
 
-        std::cout << "done!\n[r3] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        for (int i = 1; i < REPEATS; ++i)
+            gpufilter::alg5( d_in_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
     }
 
-    std::cout << "[r3] GPU Timing includes pre-computation and memory transfers\n";
+    std::cout << "done!\n";
 
-    std::cout << "[r3] Checking GPU result with CPU reference values\n";
+    gpufilter::timers.flush();
+
+    std::cout << "[r3] Copying result back from the GPU ... " << std::flush;
+
+    d_out_gpu.copy_to( in_gpu, h_in * w_in );
+
+    std::cout << "done!\n[r3] Checking GPU result with CPU reference values\n";
 
     float me, mre;
 

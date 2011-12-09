@@ -50,20 +50,22 @@ void rcfr( T *inout,
            const T& b0,
            const T& a1,
            const bool& ff = false,
-           const int& ext = 1,
+           const int& ext = 0,
            const initcond& ic = zero ) {
     for (int j = 0; j < w; j++, inout += 1) {
-        int i = -ext;
-        T p = lookat( inout, i, h, ic, w );
+        int i;
+        // p=0 is not initial condition based, it is due
+        // to the filter order outside image + extension
+        T p = (T)0;
         T c;
-        for (i++; i < h+ext; i++) {
+        for (i = -ext; i < h+ext; i++) {
             c = lookat( inout, i, h, ic, w );
             p = c*b0 - p*a1;
             if( i >= 0 and i < h ) // in image range
                 inout[i*w] = p;
         }
         if( ff ) continue;
-        if( ic == zero and ext == 1 ) p = (T)0; // original algorithms don't go outside
+        p = (T)0;
         for (i--; i >= 0; i--) {
             c = lookat( inout, i, h, ic, w );
             p = c*b0 - p*a1;
@@ -102,20 +104,22 @@ void rrfr( T *inout,
            const T& b0,
            const T& a1,
            const bool& ff = false,
-           const int& ext = 1,
+           const int& ext = 0,
            const initcond& ic = zero ) {
     for (int i = 0; i < h; i++, inout += w) {
-        int j = -ext;
-        T p = lookat( inout, j, w, ic );
+        int j;
+        // p=0 is not initial condition based, it is due
+        // to the filter order outside image + extension
+        T p = (T)0;
         T c;
-        for (j++; j < w+ext; j++) {
+        for (j = -ext; j < w+ext; j++) {
             c = lookat( inout, j, w, ic );
             p = c*b0 - p*a1;
             if( j >= 0 and j < w ) // in image range
                 inout[j] = p;
         }
         if( ff ) continue;
-        if( ic == zero and ext == 1 ) p = (T)0; // original algorithms don't go outside
+        p = (T)0;
         for (j--; j >= 0; j--) {
             c = lookat( inout, j, w, ic );
             p = c*b0 - p*a1;
@@ -161,19 +165,11 @@ void r( T *inout,
         const T& b0,
         const T& a1,
         const bool& ff = false,
-        const int& ext = 1,
+        const int& ext = 0,
         const initcond& ic = zero ) {
     rcfr(inout, h, w, b0, a1, ff, ext, ic);
     rrfr(inout, h, w, b0, a1, ff, ext, ic);
 }
-/**
- *  @example example_gauss.cc
- *
- *  This is an example of how to use the r() function in the CPU and
- *  the gaussian_gpu() function in the GPU.
- *
- *  @see cpuground.h
- */
 
 /**
  *  @ingroup cpu
@@ -197,7 +193,7 @@ void r( T *inout,
         const T& b0,
         const T& a1,
         const initcond& ic,
-        const int& ext = 1,
+        const int& ext = 0,
         const bool& ff = false ) {
     rcfr(inout, h, w, b0, a1, ff, ext, ic);
     rrfr(inout, h, w, b0, a1, ff, ext, ic);
@@ -234,15 +230,16 @@ void rcfr( T *inout,
            const T& a1,
            const T& a2,
            const bool& ff = false,
-           const int& ext = 2,
+           const int& ext = 0,
            const initcond& ic = zero ) {
     for (int j = 0; j < w; j++, inout += 1) {
-        int i = -ext;
-        T pp = lookat( inout, i, h, ic, w );
-        i++;
-        T p = lookat( inout, i, h, ic, w );
+        int i;
+        // pp=p=0 is not initial condition based, it is due
+        // to the filter order outside image + extension
+        T pp = (T)0;
+        T p = (T)0;
         T c;
-        for (i++; i < h+ext; i++) {
+        for (i = -ext; i < h+ext; i++) {
             c = lookat( inout, i, h, ic, w );
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
@@ -251,11 +248,7 @@ void rcfr( T *inout,
                 inout[i*w] = p;
         }
         if( ff ) continue;
-        c = pp;
-        i--;
-        pp = p;
-        p = c;
-        if( ic == zero and ext == 2 ) pp = p = (T)0; // original algorithms don't go outside
+        pp = p = (T)0;
         for (i--; i >= 0; i--) {
             c = lookat( inout, i, h, ic, w );
             c = c*b0 - p*a1 - pp*a2;
@@ -298,15 +291,16 @@ void rrfr( T *inout,
            const T& a1,
            const T& a2,
            const bool& ff = false,
-           const int& ext = 2,
+           const int& ext = 0,
            const initcond& ic = zero ) {
     for (int i = 0; i < h; i++, inout += w) {
-        int j = -ext;
-        T pp = lookat( inout, j, w, ic );
-        j++;
-        T p = lookat( inout, j, w, ic );
+        int j;
+        // pp=p=0 is not initial condition based, it is due
+        // to the filter order outside image + extension
+        T pp = (T)0;
+        T p = (T)0;
         T c;
-        for (j++; j < w+ext; j++) {
+        for (j = -ext; j < w+ext; j++) {
             c = lookat( inout, j, w, ic );
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
@@ -315,11 +309,7 @@ void rrfr( T *inout,
                 inout[j] = p;
         }
         if( ff ) continue;
-        c = pp;
-        j--;
-        pp = p;
-        p = c;
-        if( ic == zero and ext == 2 ) pp = p = (T)0; // original algorithms don't go outside
+        pp = p = (T)0;
         for (j--; j >= 0; j--) {
             c = lookat( inout, j, w, ic );
             c = c*b0 - p*a1 - pp*a2;
@@ -362,7 +352,7 @@ void r( T *inout,
         const T& a1,
         const T& a2,
         const bool& ff = false,
-        const int& ext = 2,
+        const int& ext = 0,
         const initcond& ic = zero ) {
     rcfr(inout, h, w, b0, a1, a2, ff, ext, ic);
     rrfr(inout, h, w, b0, a1, a2, ff, ext, ic);
@@ -392,7 +382,7 @@ void r( T *inout,
         const T& a1,
         const T& a2,
         const initcond& ic,
-        const int& ext = 2,
+        const int& ext = 0,
         const bool& ff = false ) {
     rcfr(inout, h, w, b0, a1, a2, ff, ext, ic);
     rrfr(inout, h, w, b0, a1, a2, ff, ext, ic);
@@ -423,10 +413,18 @@ void gaussian_cpu( T **in,
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, b10, a11, clamp);
-        r(in[c], hin, win, b20, a21, a22, clamp);
+        r(in[c], hin, win, b10, a11, clamp, 32);
+        r(in[c], hin, win, b20, a21, a22, clamp, 32);
     }
 }
+/**
+ *  @example example_gauss.cc
+ *
+ *  This is an example of how to use the gaussian_cpu() function in
+ *  the CPU and the gaussian_gpu() function in the GPU.
+ *
+ *  @see cpuground.h
+ */
 
 /**
  *  @ingroup api_cpu
@@ -447,8 +445,8 @@ void gaussian_cpu( T *in,
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
-    r(in, hin, win, b10, a11, clamp);
-    r(in, hin, win, b20, a21, a22, clamp);
+    r(in, hin, win, b10, a11, clamp, 32);
+    r(in, hin, win, b20, a21, a22, clamp, 32);
 }
 
 /**
@@ -472,7 +470,7 @@ void bspline3i_cpu( T **in,
                     const int& depth ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, (T)1+alpha, alpha, mirror);
+        r(in[c], hin, win, (T)1+alpha, alpha, mirror, 32);
     }
 }
 /**
@@ -500,7 +498,7 @@ void bspline3i_cpu( T *in,
                     const int& hin,
                     const int& win ) {
     const T alpha = (T)2 - sqrt((T)3);
-    r(in, hin, win, (T)1+alpha, alpha, mirror);
+    r(in, hin, win, (T)1+alpha, alpha, mirror, 32);
 }
 
 /**

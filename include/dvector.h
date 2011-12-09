@@ -275,7 +275,8 @@ public:
 private:
 
     T *m_data; ///< Vector data
-    size_t m_size, m_capacity; ///< Vector size and capacity
+    size_t m_size; ///< Vector size
+    size_t m_capacity; ///< Vector capacity
 
 };
 

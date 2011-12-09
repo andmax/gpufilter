@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     gpufilter::dvector<float> d_in_gpu, d_ybar, d_vhat, d_ysum;
     int h_out, w_out;
 
-    gpufilter::prepareSAT( d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, in_gpu, h_in, w_in );
+    gpufilter::prepare_algSAT( d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, in_gpu, h_in, w_in );
 
     gpufilter::dvector<float> d_out_gpu( h_out*w_out );
 

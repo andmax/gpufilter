@@ -104,17 +104,17 @@ private:
     /**
      *  Copy Constructor (deleted)
      *  @brief Prevent the assignment declaration by derived classes
-     *  @param[in] Object to copy to this object
+     *  @param[in] bt Object to copy to this object
      */
-    base_timer( const base_timer& );
+    base_timer( const base_timer& bt );
 
     /**
      *  @brief Assign operator (deleted)
      *  @brief Prevent the assignment declaration by derived classes
-     *  @param[in] Object to copy from
+     *  @param[in] bt Object to copy from
      *  @return This timer with assigned values
      */
-    base_timer& operator = ( const base_timer& );
+    base_timer& operator = ( const base_timer& bt );
 
     const char *m_type_label; ///< Label for this timer type
 
@@ -174,7 +174,8 @@ private:
      */
     virtual float do_get_elapsed() const;
 
-    cudaEvent_t m_start, m_stop; ///< Start and stop CUDA events for timing computation
+    cudaEvent_t m_start; ///< Start CUDA events for timing computation
+    cudaEvent_t m_stop; ///< Stop CUDA events for timing computation
 
 };
 
@@ -230,7 +231,8 @@ private:
      */
     double get_cpu_time() const;
 
-    double m_start_time, m_stop_time; ///< Start and stop CPU timings
+    double m_start_time; ///< Start CPU timings
+    double m_stop_time; ///< Stop CPU timings
 
 };
 
@@ -326,11 +328,15 @@ public:
 
 private:
 
+    /**
+     *  @struct timer_data
+     *  @brief Each timer data in the pool of timers
+     */
     struct timer_data {
-        base_timer *timer;
-        std::string label;
-        int level;
-    }; ///< timer data
+        base_timer *timer; ///< Pointer to base timer
+        std::string label; ///< Timer label
+        int level; ///< Stack level when flushing timers
+    };
 
     typedef std::list<timer_data> timer_list; ///< timer list definition
 
