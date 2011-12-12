@@ -14,12 +14,22 @@
 #include <iostream>
 #include <algorithm>
 
+#include <symbol.h>
+
 #include <dvector.h>
+#include <extension.h>
 #include <gpufilter.h>
 #include <gpudefs.cuh>
 #include <gpuconsts.cuh>
 
 #include <alg5.cuh>
+
+//== DEFINITIONS ===============================================================
+
+__constant__
+float c_tex_width, c_tex_height;
+
+texture< float, cudaTextureType2D, cudaReadModeElementType > t_in;
 
 //== NAMESPACES ===============================================================
 
@@ -30,96 +40,92 @@ namespace gpufilter {
 //-- Algorithm 5_1 ------------------------------------------------------------
 
 __global__ __launch_bounds__(WS*SOW, MBO)
-void alg5_stage1( const float *g_in,
-                  float *g_transp_pybar,
+void alg5_stage1( float *g_transp_pybar,
                   float *g_transp_ezhat,
                   float *g_ptucheck,
                   float *g_etvtilde )
 {
-    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y;
-    __shared__ float block[WS][WS+1];
+    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y, mwstx = m*WS+tx, nwstx = n*WS+tx, nwsty = n*WS+ty;
+    __shared__ float s_block[WS][WS+1];
 
-    // make g_in point to the data we'll work with
-    g_in += (n*WS+ty)*c_width + m*WS+tx;
+    float tu = ( mwstx + 0.5f ) * c_tex_width;
+    float tv = ( nwsty + 0.5f ) * c_tex_height;
 
-    float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
+    float (*brow)[WS+1] = (float (*)[WS+1]) &s_block[ty][tx];
 
     // load data into shared memory
-    int i;
 #pragma unroll
-    for(i=0; i<WS-(WS%SOW); i+=SOW)
+    for(int i=0; i<WS-(WS%SOW); i+=SOW)
     {
-        **bdata = *g_in;
-        bdata += SOW;
-        g_in += SOW*c_width;
+        **brow = tex2D( t_in, tu, tv );
+        brow += SOW;
+        tv += SOW * c_tex_height;
     }
 
     if(ty < WS%SOW)
     {
-        **bdata = *g_in;
+        **brow = tex2D( t_in, tu, tv );
     }
 
     // We use a transposed matrix for pybar and ezhat to have
     // coalesced memory accesses. This is the movement for these
     // transposed buffers.
-    g_transp_pybar += m*c_height + n*WS + tx; 
-    g_transp_ezhat += m*c_height + n*WS + tx;
-    g_ptucheck += n*c_width + m*WS + tx;
-    g_etvtilde += n*c_width + m*WS + tx;
+    g_transp_pybar += m*c_height + nwstx; 
+    g_transp_ezhat += m*c_height + nwstx;
+    g_ptucheck += n*c_width + mwstx;
+    g_etvtilde += n*c_width + mwstx;
 
     __syncthreads();
-
-    float prev;
 
     if(ty == 0)
     {
         // scan columns
         {
-            float *bdata = block[tx];
+            float *bcol = s_block[tx];
 
             // calculate pybar, scan left -> right
 
-            prev = *bdata++;
+            float prev = *bcol++;
 
 #pragma unroll
-            for(int j=1; j<WS; ++j, ++bdata)
-                prev = *bdata -= prev*c_a1;
+            for(int j=1; j<WS; ++j, ++bcol)
+                prev = *bcol -= prev*c_a1;
 
             *g_transp_pybar = prev*c_b0;
             
             // calculate ezhat, scan right -> left
 
-            prev = *--bdata;
-            --bdata;
+            prev = *--bcol;
+            --bcol;
 
 #pragma unroll
-            for(int j=WS-2; j>=0; --j, --bdata)
-                prev = *bdata -= prev*c_a1;
+            for(int j=WS-2; j>=0; --j, --bcol)
+                prev = *bcol -= prev*c_a1;
 
             *g_transp_ezhat = prev*c_b0*c_b0;
         }
 
         // scan rows
         {
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
+            brow = (float (*)[WS+1]) &s_block[0][tx];
 
             // calculate ptucheck, scan top -> down
 
-            prev = **bdata++;
+            float prev = **brow++;
 
 #pragma unroll
-            for(int i=1; i<WS; ++i, ++bdata)
-                prev = **bdata -= prev*c_a1;
+            for(int i=1; i<WS; ++i, ++brow)
+                prev = **brow -= prev*c_a1;
 
             *g_ptucheck = prev*c_b0*c_b0*c_b0;
 
             // calculate etvtilde, scan bottom -> up
 
-            prev = **--bdata;
-            --bdata;
+            prev = **--brow;
+            --brow;
 
-            for(int i=WS-2; i>=0; --i, --bdata)
-                prev = **bdata - prev*c_a1;
+            for(int i=WS-2; i>=0; --i, --brow)
+                prev = **brow - prev*c_a1;
 
             *g_etvtilde = prev*c_b0*c_b0*c_b0*c_b0;
         }
@@ -132,8 +138,8 @@ void alg5_stage2_3( float *g_transp_pybar,
 {
     int tx = threadIdx.x, ty = threadIdx.y, n = blockIdx.y;
 
-    __shared__ float transp_block[DW][WS];
-    float *bdata = &transp_block[ty][tx];
+    __shared__ float s_transp_block[DW][WS];
+    float *bdata = &s_transp_block[ty][tx];
 
     // P(ybar) -> P(y) processing --------------------------------------
 
@@ -150,7 +156,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
     if(ty == 0)
     {
-        float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+        float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 
         // (24): P_m(y) = P_m(ybar) + A^b_F * P_{m-1}(y)
         py = **bdata++;
@@ -181,7 +187,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
             if(ty == 0)
             {
-                float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+                float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 #pragma unroll
                 for(int dm=0; dm<DW; ++dm, ++bdata)
                     **bdata = py = **bdata + c_AbF*py;
@@ -207,7 +213,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
         if(ty == 0)
         {
-            float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+            float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 #pragma unroll
             for(int dm=0; dm<remaining; ++dm, ++bdata)
                 **bdata = py = **bdata + c_AbF*py;
@@ -245,7 +251,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
         if(ty == 0)
         {
-            float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+            float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
             ez = **bdata++;
 
 #pragma unroll
@@ -276,7 +282,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
             if(ty == 0)
             {
-                float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+                float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 #pragma unroll
                 for(int dm=0; dm<DW; ++dm, ++bdata)
                     **bdata = ez = **bdata + c_AbR*ez;
@@ -309,7 +315,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
         if(ty == 0)
         {
-            float (*bdata)[WS] = (float (*)[WS]) &transp_block[0][tx];
+            float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
             // (24): P_m(y) = P_m(ybar) + A^b_F * P_{m-1}(y)
 #pragma unroll
             for(int dm=0; dm<remaining; ++dm, ++bdata)
@@ -323,7 +329,7 @@ void alg5_stage2_3( float *g_transp_pybar,
     }
 }
 
-__global__ __launch_bounds__(WS*CFW, ONB)
+__global__ __launch_bounds__(WS*DW, ONB)
 void alg5_stage4_5( float *g_ptucheck,
                     float *g_etvtilde,
                     const float *g_transp_py,
@@ -331,16 +337,15 @@ void alg5_stage4_5( float *g_ptucheck,
 {
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x;
 
-    __shared__ float block[CFW][WS];
-    float *bdata = &block[ty][tx];
+    __shared__ float s_block[DW][WS];
+    float *bdata = &s_block[ty][tx];
 
     // P(ucheck) -> P(u) processing --------------------------------------
 
-	volatile __shared__ float block_RD_raw[CFW][16+32+1];
+	volatile __shared__ float s_block_RD_raw[DW][16+32+1];
 	volatile float (*block_RD)[16+32+1] 
-        = (float (*)[16+32+1]) &block_RD_raw[0][16];
-    if(ty < CFW)
-        block_RD_raw[ty][tx] = 0;
+        = (float (*)[16+32+1]) &s_block_RD_raw[0][16];
+    s_block_RD_raw[ty][tx] = 0;
 
 #define CALC_DOT(RES, V1, V2) \
     block_RD[ty][tx] = V1*V2; \
@@ -385,7 +390,7 @@ void alg5_stage4_5( float *g_ptucheck,
 
         if(ty == 0)
         {
-            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+            float (*bdata2)[WS] = (float (*)[WS]) &s_block[0][tx];
 
             ptu = **bdata2++;
 
@@ -405,10 +410,10 @@ void alg5_stage4_5( float *g_ptucheck,
     // middle row-blocks
 
     int n = blockDim.y;
-    if(n == CFW)
+    if(n == DW)
     {
-        int nmax = c_n_size-(c_n_size%CFW);
-        for(; n<nmax; n+=CFW)
+        int nmax = c_n_size-(c_n_size%DW);
+        for(; n<nmax; n+=DW)
         {
             *bdata = *ptucheck;
 
@@ -424,17 +429,17 @@ void alg5_stage4_5( float *g_ptucheck,
                 *bdata += dot*c_ARE_T[tx];
             }
 
-            transp_pm1ybar += WS*CFW;
-            transp_em1zhat += WS*CFW;
+            transp_pm1ybar += WS*DW;
+            transp_em1zhat += WS*DW;
 
             __syncthreads();
 
             if(ty == 0)
             {
-                float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+                float (*bdata2)[WS] = (float (*)[WS]) &s_block[0][tx];
 
 #pragma unroll
-                for(int dn=0; dn<CFW; ++dn, ++bdata2)
+                for(int dn=0; dn<DW; ++dn, ++bdata2)
                     **bdata2 = ptu = **bdata2 + c_AbF*ptu;
             }
 
@@ -442,7 +447,7 @@ void alg5_stage4_5( float *g_ptucheck,
 
             *ptucheck = *bdata;
 
-            ptucheck += CFW*c_width;
+            ptucheck += DW*c_width;
 
         }
     }
@@ -474,7 +479,7 @@ void alg5_stage4_5( float *g_ptucheck,
 
         if(ty == 0)
         {
-            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+            float (*bdata2)[WS] = (float (*)[WS]) &s_block[0][tx];
 #pragma unroll
             for(int dn=0; dn<remaining; ++dn, ++bdata2)
                 **bdata2 = ptu = **bdata2 + c_AbF*ptu;
@@ -508,7 +513,7 @@ void alg5_stage4_5( float *g_ptucheck,
     n = c_n_size-1;
 
     {
-        block[ty][tx] = *etvtilde;
+        s_block[ty][tx] = *etvtilde;
 
 
         if(m > 0)
@@ -534,7 +539,7 @@ void alg5_stage4_5( float *g_ptucheck,
 
         if(ty == 0)
         {
-            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+            float (*bdata2)[WS] = (float (*)[WS]) &s_block[0][tx];
 
             etv = **bdata2++;
 
@@ -553,10 +558,10 @@ void alg5_stage4_5( float *g_ptucheck,
     }
 
     // middle row-blocks
-    if(blockDim.y == CFW)
+    if(blockDim.y == DW)
     {
-        int nmin = c_n_size%CFW;
-        for(; n>=nmin; n-=CFW)
+        int nmin = c_n_size%DW;
+        for(; n>=nmin; n-=DW)
         {
 
             *bdata = *etvtilde;
@@ -577,17 +582,17 @@ void alg5_stage4_5( float *g_ptucheck,
             if(n-ty > 0)
                 *bdata += *ptmn1u*c_HARB_AFP;
 
-            transp_pm1ybar -= WS*CFW;
-            transp_em1zhat -= WS*CFW;
-            ptmn1u -= CFW*c_width;
+            transp_pm1ybar -= WS*DW;
+            transp_em1zhat -= WS*DW;
+            ptmn1u -= DW*c_width;
 
             __syncthreads();
 
             if(ty == 0)
             {
-                float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+                float (*bdata2)[WS] = (float (*)[WS]) &s_block[0][tx];
 #pragma unroll
-                for(int dn=0; dn<CFW; ++dn, ++bdata2)
+                for(int dn=0; dn<DW; ++dn, ++bdata2)
                     **bdata2 = etv = **bdata2 + c_AbR*etv;
             }
 
@@ -595,7 +600,7 @@ void alg5_stage4_5( float *g_ptucheck,
 
             *etvtilde = *bdata;
 
-            etvtilde -= CFW*c_width;
+            etvtilde -= DW*c_width;
         }
     }
 
@@ -628,7 +633,7 @@ void alg5_stage4_5( float *g_ptucheck,
 
         if(ty == 0)
         {
-            float (*bdata2)[WS] = (float (*)[WS]) &block[0][tx];
+            float (*bdata2)[WS] = (float (*)[WS]) &s_block[0][tx];
 #pragma unroll
             for(int dn=0; dn<remaining; ++dn, ++bdata2)
                 **bdata2 = etv = **bdata2 + c_AbR*etv;
@@ -643,64 +648,53 @@ void alg5_stage4_5( float *g_ptucheck,
 }
 
 __global__ __launch_bounds__(WS*SOW, MBO)
-void alg5_stage6( float *g_inout,
+void alg5_stage6( float *g_out,
                   const float *g_transp_py,
                   const float *g_transp_ez,
                   const float *g_ptu,
                   const float *g_etv )
 {
-    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y;
+    int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y, mwstx = m*WS+tx, nwstx = n*WS+tx, nwsty = n*WS+ty;
+    __shared__ float s_block[WS][WS+1];
 
-    __shared__ float block[WS][WS+1];
+    float tu = ( mwstx + 0.5f ) * c_tex_width;
+    float tv = ( nwsty + 0.5f ) * c_tex_height;
 
-    const float *in = g_inout + (n*WS+ty)*c_width + m*WS+tx;
-
-    float (*curb)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
+    float (*brow)[WS+1] = (float (*)[WS+1]) &s_block[ty][tx];
 
     // load data into shared memory
     int i;
 #pragma unroll
     for(i=0; i<WS-(WS%SOW); i+=SOW)
     {
-        **curb = *in;
-        in += SOW*c_width;
-        curb += SOW;
+        **brow = tex2D( t_in, tu, tv );
+        brow += SOW;
+        tv += SOW * c_tex_height;
     }
 
     if(ty < WS%SOW)
     {
-        **curb = *in;
+        **brow = tex2D( t_in, tu, tv );
     }
 
-    __shared__ float py[WS], ez[WS], ptu[WS], etv[WS];
+    g_out += ((n+1)*WS-1)*c_width + mwstx;
 
-    switch(ty)
-    {
-    case 0:
-        if(m > 0)
-            py[tx] = g_transp_py[(n*WS + tx) + (m-1)*c_height] / c_b0;
-        else
-            py[tx] = 0;
-        break;
-    case 1:
-        if(m < c_m_size-1)
-            ez[tx] = g_transp_ez[(n*WS + tx) + (m+1)*c_height];
-        else
-            ez[tx] = 0;
-        break;
-    case 2:
-        if(n > 0)
-            ptu[tx] = g_ptu[(m*WS + tx) + (n-1)*c_width] / c_b0;
-        else
-            ptu[tx] = 0;
-        break;
-    case 3:
-        if(n < c_n_size-1)
-            etv[tx] = g_etv[(m*WS + tx) + (n+1)*c_width];
-        else
-            etv[tx] = 0;
-        break;
-    }
+    // It is strangely better to make all warps read the carries to
+    // registers than to separate carries in four block boundaries
+    // reading them with four warps in shared memory
+    float py=0.f, ez=0.f, ptu=0.f, etv=0.f;
+
+    if(m > 0)
+        py = g_transp_py[nwstx + (m-1)*c_height] * c_1_b0;
+
+    if(m < c_m_size-1)
+        ez = g_transp_ez[nwstx + (m+1)*c_height];
+
+    if(n > 0)
+        ptu = g_ptu[mwstx + (n-1)*c_width] * c_1_b0;
+
+    if(n < c_n_size-1)
+        etv = g_etv[mwstx + (n+1)*c_width];
 
     __syncthreads();
 
@@ -708,46 +702,45 @@ void alg5_stage6( float *g_inout,
     {
         float b0_2 = c_b0*c_b0;
         {
-            float *bdata = block[tx];
+            float *bcol = s_block[tx];
 
             // calculate y ---------------------
 
-            float prev = py[tx];
+            float prev = py;
 
 #pragma unroll
-            for(int j=0; j<WS; ++j, ++bdata)
-                *bdata = prev = *bdata - prev*c_a1;
+            for(int j=0; j<WS; ++j, ++bcol)
+                *bcol = prev = *bcol - prev*c_a1;
 
             // calculate z ---------------------
 
-            prev = ez[tx];
+            prev = ez;
 
-            --bdata;
-            for(int j=WS-1; j>=0; --j, --bdata)
-                *bdata = prev = *bdata*b0_2 - prev*c_a1;
+            --bcol;
+            for(int j=WS-1; j>=0; --j, --bcol)
+                *bcol = prev = *bcol*b0_2 - prev*c_a1;
         }
 
         {
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
+            brow = (float (*)[WS+1]) &s_block[0][tx];
 
             // calculate u ---------------------
 
-            float prev = ptu[tx];
+            float prev = ptu;
 
 #pragma unroll
-            for(int i=0; i<WS; ++i, ++bdata)
-                **bdata = prev = **bdata - prev*c_a1;
+            for(int i=0; i<WS; ++i, ++brow)
+                **brow = prev = **brow - prev*c_a1;
 
             // calculate v ---------------------
-            float *out = g_inout + ((n+1)*WS-1)*c_width + m*WS+tx;
 
-            prev = etv[tx];
+            prev = etv;
 
-            --bdata;
-            for(int i=WS-1; i>=0; --i) 
+            --brow;
+            for(int i=WS-1; i>=0; --i, --brow)
             {
-                *out = prev = **bdata-- *b0_2 - prev*c_a1;
-                out -= c_width;
+                *g_out = prev = **brow *b0_2 - prev*c_a1;
+                g_out -= c_width;
             }
         }
     }
@@ -756,81 +749,122 @@ void alg5_stage6( float *g_inout,
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void prepare_alg5( dvector<float>& d_in,
+void prepare_alg5( dvector<float>& d_out,
+                   cudaArray *& a_in,
                    dvector<float>& d_transp_pybar,
                    dvector<float>& d_transp_ezhat,
                    dvector<float>& d_ptucheck,
                    dvector<float>& d_etvtilde,
                    dim3& cg_img,
-                   const float *in,
+                   const float *h_in,
                    const int& h,
                    const int& w,
                    const float& b0,
-                   const float& a1 ) {
+                   const float& a1,
+                   const initcond& ic,
+                   const int& extb )
+{
 
     up_constants_coefficients1( b0, a1 );
 
     up_constants_sizes( cg_img, h, w );
 
-    d_in.copy_from( in, h * w );
+    d_out.resize( h * w );
     d_transp_pybar.resize( cg_img.x * h );
     d_transp_ezhat.resize( cg_img.x * h );
     d_ptucheck.resize( cg_img.y * w );
     d_etvtilde.resize( cg_img.y * w );
 
+    cudaChannelFormatDesc ccd = cudaCreateChannelDesc<float>(); // cuda channel descriptor for texture
+    cudaMallocArray( &a_in, &ccd, w, h );
+
+    cudaMemcpyToArray( a_in, 0, 0, h_in, h*w*sizeof(float), cudaMemcpyHostToDevice );
+
+    t_in.normalized = true;
+    t_in.filterMode = cudaFilterModePoint;
+
+    switch( ic ) {
+    case zero:
+        t_in.addressMode[0] = cudaAddressModeBorder; // defaults to zero-border
+        t_in.addressMode[1] = cudaAddressModeBorder;
+        break;
+    case clamp:
+        t_in.addressMode[0] = cudaAddressModeClamp;
+        t_in.addressMode[1] = cudaAddressModeClamp;
+        break;
+    case repeat:
+        t_in.addressMode[0] = cudaAddressModeWrap; // implements repeat
+        t_in.addressMode[1] = cudaAddressModeWrap;
+        break;
+    case mirror:
+        t_in.addressMode[0] = cudaAddressModeMirror;
+        t_in.addressMode[1] = cudaAddressModeMirror;
+        break;
+    }
+
+    copy_to_symbol("c_tex_height", 1.f / (float)h);
+    copy_to_symbol("c_tex_width", 1.f / (float)w);
+
 }
 
 __host__
-void alg5( dvector<float>& d_inout,
+void alg5( float *h_inout,
+           const int& h,
+           const int& w,
+           const float& b0,
+           const float& a1,
+           const initcond& ic,
+           const int& extb )
+{
+
+    dim3 cg_img;
+    dvector<float> d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
+    cudaArray *a_in;
+
+    prepare_alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, h_inout, h, w, b0, a1, ic, extb );
+
+    alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
+
+    d_out.copy_to( h_inout, h * w );
+
+    cudaFreeArray( a_in );
+
+}
+
+__host__
+void alg5( dvector<float>& d_out,
+           const cudaArray *a_in,
            dvector<float>& d_transp_pybar,
            dvector<float>& d_transp_ezhat,
            dvector<float>& d_ptucheck,
            dvector<float>& d_etvtilde,
-           const dim3& cg_img ) {
+           const dim3& cg_img )
+{
 
     dvector<float> d_transp_py, d_transp_ez, d_ptu, d_etv;
 
-    alg5_stage1<<< cg_img, dim3(WS, SOW) >>>(
-        d_inout, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde );
+    cudaBindTextureToArray( t_in, a_in );
 
-    alg5_stage2_3<<< dim3(1, cg_img.y), dim3(WS, std::min<int>(cg_img.x, DW)) >>>(
-        d_transp_pybar, d_transp_ezhat );
+    alg5_stage1<<< cg_img, dim3(WS, SOW) >>>( d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde );
+
+    alg5_stage2_3<<< dim3(1, cg_img.y), dim3(WS, DW) >>>( d_transp_pybar, d_transp_ezhat );
 
     swap(d_transp_pybar, d_transp_py);
     swap(d_transp_ezhat, d_transp_ez);
 
-    alg5_stage4_5<<< dim3(cg_img.x, 1), dim3(WS, std::min<int>(cg_img.y, CFW)) >>>(
-        d_ptucheck, d_etvtilde, d_transp_py, d_transp_ez );
+    alg5_stage4_5<<< dim3(cg_img.x, 1), dim3(WS, DW) >>>( d_ptucheck, d_etvtilde, d_transp_py, d_transp_ez );
 
     swap(d_ptucheck, d_ptu);
     swap(d_etvtilde, d_etv);
 
-    alg5_stage6<<< cg_img, dim3(WS, SOW) >>>(
-        d_inout, d_transp_py, d_transp_ez, d_ptu, d_etv );
+    alg5_stage6<<< cg_img, dim3(WS, SOW) >>>( d_out, d_transp_py, d_transp_ez, d_ptu, d_etv );
 
     swap(d_ptu, d_ptucheck);
     swap(d_etv, d_etvtilde);
     swap(d_transp_py, d_transp_pybar);
     swap(d_transp_ez, d_transp_ezhat);
 
-}
-
-__host__
-void alg5( float *inout,
-           const int& h,
-           const int& w,
-           const float& b0,
-           const float& a1 )
-{
-
-    dim3 cg_img;
-    dvector<float> d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
-
-    prepare_alg5( d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, inout, h, w, b0, a1 );
-
-    alg5( d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
-
-    d_out.copy_to( inout, h * w );
+    cudaUnbindTexture( t_in );
 
 }
 

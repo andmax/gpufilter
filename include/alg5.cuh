@@ -28,15 +28,13 @@ namespace gpufilter {
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in alg5()
- *  @param[in] g_in The input 2D image
  *  @param[out] g_transp_pybar All \f$P_{m,n}(\bar{Y})\f$
  *  @param[out] g_transp_ezhat All \f$E_{m,n}(\hat{Z})\f$
  *  @param[out] g_ptucheck All \f$P^T_{m,n}(\check{U})\f$
  *  @param[out] g_etvtilde All \f$E^T_{m,n}(\tilde{V})\f$
  */
 __global__
-void alg5_stage1( const float *g_in,
-                  float *g_transp_pybar,
+void alg5_stage1( float *g_transp_pybar,
                   float *g_transp_ezhat,
                   float *g_ptucheck,
                   float *g_etvtilde );
@@ -117,14 +115,14 @@ void alg5_stage4_5( float *g_ptucheck,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in alg5()
- *  @param[in,out] g_inout The input and output 2D image
+ *  @param[out] g_out The output 2D image
  *  @param[in] g_transp_py All \f$P_{m,n}(Y)\f$
  *  @param[in] g_transp_ez All \f$E_{m,n}(Z)\f$
  *  @param[in] g_ptu All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_etv All \f$E^T_{m,n}(V)\f$
  */
 __global__
-void alg5_stage6( float *g_inout,
+void alg5_stage6( float *g_out,
                   const float *g_transp_py,
                   const float *g_transp_ez,
                   const float *g_ptu,

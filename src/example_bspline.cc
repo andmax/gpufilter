@@ -1,8 +1,8 @@
 /**
- *  @file example_r4.cc
- *  @brief Fourth R (Recursive Filtering) example
+ *  @file example_bspline.cc
+ *  @brief Bicubic B-Spline interpolation example
  *  @author Andre Maximo
- *  @date November, 2011
+ *  @date December, 2011
  */
 
 #include <ctime>
@@ -38,9 +38,8 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int w_in = 1024, h_in = 1024;
-    const float b0 = 0.0060625f, a1 = -1.89282f, a2 = 0.89888f;
 
-    std::cout << "[r4] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[bspline] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
 
     float *in_cpu = new float[h_in*w_in];
     float *in_gpu = new float[h_in*w_in];
@@ -50,34 +49,34 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < h_in*w_in; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
-    std::cout << "done!\n[r4] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1} - a2 * y_{i-2}\n";
-    std::cout << "[r4] Considering forward and reverse on rows and columns\n";
-    std::cout << "[r4] Coefficients are: b0 = " << b0 << " ; a1 = " << a1 << " ; a2 = " << a2 << "\n";
-    std::cout << "[r4] CPU Computing second-order recursive filtering ... " << std::flush;
+    std::cout << "done!\n[bspline] Applying bspline3i filter\n";
+    std::cout << "[bspline] Considering zero-border as initial condition.\n";
+
+    std::cout << "[bspline] Computing in the CPU ... " << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r( in_cpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::bspline3i_cpu( in_cpu, h_in, w_in, gpufilter::zero, 0 );
 
-        std::cout << "done!\n[r4] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[bspline] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
 
-    std::cout << "[r4] GPU Computing second-order recursive filtering using Algorithm 4 ... " << std::flush;
+    std::cout << "[bspline] Computing in the GPU ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::alg4( in_gpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::bspline3i_gpu( in_gpu, h_in, w_in );
 
-        std::cout << "done!\n[r4] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[bspline] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
 
-    std::cout << "[r4] GPU Timing includes pre-computation and memory transfers\n";
+    std::cout << "[bspline] GPU Timing includes memory transfers from and to the CPU\n";
 
-    std::cout << "[r4] Checking GPU result with CPU reference values\n";
+    std::cout << "[bspline] Checking GPU result with CPU reference values\n";
 
     float me, mre;
 
@@ -85,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << std::scientific;
 
-    std::cout << "[r4] Maximum error: " << me << "\n";
+    std::cout << "[bspline] Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

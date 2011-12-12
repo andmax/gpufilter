@@ -148,6 +148,7 @@ void up_constants_coefficients1( const float& b0,
 {
     copy_to_symbol("c_b0", b0);
     copy_to_symbol("c_a1", a1);
+    copy_to_symbol("c_1_b0", 1.f/b0);
 
     const int B = 32, R = 1;
 

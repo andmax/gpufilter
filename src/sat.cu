@@ -30,9 +30,9 @@ void algSAT_stage1( const float *g_in,
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
-	__shared__ float block[ WS ][ WS+1 ];
+	__shared__ float s_block[ WS ][ WS+1 ];
 
-    float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
+    float (*bdata)[WS+1] = (float (*)[WS+1]) &s_block[ty][tx];
 
 	g_in += (row0+ty)*c_width+col;
 	g_ybar += by*c_width+col;
@@ -53,7 +53,7 @@ void algSAT_stage1( const float *g_in,
 	if( ty == 0 ) {
 
         {   // calculate ybar -----------------------
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
+            float (*bdata)[WS+1] = (float (*)[WS+1]) &s_block[0][tx];
 
             float prev = **bdata;
             ++bdata;
@@ -66,7 +66,7 @@ void algSAT_stage1( const float *g_in,
         }
 
         {   // calculate vhat -----------------------
-            float *bdata = block[tx];
+            float *bdata = s_block[tx];
 
             float prev = *bdata;
             ++bdata;
@@ -97,25 +97,25 @@ void algSAT_stage2( float *g_ybar,
 	if( tx == WS-1 )
 		g_ysum += col0;
 
-	volatile __shared__ float block[ MW ][ HWS+WS+1 ];
+	volatile __shared__ float s_block[ MW ][ HWS+WS+1 ];
 
-	if( tx < HWS ) block[ty][tx] = 0.f;
-	else block[ty][ln] = 0.f;
+	if( tx < HWS ) s_block[ty][tx] = 0.f;
+	else s_block[ty][ln] = 0.f;
 
 	for (int m = 1; m < c_m_size; ++m) {
 
         // calculate ysum -----------------------
 
-		block[ty][ln] = y;
+		s_block[ty][ln] = y;
 
-		block[ty][ln] += block[ty][ln-1];
-		block[ty][ln] += block[ty][ln-2];
-		block[ty][ln] += block[ty][ln-4];
-		block[ty][ln] += block[ty][ln-8];
-		block[ty][ln] += block[ty][ln-16];
+		s_block[ty][ln] += s_block[ty][ln-1];
+		s_block[ty][ln] += s_block[ty][ln-2];
+		s_block[ty][ln] += s_block[ty][ln-4];
+		s_block[ty][ln] += s_block[ty][ln-8];
+		s_block[ty][ln] += s_block[ty][ln-16];
 
 		if( tx == WS-1 ) {
-			*g_ysum = block[ty][ln];
+			*g_ysum = s_block[ty][ln];
 			g_ysum += c_n_size;
 		}
 
@@ -165,9 +165,9 @@ void algSAT_stage4( float *g_inout,
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
-	__shared__ float block[ WS ][ WS+1 ];
+	__shared__ float s_block[ WS ][ WS+1 ];
 
-    float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
+    float (*bdata)[WS+1] = (float (*)[WS+1]) &s_block[ty][tx];
 
 	g_inout += (row0+ty)*c_width+col;
 	if( by > 0 ) g_y += (by-1)*c_width+col;
@@ -188,7 +188,7 @@ void algSAT_stage4( float *g_inout,
 	if( ty == 0 ) {
 
         {   // calculate y -----------------------
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
+            float (*bdata)[WS+1] = (float (*)[WS+1]) &s_block[0][tx];
 
             float prev;
             if( by > 0 ) prev = *g_y;
@@ -200,7 +200,7 @@ void algSAT_stage4( float *g_inout,
         }
 
         {   // calculate x -----------------------
-            float *bdata = block[tx];
+            float *bdata = s_block[tx];
 
             float prev;
             if( bx > 0 ) prev = *g_v;
@@ -215,7 +215,7 @@ void algSAT_stage4( float *g_inout,
 
 	__syncthreads();
 
-    bdata = (float (*)[WS+1]) &block[ty][tx];
+    bdata = (float (*)[WS+1]) &s_block[ty][tx];
 
 	g_inout -= (WS-(WS%SOW))*c_width;
 
@@ -239,9 +239,9 @@ void algSAT_stage4( float *g_out,
 
 	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
-	__shared__ float block[ WS ][ WS+1 ];
+	__shared__ float s_block[ WS ][ WS+1 ];
 
-    float (*bdata)[WS+1] = (float (*)[WS+1]) &block[ty][tx];
+    float (*bdata)[WS+1] = (float (*)[WS+1]) &s_block[ty][tx];
 
 	g_in += (row0+ty)*c_width+col;
 	if( by > 0 ) g_y += (by-1)*c_width+col;
@@ -262,7 +262,7 @@ void algSAT_stage4( float *g_out,
 	if( ty == 0 ) {
 
         {   // calculate y -----------------------
-            float (*bdata)[WS+1] = (float (*)[WS+1]) &block[0][tx];
+            float (*bdata)[WS+1] = (float (*)[WS+1]) &s_block[0][tx];
 
             float prev;
             if( by > 0 ) prev = *g_y;
@@ -274,7 +274,7 @@ void algSAT_stage4( float *g_out,
         }
 
         {   // calculate x -----------------------
-            float *bdata = block[tx];
+            float *bdata = s_block[tx];
 
             float prev;
             if( bx > 0 ) prev = *g_v;
@@ -289,7 +289,7 @@ void algSAT_stage4( float *g_out,
 
 	__syncthreads();
 
-    bdata = (float (*)[WS+1]) &block[ty][tx];
+    bdata = (float (*)[WS+1]) &s_block[ty][tx];
 
 	g_out += (row0+ty)*c_width+col;
 
@@ -308,7 +308,7 @@ void algSAT_stage4( float *g_out,
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void prepare_algSAT( dvector<float>& d_in,
+void prepare_algSAT( dvector<float>& d_img,
                      dvector<float>& d_ybar,
                      dvector<float>& d_vhat,
                      dvector<float>& d_ysum,
@@ -317,7 +317,7 @@ void prepare_algSAT( dvector<float>& d_in,
                      dim3& cg_vhat,
                      int& h_out,
                      int& w_out,
-                     const float *in,
+                     const float *img,
                      const int& h,
                      const int& w ) {
 
@@ -329,7 +329,7 @@ void prepare_algSAT( dvector<float>& d_in,
 
     up_constants_sizes( cg_img, h_out, w_out );
 
-    d_in.copy_from( in, h, w, h_out, w_out );
+    d_img.copy_from( img, h, w, h_out, w_out );
     d_ybar.resize( cg_img.y * w_out );
     d_vhat.resize( cg_img.x * h_out );
     d_ysum.resize( cg_img.x * cg_img.y );
@@ -337,6 +337,23 @@ void prepare_algSAT( dvector<float>& d_in,
 	const int nWm = (w_out+MTS-1)/MTS, nHm = (h_out+MTS-1)/MTS;
     cg_ybar = dim3(nWm, 1);
     cg_vhat = dim3(1, nHm);
+
+}
+
+__host__
+void algSAT( float *inout,
+             const int& h,
+             const int& w ) {
+
+    dim3 cg_img, cg_ybar, cg_vhat;
+    dvector<float> d_out, d_ybar, d_vhat, d_ysum;
+    int h_out, w_out;
+
+    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, inout, h, w );
+
+    algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+
+    d_out.copy_to( inout, h_out, w_out, h, w );
 
 }
 
@@ -376,23 +393,6 @@ void algSAT( dvector<float>& d_inout,
     algSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
 
     algSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
-
-}
-
-__host__
-void algSAT( float *inout,
-             const int& h,
-             const int& w ) {
-
-    dim3 cg_img, cg_ybar, cg_vhat;
-    dvector<float> d_out, d_ybar, d_vhat, d_ysum;
-    int h_out, w_out;
-
-    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, inout, h, w );
-
-    algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
-
-    d_out.copy_to( inout, h_out, w_out, h, w );
 
 }
 

@@ -139,6 +139,7 @@ The people involved in the ::gpufilter project are listed below:
 #include <complex>
 
 #include <dvector.h>
+#include <extension.h>
 
 //== NAMESPACES ===============================================================
 
@@ -283,7 +284,7 @@ void weights2( const T1& s,
  *  [Nehab:2011] in alg5() function) and it is implemented in algSAT()
  *  function.
  *
- *  @param[out] d_in The input 2D image to be allocated in device memory
+ *  @param[out] d_img The input 2D image to be allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
  *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ to be allocated in device memory
@@ -292,12 +293,12 @@ void weights2( const T1& s,
  *  @param[out] cg_vhat Computation grid for SAT Stage 3
  *  @param[out] h_out Height (multiple of 32) of the output image
  *  @param[out] w_out Width (multiple of 32) of the output image
- *  @param[in] in The input 2D image to compute SAT
+ *  @param[in] img The input 2D image to compute SAT
  *  @param[in] h Image height
  *  @param[in] w Image width
  */
 extern
-void prepare_algSAT( dvector<float>& d_in,
+void prepare_algSAT( dvector<float>& d_img,
                      dvector<float>& d_ybar,
                      dvector<float>& d_vhat,
                      dvector<float>& d_ysum,
@@ -306,7 +307,7 @@ void prepare_algSAT( dvector<float>& d_in,
                      dim3& cg_vhat,
                      int& h_out,
                      int& w_out,
-                     const float *in,
+                     const float *img,
                      const int& h,
                      const int& w );
 /**
@@ -370,7 +371,8 @@ void algSAT( float *inout,
  *  the computational grids.
  *
  *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
- *  @param[in,out] d_inout The input and output 2D image allocated in device memory
+ *  @param[out] d_out The output 2D image allocated in device memory
+ *  @param[in] d_in The input 2D image allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
  *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
@@ -379,7 +381,8 @@ void algSAT( float *inout,
  *  @param[in] cg_vhat Computation grid for SAT Stage 3
  */
 extern
-void algSAT( dvector<float>& d_inout,
+void algSAT( dvector<float>& d_out,
+             const dvector<float>& d_in,
              dvector<float>& d_ybar,
              dvector<float>& d_vhat,
              dvector<float>& d_ysum,
@@ -396,8 +399,7 @@ void algSAT( dvector<float>& d_inout,
  *  the computational grids.
  *
  *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
- *  @param[out] d_out The output 2D image allocated in device memory
- *  @param[in] d_in The input 2D image allocated in device memory
+ *  @param[in,out] d_inout The input and output 2D image allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
  *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
@@ -406,8 +408,7 @@ void algSAT( dvector<float>& d_inout,
  *  @param[in] cg_vhat Computation grid for SAT Stage 3
  */
 extern
-void algSAT( dvector<float>& d_out,
-             const dvector<float>& d_in,
+void algSAT( dvector<float>& d_inout,
              dvector<float>& d_ybar,
              dvector<float>& d_vhat,
              dvector<float>& d_ysum,
@@ -465,30 +466,36 @@ void alg4( float *inout,
  *  [Nehab:2011] in alg5() function) and it is implemented in alg5()
  *  function.
  *
- *  @param[out] d_in The input 2D image to be allocated in device memory
+ *  @param[out] d_out The output 2D image to be allocated in device memory
+ *  @param[out] a_in The input 2D image as cudaArray to be allocated and copied to device memory
  *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
  *  @param[out] d_transp_ezhat The \f$E_{m,n}(\hat{Z})\f$ to be allocated in device memory
  *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ to be allocated in device memory
  *  @param[out] d_etvtilde The \f$E^T_{m,n}(\tilde{U})\f$ to be allocated in device memory
  *  @param[out] cg_img Computation grid for algorithm 5
- *  @param[in] in The input 2D image to compute algorithm 5
+ *  @param[in] h_in The input 2D image to compute algorithm 5 in host memory
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback coefficient
+ *  @param[in] ic Initial condition (for outside access) (default zero)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 extern
-void prepare_alg5( dvector<float>& d_in,
+void prepare_alg5( dvector<float>& d_out,
+                   cudaArray *& a_in,
                    dvector<float>& d_transp_pybar,
                    dvector<float>& d_transp_ezhat,
                    dvector<float>& d_ptucheck,
                    dvector<float>& d_etvtilde,
                    dim3& cg_img,
-                   const float *in,
+                   const float *h_in,
                    const int& h,
                    const int& w,
                    const float& b0,
-                   const float& a1 );
+                   const float& a1,
+                   const initcond& ic = zero,
+                   const int& extb = 0 );
 /**
  *  @example example_r3.cc
  *
@@ -524,18 +531,22 @@ void prepare_alg5( dvector<float>& d_in,
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function only works with multiples of 32 in each dimension.
  *
- *  @param[in,out] inout The input and output 2D image to compute recursive filtering
+ *  @param[in,out] h_inout The input and output 2D image to compute recursive filtering in host memory
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback coefficient
+ *  @param[in] ic Initial condition (for outside access) (default zero)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 extern
-void alg5( float *inout,
+void alg5( float *h_inout,
            const int& h,
            const int& w,
            const float& b0,
-           const float& a1 );
+           const float& a1,
+           const initcond& ic = zero,
+           const int& extb = 0 );
 /**
  *  @example example_r2.cc
  *
@@ -554,7 +565,8 @@ void alg5( float *inout,
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function only works with multiples of 32 in each dimension.
  *
- *  @param[in,out] d_inout The input and output 2D image allocated in device memory
+ *  @param[out] d_out The output 2D image allocated in device memory
+ *  @param[in] a_in The input 2D image allocated in device memory as cudaArray
  *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
  *  @param[out] d_transp_ezhat The \f$E_{m,n}(\hat{Z})\f$ allocated in device memory
  *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ allocated in device memory
@@ -562,7 +574,8 @@ void alg5( float *inout,
  *  @param[in] cg_img Computation grid for algorithm 5
  */
 extern
-void alg5( dvector<float>& d_inout,
+void alg5( dvector<float>& d_out,
+           const cudaArray *a_in,
            dvector<float>& d_transp_pybar,
            dvector<float>& d_transp_ezhat,
            dvector<float>& d_ptucheck,

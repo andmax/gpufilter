@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::gaussian_cpu( in_cpu, h_in, w_in, sigma );
+        gpufilter::gaussian_cpu( in_cpu, h_in, w_in, sigma, gpufilter::zero, 0 );
 
         std::cout << "done!\n[gauss] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }

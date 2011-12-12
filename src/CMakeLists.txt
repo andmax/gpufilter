@@ -27,6 +27,9 @@ target_link_libraries(ex7 gpufilter)
 cuda_add_executable(ex8 example_gauss.cc)
 target_link_libraries(ex8 gpufilter)
 
+cuda_add_executable(ex9 example_bspline.cc)
+target_link_libraries(ex9 gpufilter)
+
 include_directories(${OPENCV_DIR})
 
 cuda_add_executable(recursive app_recursive.cc)

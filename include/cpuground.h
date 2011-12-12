@@ -401,6 +401,8 @@ void r( T *inout,
  *  @param[in] win Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] s Sigma support of Gaussian blur computation
+ *  @param[in] ic Initial condition (for outside access) (default clamp)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
  *  @tparam T Image value type
  */
 template< class T >
@@ -408,69 +410,15 @@ void gaussian_cpu( T **in,
                    const int& hin,
                    const int& win,
                    const int& depth,
-                   const T& s ) {
+                   const T& s,
+                   const initcond& ic = clamp,
+                   const int& ext = 32 ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, b10, a11, clamp, 32);
-        r(in[c], hin, win, b20, a21, a22, clamp, 32);
-    }
-}
-/**
- *  @example example_gauss.cc
- *
- *  This is an example of how to use the gaussian_cpu() function in
- *  the CPU and the gaussian_gpu() function in the GPU.
- *
- *  @see cpuground.h
- */
-
-/**
- *  @ingroup api_cpu
- *  @overload
- *  @brief Gaussian blur a single-channel image in the CPU
- *
- *  @param[in,out] in The single-channel 2D image to compute Gaussian blur
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
- *  @param[in] s Sigma support of Gaussian blur computation
- *  @tparam T Image value type
- */
-template< class T >
-void gaussian_cpu( T *in,
-                   const int& hin,
-                   const int& win,
-                   const T& s ) {
-    T b10, a11, b20, a21, a22;
-    weights1(s, b10, a11);
-    weights2(s, b20, a21, a22);
-    r(in, hin, win, b10, a11, clamp, 32);
-    r(in, hin, win, b20, a21, a22, clamp, 32);
-}
-
-/**
- *  @ingroup api_cpu
- *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
- *
- *  Given an input 2D image compute the Bicubic B-Spline interpolation
- *  of it by applying a first-order recursive filter using
- *  clamp-to-border initial conditions.
- *
- *  @param[in,out] in The 2D image to compute the Bicubic B-Spline interpolation
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
- *  @param[in] depth Depth of the input image (color channels)
- *  @tparam T Image value type
- */
-template< class T >
-void bspline3i_cpu( T **in,
-                    const int& hin,
-                    const int& win,
-                    const int& depth ) {
-    const T alpha = (T)2 - sqrt((T)3);
-    for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, (T)1+alpha, alpha, mirror, 32);
+        r(in[c], hin, win, b10, a11, ic, ext);
+        r(in[c], hin, win, b20, a21, a22, ic, ext);
     }
 }
 /**
@@ -486,20 +434,96 @@ void bspline3i_cpu( T **in,
 /**
  *  @ingroup api_cpu
  *  @overload
+ *  @brief Gaussian blur a single-channel image in the CPU
+ *
+ *  @param[in,out] in The single-channel 2D image to compute Gaussian blur
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @param[in] s Sigma support of Gaussian blur computation
+ *  @param[in] ic Initial condition (for outside access) (default clamp)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
+ *  @tparam T Image value type
+ */
+template< class T >
+void gaussian_cpu( T *in,
+                   const int& hin,
+                   const int& win,
+                   const T& s,
+                   const initcond& ic = clamp,
+                   const int& ext = 32 ) {
+    T b10, a11, b20, a21, a22;
+    weights1(s, b10, a11);
+    weights2(s, b20, a21, a22);
+    r(in, hin, win, b10, a11, ic, ext);
+    r(in, hin, win, b20, a21, a22, ic, ext);
+}
+/**
+ *  @example example_gauss.cc
+ *
+ *  This is an example of how to use the gaussian_cpu() function in
+ *  the CPU and the gaussian_gpu() function in the GPU.
+ *
+ *  @see cpuground.h
+ */
+
+/**
+ *  @ingroup api_cpu
+ *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
+ *
+ *  Given an input 2D image compute the Bicubic B-Spline interpolation
+ *  of it by applying a first-order recursive filter using
+ *  clamp-to-border initial conditions.
+ *
+ *  @param[in,out] in The 2D image to compute the Bicubic B-Spline interpolation
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @param[in] depth Depth of the input image (color channels)
+ *  @param[in] ic Initial condition (for outside access) (default mirror)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
+ *  @tparam T Image value type
+ */
+template< class T >
+void bspline3i_cpu( T **in,
+                    const int& hin,
+                    const int& win,
+                    const int& depth,
+                    const initcond& ic = mirror,
+                    const int& ext = 32 ) {
+    const T alpha = (T)2 - sqrt((T)3);
+    for (int c = 0; c < depth; c++) {
+        r(in[c], hin, win, (T)1+alpha, alpha, ic, ext);
+    }
+}
+
+/**
+ *  @ingroup api_cpu
+ *  @overload
  *  @brief Compute the Bicubic B-Spline interpolation of a single-channel image in the CPU
  *
  *  @param[in,out] in The single-channel 2D image to compute the Bicubic B-Spline interpolation
  *  @param[in] hin Height of the input image
  *  @param[in] win Width of the input image
+ *  @param[in] ic Initial condition (for outside access) (default mirror)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
  *  @tparam T Image value type
  */
 template< class T >
 void bspline3i_cpu( T *in,
                     const int& hin,
-                    const int& win ) {
+                    const int& win,
+                    const initcond& ic = mirror,
+                    const int& ext = 32 ) {
     const T alpha = (T)2 - sqrt((T)3);
-    r(in, hin, win, (T)1+alpha, alpha, mirror, 32);
+    r(in, hin, win, (T)1+alpha, alpha, ic, ext);
 }
+/**
+ *  @example example_bspline.cc
+ *
+ *  This is an example of how to use the bspline3i_cpu() function in
+ *  the CPU and the bspline3i_gpu() function in the GPU.
+ *
+ *  @see cpuground.h
+ */
 
 /**
  *  @ingroup api_cpu

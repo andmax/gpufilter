@@ -1,7 +1,7 @@
 /**
  *  @file gpufilter.cu
  *  @brief CUDA device code for GPU-Efficient Recursive Filtering Algorithms
- *  @author Rodolfo Lima
+ *  @author Diego Nehab
  *  @author Andre Maximo
  *  @date September, 2011
  */

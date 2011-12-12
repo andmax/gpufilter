@@ -1,5 +1,5 @@
 /**
- *  @file gpufilter.cu
+ *  @file alg4.cu
  *  @brief CUDA device code for GPU-Efficient Recursive Filtering Algorithm 4
  *  @author Rodolfo Lima
  *  @date September, 2011

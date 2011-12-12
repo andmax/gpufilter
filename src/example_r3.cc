@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     std::cout << "done!\n[r3] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
     std::cout << "[r3] Considering forward and reverse on rows and columns\n";
     std::cout << "[r3] Feedforward and feedback coefficients are: b0 = " << b0 << " ; a1 = " << a1 << "\n";
-    std::cout << "[r3] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "[r3] CPU Computing first-order recursive filtering ... " << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
@@ -76,21 +76,18 @@ int main(int argc, char *argv[]) {
     std::cout << "done!\n[r3] Configuring the GPU to run ... " << std::flush;
 
     dim3 cg_img;
-    gpufilter::dvector<float> d_in_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
+    gpufilter::dvector<float> d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
+    cudaArray *a_in;
 
-    gpufilter::prepare_alg5( d_in_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, in_gpu, h_in, w_in, b0, a1 );
+    gpufilter::prepare_alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, in_gpu, h_in, w_in, b0, a1 );
 
-    gpufilter::dvector<float> d_out_gpu( d_in_gpu );
-
-    std::cout << "done!\n[r3] GPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "done!\n[r3] GPU Computing first-order recursive filtering using Algorithm 5 ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in*REPEATS, "iP") );
 
-        gpufilter::alg5( d_out_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
-
-        for (int i = 1; i < REPEATS; ++i)
-            gpufilter::alg5( d_in_gpu, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
+        for (int i = 0; i < REPEATS; ++i)
+            gpufilter::alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
     }
 
     std::cout << "done!\n";
@@ -99,7 +96,9 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[r3] Copying result back from the GPU ... " << std::flush;
 
-    d_out_gpu.copy_to( in_gpu, h_in * w_in );
+    d_out.copy_to( in_gpu, h_in * w_in );
+
+    cudaFreeArray( a_in );
 
     std::cout << "done!\n[r3] Checking GPU result with CPU reference values\n";
 
