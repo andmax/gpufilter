@@ -11,7 +11,7 @@
 #include <util.h>
 #include <symbol.h>
 
-#include <gpudefs.cuh>
+#include <gpudefs.h>
 
 //== NAMESPACES ===============================================================
 
@@ -21,15 +21,25 @@ namespace gpufilter {
 
 void up_constants_sizes( dim3& g,
                          const int& h,
-                         const int& w ) {
+                         const int& w,
+                         const int& p ) {
 
     g.x = (w+WS-1)/WS;
     g.y = (h+WS-1)/WS;
 
     copy_to_symbol("c_height", h);
 	copy_to_symbol("c_width", w);
+	copy_to_symbol("c_img_pitch", (p==0)?w:p);
     copy_to_symbol("c_m_size", g.y);
 	copy_to_symbol("c_n_size", g.x);
+
+}
+
+void up_constants_texture( const int& h,
+                           const int& w ) {
+
+    copy_to_symbol("c_tex_height", 1.f / (float)h);
+    copy_to_symbol("c_tex_width", 1.f / (float)w);
 
 }
 

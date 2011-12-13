@@ -5,8 +5,12 @@
  *  @date March, 2011
  */
 
-#ifndef GPUDEFS_CUH
-#define GPUDEFS_CUH
+#ifndef GPUDEFS_H
+#define GPUDEFS_H
+
+//== INCLUDES =================================================================
+
+#include <cuda_runtime.h>
 
 //== DEFINITIONS ===============================================================
 
@@ -32,27 +36,47 @@ namespace gpufilter {
  *  @ingroup api_gpu
  *  @brief Upload device constants sizes
  *
- *  Given the dimensions of the 2D input image, upload in device
- *  constant memory all values related to size.
+ *  Given the dimensions of the 2D work image, upload to the device
+ *  constant memory size-related values.  The work image is the
+ *  original image plus extension blocks to compute filtering
+ *  out-of-bounds.
  *
  *  @param[out] g Computation grid dimension considering a b x b block size where b = 32
+ *  @param[in] h Height of the work image
+ *  @param[in] w Width of the work image
+ *  @param[in] p Pitch of the original input image (defaults 0 use width)
+ */
+extern
+void up_constants_sizes( dim3& g,
+                         const int& h,
+                         const int& w,
+                         const int& p = 0 );
+
+/**
+ *  @ingroup api_gpu
+ *  @brief Upload device constants texture values
+ *
+ *  Given the dimensions of the 2D input image, upload to the device
+ *  constant memory the texture-related values.
+ *
  *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
  */
-void up_constants_sizes( dim3& g,
-                         const int& h,
-                         const int& w );
+extern
+void up_constants_texture( const int& h,
+                           const int& w );
 
 /**
  *  @ingroup api_gpu
  *  @brief Upload device constants first-order coefficients
  *
  *  Given the first-order coefficients of the recursive filter, upload
- *  in device constant memory all values related to the coefficients.
+ *  to the device constant memory the coefficients-related values.
  *
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  */
+extern
 void up_constants_coefficients1( const float& b0,
                                  const float& a1 );
 
@@ -61,13 +85,14 @@ void up_constants_coefficients1( const float& b0,
  *  @brief Upload device constants second-order coefficients
  *
  *  Given the second-order coefficients of the recursive filter,
- *  upload in device constant memory all values related to the
- *  coefficients.
+ *  upload to the device constant memory the coefficients-related
+ *  values.
  *
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
  */
+extern
 void up_constants_coefficients2( const float& b0,
                                  const float& a1,
                                  const float& a2 );
@@ -75,5 +100,5 @@ void up_constants_coefficients2( const float& b0,
 //=============================================================================
 } // namespace gpufilter
 //=============================================================================
-#endif // GPUDEFS_CUH
+#endif // GPUDEFS_H
 //=============================================================================

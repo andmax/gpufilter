@@ -15,7 +15,10 @@
 // parameter in kernels; f_ surface; h_ host pointer.
 
 __constant__
-int c_width, c_height, c_m_size, c_n_size;
+int c_width, c_height, c_img_pitch, c_m_size, c_n_size;
+
+__constant__
+float c_tex_width, c_tex_height;
 
 __constant__
 float c_b0, c_a1, c_1_b0, c_AbF, c_AbR, c_HARB_AFP, c_HARB_AFP_T,
@@ -26,6 +29,8 @@ float c_Linf2, c_Llast2, c_iR2, c_Minf, c_Ninf;
 
 __constant__
 float c_Af[2][2], c_Ar[2][2], c_Arf[2][2];
+
+texture< float, cudaTextureType2D, cudaReadModeElementType > t_in;
 
 //=============================================================================
 #endif // GPUCONSTS_CUH

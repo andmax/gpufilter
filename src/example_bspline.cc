@@ -14,6 +14,7 @@
 #include <timer.h>
 #include <cpuground.h>
 #include <gpufilter.h>
+#include <gpudefs.h>
 
 // Check computation
 void check_reference( const float *ref,
@@ -37,16 +38,18 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    const int w_in = 1024, h_in = 1024;
+    const int in_w = 1024, in_h = 1024;
+    const gpufilter::initcond ic = gpufilter::mirror;
+    const int extb = 1, ext = WS*extb;
 
-    std::cout << "[bspline] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[bspline] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[h_in*w_in];
-    float *in_gpu = new float[h_in*w_in];
+    float *in_cpu = new float[in_h*in_w];
+    float *in_gpu = new float[in_h*in_w];
 
     srand(time(0));
 
-    for (int i = 0; i < h_in*w_in; ++i)
+    for (int i = 0; i < in_h*in_w; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
     std::cout << "done!\n[bspline] Applying bspline3i filter\n";
@@ -59,7 +62,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::bspline3i_cpu( in_cpu, h_in, w_in, gpufilter::zero, 0 );
+        gpufilter::bspline3i_cpu( in_cpu, in_h, in_w, ic, ext );
 
         std::cout << "done!\n[bspline] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
@@ -69,7 +72,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::bspline3i_gpu( in_gpu, h_in, w_in );
+        gpufilter::bspline3i_gpu( in_gpu, in_h, in_w, ic, extb );
 
         std::cout << "done!\n[bspline] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
@@ -80,7 +83,7 @@ int main(int argc, char *argv[]) {
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
+    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
 
     std::cout << std::scientific;
 

@@ -12,6 +12,8 @@
 #ifndef GPUFILTER_H
 #define GPUFILTER_H
 
+//== MAIN DOCUMENTATION =======================================================
+
 /**
  *  @defgroup utils Utility classes and functions
  */
@@ -284,7 +286,7 @@ void weights2( const T1& s,
  *  [Nehab:2011] in alg5() function) and it is implemented in algSAT()
  *  function.
  *
- *  @param[out] d_img The input 2D image to be allocated in device memory
+ *  @param[out] d_inout The in/output 2D image to be allocated and copied to device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ to be allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ to be allocated in device memory
  *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ to be allocated in device memory
@@ -293,12 +295,12 @@ void weights2( const T1& s,
  *  @param[out] cg_vhat Computation grid for SAT Stage 3
  *  @param[out] h_out Height (multiple of 32) of the output image
  *  @param[out] w_out Width (multiple of 32) of the output image
- *  @param[in] img The input 2D image to compute SAT
+ *  @param[in] h_in The input 2D image to compute SAT in host memory
  *  @param[in] h Image height
  *  @param[in] w Image width
  */
 extern
-void prepare_algSAT( dvector<float>& d_img,
+void prepare_algSAT( dvector<float>& d_inout,
                      dvector<float>& d_ybar,
                      dvector<float>& d_vhat,
                      dvector<float>& d_ysum,
@@ -307,7 +309,7 @@ void prepare_algSAT( dvector<float>& d_img,
                      dim3& cg_vhat,
                      int& h_out,
                      int& w_out,
-                     const float *img,
+                     const float *h_in,
                      const int& h,
                      const int& w );
 /**
@@ -346,7 +348,7 @@ void prepare_algSAT( dvector<float>& d_img,
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function works better in multiples of 32 in each dimension.
  *
- *  @param[in,out] inout The input and output 2D image to compute SAT
+ *  @param[in,out] inout The in/output 2D image to compute SAT
  *  @param[in] h Image height
  *  @param[in] w Image width
  */
@@ -399,7 +401,7 @@ void algSAT( dvector<float>& d_out,
  *  the computational grids.
  *
  *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
- *  @param[in,out] d_inout The input and output 2D image allocated in device memory
+ *  @param[in,out] d_inout The in/output 2D image allocated in device memory
  *  @param[out] d_ybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
  *  @param[out] d_vhat The \f$P^T_{m,n}(\hat{V})\f$ allocated in device memory
  *  @param[out] d_ysum The \f$s(P_{m,n}(Y))\f$ allocated in device memory
@@ -431,7 +433,7 @@ void algSAT( dvector<float>& d_inout,
  *  this function only works with \f$64^2\f$ minimum image resolution,
  *  and only in multiples of 64 in each dimension.
  *
- *  @param[in,out] inout The input and output 2D image to compute recursive filtering
+ *  @param[in,out] inout The in/output 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
@@ -531,7 +533,7 @@ void prepare_alg5( dvector<float>& d_out,
  *  @note For performance purposes (in CUDA kernels implementation)
  *  this function only works with multiples of 32 in each dimension.
  *
- *  @param[in,out] h_inout The input and output 2D image to compute recursive filtering in host memory
+ *  @param[in,out] h_inout The in/output 2D image to compute recursive filtering in host memory
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
@@ -572,6 +574,7 @@ void alg5( float *h_inout,
  *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ allocated in device memory
  *  @param[out] d_etvtilde The \f$E^T_{m,n}(\tilde{U})\f$ allocated in device memory
  *  @param[in] cg_img Computation grid for algorithm 5
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 extern
 void alg5( dvector<float>& d_out,
@@ -580,7 +583,8 @@ void alg5( dvector<float>& d_out,
            dvector<float>& d_transp_ezhat,
            dvector<float>& d_ptucheck,
            dvector<float>& d_etvtilde,
-           const dim3& cg_img );
+           const dim3& cg_img,
+           const int& extb = 0 );
 
 /**
  *  @ingroup api_gpu
@@ -596,13 +600,17 @@ void alg5( dvector<float>& d_out,
  *  @param[in] w Width of the input image
  *  @param[in] d Depth of the input image (color channels)
  *  @param[in] s Sigma support of Gaussian blur computation
+ *  @param[in] ic Initial condition (for outside access) (default clamp)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1 block)
  */
 extern
 void gaussian_gpu( float **inout,
                    const int& h,
                    const int& w,
                    const int& d,
-                   const float& s );
+                   const float& s,
+                   const initcond& ic = clamp,
+                   const int& extb = 1 );
 
 /**
  *  @ingroup api_gpu
@@ -613,12 +621,16 @@ void gaussian_gpu( float **inout,
  *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
  *  @param[in] s Sigma support of Gaussian blur computation
+ *  @param[in] ic Initial condition (for outside access) (default clamp)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1 block)
  */
 extern
 void gaussian_gpu( float *inout,
                    const int& h,
                    const int& w,
-                   const float& s );
+                   const float& s,
+                   const initcond& ic = clamp,
+                   const int& extb = 1 );
 
 /**
  *  @ingroup api_gpu
@@ -632,12 +644,16 @@ void gaussian_gpu( float *inout,
  *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
  *  @param[in] d Depth of the input image (color channels)
+ *  @param[in] ic Initial condition (for outside access) (default mirror)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1 block)
  */
 extern
 void bspline3i_gpu( float **inout,
                     const int& h,
                     const int& w,
-                    const int& d );
+                    const int& d,
+                    const initcond& ic = mirror,
+                    const int& extb = 1 );
 
 /**
  *  @ingroup api_gpu
@@ -647,12 +663,15 @@ void bspline3i_gpu( float **inout,
  *  @param[in,out] inout The single-channel 2D image to compute the Bicubic B-Spline interpolation
  *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] ic Initial condition (for outside access) (default mirror)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1 block)
  */
 extern
 void bspline3i_gpu( float *inout,
                     const int& h,
-                    const int& w );
-
+                    const int& w,
+                    const initcond& ic = mirror,
+                    const int& extb = 1 );
 
 //=============================================================================
 } // namespace gpufilter

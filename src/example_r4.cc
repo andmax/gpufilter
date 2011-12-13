@@ -37,17 +37,17 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    const int w_in = 1024, h_in = 1024;
+    const int in_w = 1024, in_h = 1024;
     const float b0 = 0.0060625f, a1 = -1.89282f, a2 = 0.89888f;
 
-    std::cout << "[r4] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[r4] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[h_in*w_in];
-    float *in_gpu = new float[h_in*w_in];
+    float *in_cpu = new float[in_h*in_w];
+    float *in_gpu = new float[in_h*in_w];
 
     srand(time(0));
 
-    for (int i = 0; i < h_in*w_in; ++i)
+    for (int i = 0; i < in_h*in_w; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
     std::cout << "done!\n[r4] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1} - a2 * y_{i-2}\n";
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r( in_cpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::r( in_cpu, in_h, in_w, b0, a1, a2 );
 
         std::cout << "done!\n[r4] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::alg4( in_gpu, h_in, w_in, b0, a1, a2 );
+        gpufilter::alg4( in_gpu, in_h, in_w, b0, a1, a2 );
 
         std::cout << "done!\n[r4] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
+    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
 
     std::cout << std::scientific;
 

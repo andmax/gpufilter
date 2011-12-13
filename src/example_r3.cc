@@ -17,6 +17,7 @@
 
 #include <cpuground.h>
 #include <gpufilter.h>
+#include <gpudefs.h>
 
 #include <alg5.cuh>
 
@@ -44,20 +45,18 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    int w_in = 4096, h_in = 4096;
-
-    if( argc == 3 ) { sscanf(argv[1], "%d", &w_in); sscanf(argv[2], "%d", &h_in); }
+    const int in_w = 4096, in_h = 4096;
 
     const float b0 = 1.267949192f, a1 = 0.267949192f;
 
-    std::cout << "[r3] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[r3] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[h_in*w_in];
-    float *in_gpu = new float[h_in*w_in];
+    float *in_cpu = new float[in_h*in_w];
+    float *in_gpu = new float[in_h*in_w];
 
     srand(time(0));
 
-    for (int i = 0; i < h_in*w_in; ++i)
+    for (int i = 0; i < in_h*in_w; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
     std::cout << "done!\n[r3] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
@@ -68,9 +67,9 @@ int main(int argc, char *argv[]) {
     std::cout << std::fixed << std::setprecision(2);
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU", h_in*w_in, "iP") );
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU", in_h*in_w, "iP") );
 
-        gpufilter::r( in_cpu, h_in, w_in, b0, a1 );
+        gpufilter::r( in_cpu, in_h, in_w, b0, a1 );
     }
 
     std::cout << "done!\n[r3] Configuring the GPU to run ... " << std::flush;
@@ -79,12 +78,12 @@ int main(int argc, char *argv[]) {
     gpufilter::dvector<float> d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
     cudaArray *a_in;
 
-    gpufilter::prepare_alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, in_gpu, h_in, w_in, b0, a1 );
+    gpufilter::prepare_alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img, in_gpu, in_h, in_w, b0, a1 );
 
     std::cout << "done!\n[r3] GPU Computing first-order recursive filtering using Algorithm 5 ... " << std::flush;
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", h_in*w_in*REPEATS, "iP") );
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", in_h*in_w*REPEATS, "iP") );
 
         for (int i = 0; i < REPEATS; ++i)
             gpufilter::alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde, cg_img );
@@ -96,7 +95,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[r3] Copying result back from the GPU ... " << std::flush;
 
-    d_out.copy_to( in_gpu, h_in * w_in );
+    d_out.copy_to( in_gpu, in_h * in_w );
 
     cudaFreeArray( a_in );
 
@@ -104,7 +103,7 @@ int main(int argc, char *argv[]) {
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
+    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
 
     std::cout << std::scientific;
 

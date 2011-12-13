@@ -29,21 +29,21 @@ void print_matrix( const float *img,
 // Main
 int main(int argc, char *argv[]) {
 
-    const int w_in = 8, h_in = 8;
+    const int in_w = 8, in_h = 8;
     const float b0 = 1.f, a1 = -1.f;
 
-    std::cout << "[r1] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
+    std::cout << "[r1] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
-    float *in = new float[h_in*w_in];
+    float *in = new float[in_h*in_w];
 
     srand(time(0));
 
-    for (int i = 0; i < h_in*w_in; ++i)
+    for (int i = 0; i < in_h*in_w; ++i)
         in[i] = rand() % 8;
 
     std::cout << "done!\n";
 
-    print_matrix(in, h_in, w_in, 2);
+    print_matrix(in, in_h, in_w, 2);
 
     std::cout << "[r1] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
     std::cout << "[r1] Considering causal filter (only forward) on each row\n";
@@ -51,11 +51,11 @@ int main(int argc, char *argv[]) {
     std::cout << "[r1] This is equivalent to an inclusive multi-scan with the plus operator\n";
     std::cout << "[r1] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
 
-    gpufilter::rrfr( in, h_in, w_in, b0, a1, true );
+    gpufilter::rrfr( in, in_h, in_w, b0, a1, true );
 
-    std::cout << "done!\n[r1] Output matrix " << w_in << " x " << h_in << " :\n";
+    std::cout << "done!\n[r1] Output matrix " << in_w << " x " << in_h << " :\n";
 
-    print_matrix(in, h_in, w_in, 4);
+    print_matrix(in, in_h, in_w, 4);
 
     delete [] in;
 

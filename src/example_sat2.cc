@@ -38,18 +38,16 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    int w_in = 1024, h_in = 1024;
+    const int in_w = 1024, in_h = 1024;
 
-    if( argc == 3 ) { sscanf(argv[1], "%d", &w_in); sscanf(argv[2], "%d", &h_in); }
+    std::cout << "[sat2] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
-    std::cout << "[sat2] Generating random input image (" << w_in << "x" << h_in << ") ... " << std::flush;
-
-    float *in_cpu = new float[h_in*w_in];
-    float *in_gpu = new float[h_in*w_in];
+    float *in_cpu = new float[in_h*in_w];
+    float *in_gpu = new float[in_h*in_w];
 
     srand(time(0));
 
-    for (int i = 0; i < h_in*w_in; ++i)
+    for (int i = 0; i < in_h*in_w; ++i)
         in_gpu[i] = in_cpu[i] = rand() % 256;
 
     std::cout << "done!\n[sat2] Computing summed-area table in the CPU ... " << std::flush;
@@ -59,7 +57,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::sat_cpu( in_cpu, h_in, w_in );
+        gpufilter::sat_cpu( in_cpu, in_h, in_w );
 
         std::cout << "done!\n[sat2] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
@@ -69,7 +67,7 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::algSAT( in_gpu, h_in, w_in );
+        gpufilter::algSAT( in_gpu, in_h, in_w );
 
         std::cout << "done!\n[sat2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
     }
@@ -80,7 +78,7 @@ int main(int argc, char *argv[]) {
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, h_in*w_in, me, mre );
+    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
 
     std::cout << std::resetiosflags( std::ios_base::floatfield );
 

@@ -9,8 +9,8 @@
 
 #include <dvector.h>
 
+#include <gpudefs.h>
 #include <gpufilter.h>
-#include <gpudefs.cuh>
 #include <gpuconsts.cuh>
 
 #include <sat.cuh>
@@ -308,40 +308,40 @@ void algSAT_stage4( float *g_out,
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void prepare_algSAT( dvector<float>& d_img,
+void prepare_algSAT( dvector<float>& d_inout,
                      dvector<float>& d_ybar,
                      dvector<float>& d_vhat,
                      dvector<float>& d_ysum,
                      dim3& cg_img,
                      dim3& cg_ybar,
                      dim3& cg_vhat,
-                     int& h_out,
-                     int& w_out,
-                     const float *img,
+                     int& out_h,
+                     int& out_w,
+                     const float *h_in,
                      const int& h,
                      const int& w ) {
 
-    h_out = h;
-    w_out = w;
+    out_h = h;
+    out_w = w;
 
-    if( h % 32 > 0 ) h_out += (32 - (h % 32));
-    if( w % 32 > 0 ) w_out += (32 - (w % 32));
+    if( h % 32 > 0 ) out_h += (32 - (h % 32));
+    if( w % 32 > 0 ) out_w += (32 - (w % 32));
 
-    up_constants_sizes( cg_img, h_out, w_out );
+    up_constants_sizes( cg_img, out_h, out_w );
 
-    d_img.copy_from( img, h, w, h_out, w_out );
-    d_ybar.resize( cg_img.y * w_out );
-    d_vhat.resize( cg_img.x * h_out );
+    d_inout.copy_from( h_in, h, w, out_h, out_w );
+    d_ybar.resize( cg_img.y * out_w );
+    d_vhat.resize( cg_img.x * out_h );
     d_ysum.resize( cg_img.x * cg_img.y );
 
-	const int nWm = (w_out+MTS-1)/MTS, nHm = (h_out+MTS-1)/MTS;
+	const int nWm = (out_w+MTS-1)/MTS, nHm = (out_h+MTS-1)/MTS;
     cg_ybar = dim3(nWm, 1);
     cg_vhat = dim3(1, nHm);
 
 }
 
 __host__
-void algSAT( float *inout,
+void algSAT( float *h_inout,
              const int& h,
              const int& w ) {
 
@@ -349,11 +349,11 @@ void algSAT( float *inout,
     dvector<float> d_out, d_ybar, d_vhat, d_ysum;
     int h_out, w_out;
 
-    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, inout, h, w );
+    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, h_inout, h, w );
 
     algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
 
-    d_out.copy_to( inout, h_out, w_out, h, w );
+    d_out.copy_to( h_inout, h_out, w_out, h, w );
 
 }
 

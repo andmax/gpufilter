@@ -13,6 +13,7 @@
 
 #include <cmath>
 
+#include <gpudefs.h>
 #include <extension.h>
 
 //== NAMESPACES ===============================================================
@@ -359,6 +360,34 @@ void r( T *inout,
 }
 
 /**
+ *  @ingroup api_cpu
+ *  @brief Compute the Summed-area Table of an image in the CPU
+ *
+ *  Given an input 2D image compute its Summed-Area Table (SAT) by
+ *  applying a first-order recursive filters forward using zero-border
+ *  initial conditions.
+ *
+ *  @param[in,out] in The 2D image to compute the SAT
+ *  @param[in] hin Height of the input image
+ *  @param[in] win Width of the input image
+ *  @tparam T Image value type
+ */
+template< class T >
+void sat_cpu( T *in,
+              const int& hin,
+              const int& win ) {
+    r(in, hin, win, (T)1, (T)-1, true);
+}
+/**
+ *  @example example_sat1.cc
+ *
+ *  This is an example of how to use the sat_cpu() function in the
+ *  CPU.
+ *
+ *  @see cpuground.h
+ */
+
+/**
  *  @ingroup cpu
  *  @overload
  *  @brief Compute second-order recursive filtering
@@ -402,7 +431,7 @@ void r( T *inout,
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] s Sigma support of Gaussian blur computation
  *  @param[in] ic Initial condition (for outside access) (default clamp)
- *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
@@ -412,7 +441,7 @@ void gaussian_cpu( T **in,
                    const int& depth,
                    const T& s,
                    const initcond& ic = clamp,
-                   const int& ext = 32 ) {
+                   const int& ext = WS ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
@@ -441,7 +470,7 @@ void gaussian_cpu( T **in,
  *  @param[in] win Width of the input image
  *  @param[in] s Sigma support of Gaussian blur computation
  *  @param[in] ic Initial condition (for outside access) (default clamp)
- *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
@@ -450,7 +479,7 @@ void gaussian_cpu( T *in,
                    const int& win,
                    const T& s,
                    const initcond& ic = clamp,
-                   const int& ext = 32 ) {
+                   const int& ext = WS ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
@@ -479,7 +508,7 @@ void gaussian_cpu( T *in,
  *  @param[in] win Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] ic Initial condition (for outside access) (default mirror)
- *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
@@ -488,7 +517,7 @@ void bspline3i_cpu( T **in,
                     const int& win,
                     const int& depth,
                     const initcond& ic = mirror,
-                    const int& ext = 32 ) {
+                    const int& ext = WS ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
         r(in[c], hin, win, (T)1+alpha, alpha, ic, ext);
@@ -504,7 +533,7 @@ void bspline3i_cpu( T **in,
  *  @param[in] hin Height of the input image
  *  @param[in] win Width of the input image
  *  @param[in] ic Initial condition (for outside access) (default mirror)
- *  @param[in] ext Extension (in pixels) to consider outside image (default 32)
+ *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
@@ -512,7 +541,7 @@ void bspline3i_cpu( T *in,
                     const int& hin,
                     const int& win,
                     const initcond& ic = mirror,
-                    const int& ext = 32 ) {
+                    const int& ext = WS ) {
     const T alpha = (T)2 - sqrt((T)3);
     r(in, hin, win, (T)1+alpha, alpha, ic, ext);
 }
@@ -521,34 +550,6 @@ void bspline3i_cpu( T *in,
  *
  *  This is an example of how to use the bspline3i_cpu() function in
  *  the CPU and the bspline3i_gpu() function in the GPU.
- *
- *  @see cpuground.h
- */
-
-/**
- *  @ingroup api_cpu
- *  @brief Compute the Summed-area Table of an image in the CPU
- *
- *  Given an input 2D image compute its Summed-Area Table (SAT) by
- *  applying a first-order recursive filters forward using zero-border
- *  initial conditions.
- *
- *  @param[in,out] in The 2D image to compute the SAT
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
- *  @tparam T Image value type
- */
-template< class T >
-void sat_cpu( T *in,
-              const int& hin,
-              const int& win ) {
-    r(in, hin, win, (T)1, (T)-1, true);
-}
-/**
- *  @example example_sat1.cc
- *
- *  This is an example of how to use the sat_cpu() function in the
- *  CPU.
  *
  *  @see cpuground.h
  */

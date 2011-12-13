@@ -32,12 +32,14 @@ namespace gpufilter {
  *  @param[out] g_transp_ezhat All \f$E_{m,n}(\hat{Z})\f$
  *  @param[out] g_ptucheck All \f$P^T_{m,n}(\check{U})\f$
  *  @param[out] g_etvtilde All \f$E^T_{m,n}(\tilde{V})\f$
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 __global__
 void alg5_stage1( float *g_transp_pybar,
                   float *g_transp_ezhat,
                   float *g_ptucheck,
-                  float *g_etvtilde );
+                  float *g_etvtilde,
+                  int extb = 0 );
 
 /**
  *  @ingroup gpu
@@ -120,13 +122,15 @@ void alg5_stage4_5( float *g_ptucheck,
  *  @param[in] g_transp_ez All \f$E_{m,n}(Z)\f$
  *  @param[in] g_ptu All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_etv All \f$E^T_{m,n}(V)\f$
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 __global__
 void alg5_stage6( float *g_out,
                   const float *g_transp_py,
                   const float *g_transp_ez,
                   const float *g_ptu,
-                  const float *g_etv );
+                  const float *g_etv,
+                  int extb = 0 );
 
 //=============================================================================
 } // namespace gpufilter

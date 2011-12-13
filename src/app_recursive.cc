@@ -80,16 +80,16 @@ int main(int argc, char *argv[]) {
     if( !in_img )
         errorf("Unable to load image '%s'", file_in);
 
-    int w_in = in_img->width, h_in = in_img->height, depth = in_img->nChannels;
+    int in_w = in_img->width, in_h = in_img->height, depth = in_img->nChannels;
 
-    printf("Image is %dx%dx%d\n", w_in, h_in, depth);
+    printf("Image is %dx%dx%d\n", in_w, in_h, depth);
 
     printf("Flattening input image\n");
 
     float **flat_in = new float*[depth];
 
     for (int c = 0; c < depth; c++)
-        flat_in[c] = new float[w_in*h_in];
+        flat_in[c] = new float[in_w*in_h];
 
     if( !flat_in ) 
         errorf("Out of memory!");
@@ -98,17 +98,17 @@ int main(int argc, char *argv[]) {
 
         cvSetImageCOI(in_img, c+1);
 
-        IplImage *ch_img = cvCreateImage(cvSize(w_in, h_in), in_img->depth, 1);
+        IplImage *ch_img = cvCreateImage(cvSize(in_w, in_h), in_img->depth, 1);
 
         cvCopy(in_img, ch_img);
 
-        IplImage *uc_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_8U, 1);
+        IplImage *uc_img = cvCreateImage(cvSize(in_w, in_h), IPL_DEPTH_8U, 1);
 
         cvConvertImage(ch_img, uc_img);
 
-        for (int i = 0; i < h_in; ++i)
-            for (int j = 0; j < w_in; ++j)
-                flat_in[c][i*w_in+j] = ((unsigned char *)(uc_img->imageData + i*uc_img->widthStep))[j]/255.f;
+        for (int i = 0; i < in_h; ++i)
+            for (int j = 0; j < in_w; ++j)
+                flat_in[c][i*in_w+j] = ((unsigned char *)(uc_img->imageData + i*uc_img->widthStep))[j]/255.f;
 
         cvReleaseImage(&ch_img);
         cvReleaseImage(&uc_img);
@@ -120,18 +120,18 @@ int main(int argc, char *argv[]) {
         printf("Applying filter gaussian in the %s (sigma = %g)\n", unit, sigma);
 
         if( strcmp(unit, "cpu") == 0 )
-            gpufilter::gaussian_cpu(flat_in, h_in, w_in, depth, sigma);
+            gpufilter::gaussian_cpu(flat_in, in_h, in_w, depth, sigma);
         else if( strcmp(unit, "gpu") == 0 )
-            gpufilter::gaussian_gpu(flat_in, h_in, w_in, depth, sigma);
+            gpufilter::gaussian_gpu(flat_in, in_h, in_w, depth, sigma);
 
     } else if (strcmp(filter, "bspline3i") == 0) {
 
         printf("Applying filter bspline3i in the %s\n", unit);
 
         if( strcmp(unit, "cpu") == 0 )
-            gpufilter::bspline3i_cpu(flat_in, h_in, w_in, depth);
+            gpufilter::bspline3i_cpu(flat_in, in_h, in_w, depth);
         else if( strcmp(unit, "gpu") == 0 )
-            gpufilter::bspline3i_gpu(flat_in, h_in, w_in, depth);
+            gpufilter::bspline3i_gpu(flat_in, in_h, in_w, depth);
 
     } else {
 
@@ -141,13 +141,13 @@ int main(int argc, char *argv[]) {
 
     printf("Packing output image\n");
 
-    IplImage *out_img = cvCreateImage(cvSize(w_in, h_in), IPL_DEPTH_8U, depth);
+    IplImage *out_img = cvCreateImage(cvSize(in_w, in_h), IPL_DEPTH_8U, depth);
 
     gpufilter::_clamp clamp;
     for (int c = 0; c < depth; c++)
-        for (int i = 0; i < h_in; ++i)
-            for (int j = 0; j < w_in; ++j)
-                ((unsigned char *)(out_img->imageData + i*out_img->widthStep))[j*depth + c] = (unsigned char) (floorf(clamp(flat_in[c][i*w_in+j])*255.f+0.5f));
+        for (int i = 0; i < in_h; ++i)
+            for (int j = 0; j < in_w; ++j)
+                ((unsigned char *)(out_img->imageData + i*out_img->widthStep))[j*depth + c] = (unsigned char) (floorf(clamp(flat_in[c][i*in_w+j])*255.f+0.5f));
 
     printf("Saving output image '%s'\n", file_out);
 

@@ -15,8 +15,8 @@
 #include <algorithm>
 
 #include <dvector.h>
+#include <gpudefs.h>
 #include <gpufilter.h>
-#include <gpudefs.cuh>
 #include <gpuconsts.cuh>
 
 #include <alg4.cuh>
