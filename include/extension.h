@@ -137,6 +137,7 @@ T lookat( const T *in,
           const int& n,
           const initcond& ic,
           const int& p = 1 ) {
+    if( !in ) return (T)0;
     switch( ic ) {
     case zero:
         if( i < 0 ) return (T)0;
@@ -153,7 +154,51 @@ T lookat( const T *in,
         return in[ m(i, n)*p ];
     }
     return (T)0;
-};
+}
+
+/**
+ *  @ingroup utils
+ *  @overload
+ *  @brief Look in an image at a given position
+ *
+ *  This function looks in an input image at an arbitrary position
+ *  (possibly outside the image) using a given initial condition and
+ *  the 2D image size.
+ *
+ *  @param[in] img Input image
+ *  @param[in] i Row index
+ *  @param[in] j Column index
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ *  @param[in] ic Initial condition
+ *  @return Value at given position
+ *  @tparam T Input image value type
+ */
+template< class T >
+T lookat( const T *img,
+          const int& i,
+          const int& j,
+          const int& h,
+          const int& w,
+          const initcond& ic ) {
+    if( !img ) return (T)0;
+    switch( ic ) {
+    case zero:
+        if( i < 0 or j < 0 ) return (T)0;
+        else if( i >= h or j >= w ) return (T)0;
+        else return img[i*w+j];
+    case clamp:
+        _clamp c;
+        return img[ c(i, h)*w + c(j, w) ];
+    case repeat:
+        _repeat r;
+        return img[ r(i, h)*w + r(j, w) ];
+    case mirror:
+        _mirror m;
+        return img[ m(i, h)*w + m(j, w) ];
+    }
+    return (T)0;
+}
 
 //=============================================================================
 } // namespace gpufilter

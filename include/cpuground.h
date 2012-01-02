@@ -40,8 +40,6 @@ namespace gpufilter {
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ic Initial condition (for outside access)
  *  @tparam T Image value type
  */
 template< class T >
@@ -50,28 +48,24 @@ void rcfr( T *inout,
            const int& w,
            const T& b0,
            const T& a1,
-           const bool& ff = false,
-           const int& ext = 0,
-           const initcond& ic = zero ) {
-    for (int j = 0; j < w; j++, inout += 1) {
+           const bool& ff = false ) {
+    for (int j = 0; j < w; j++) {
         int i;
         // p=0 is not initial condition based, it is due
         // to the filter order outside image + extension
         T p = (T)0;
         T c;
-        for (i = -ext; i < h+ext; i++) {
-            c = lookat( inout, i, h, ic, w );
+        for (i = 0; i < h; i++) {
+            c = inout[i*w+j];
             p = c*b0 - p*a1;
-            if( i >= 0 and i < h ) // in image range
-                inout[i*w] = p;
+            inout[i*w+j] = p;
         }
         if( ff ) continue;
         p = (T)0;
         for (i--; i >= 0; i--) {
-            c = lookat( inout, i, h, ic, w );
+            c = inout[i*w+j];
             p = c*b0 - p*a1;
-            if( i >= 0 and i < h ) // in image range
-                inout[i*w] = p;
+            inout[i*w+j] = p;
         }
     }
 }
@@ -94,8 +88,6 @@ void rcfr( T *inout,
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ic Initial condition (for outside access)
  *  @tparam T Image value type
  */
 template< class T >
@@ -104,28 +96,24 @@ void rrfr( T *inout,
            const int& w,
            const T& b0,
            const T& a1,
-           const bool& ff = false,
-           const int& ext = 0,
-           const initcond& ic = zero ) {
+           const bool& ff = false ) {
     for (int i = 0; i < h; i++, inout += w) {
         int j;
         // p=0 is not initial condition based, it is due
         // to the filter order outside image + extension
         T p = (T)0;
         T c;
-        for (j = -ext; j < w+ext; j++) {
-            c = lookat( inout, j, w, ic );
+        for (j = 0; j < w; j++) {
+            c = inout[j];
             p = c*b0 - p*a1;
-            if( j >= 0 and j < w ) // in image range
-                inout[j] = p;
+            inout[j] = p;
         }
         if( ff ) continue;
         p = (T)0;
         for (j--; j >= 0; j--) {
-            c = lookat( inout, j, w, ic );
+            c = inout[j];
             p = c*b0 - p*a1;
-            if( j >= 0 and j < w ) // in image range
-                inout[j] = p;
+            inout[j] = p;
         }
     }
 }
@@ -155,8 +143,6 @@ void rrfr( T *inout,
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ic Initial condition (for outside access)
  *  @tparam T Image value type
  */
 template< class T >
@@ -165,39 +151,9 @@ void r( T *inout,
         const int& w,
         const T& b0,
         const T& a1,
-        const bool& ff = false,
-        const int& ext = 0,
-        const initcond& ic = zero ) {
-    rcfr(inout, h, w, b0, a1, ff, ext, ic);
-    rrfr(inout, h, w, b0, a1, ff, ext, ic);
-}
-
-/**
- *  @ingroup cpu
- *  @overload
- *  @brief Compute first-order recursive filtering
- *
- *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
- *  @param[in] w Width of the input image
- *  @param[in] b0 Feedforward coefficient
- *  @param[in] a1 Feedback first-order coefficient
- *  @param[in] ic Initial condition (for outside access)
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @tparam T Image value type
- */
-template< class T >
-void r( T *inout,
-        const int& h,
-        const int& w,
-        const T& b0,
-        const T& a1,
-        const initcond& ic,
-        const int& ext = 0,
         const bool& ff = false ) {
-    rcfr(inout, h, w, b0, a1, ff, ext, ic);
-    rrfr(inout, h, w, b0, a1, ff, ext, ic);
+    rcfr(inout, h, w, b0, a1, ff);
+    rrfr(inout, h, w, b0, a1, ff);
 }
 
 /**
@@ -219,8 +175,6 @@ void r( T *inout,
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ic Initial condition (for outside access)
  *  @tparam T Image value type
  */
 template< class T >
@@ -230,33 +184,29 @@ void rcfr( T *inout,
            const T& b0,
            const T& a1,
            const T& a2,
-           const bool& ff = false,
-           const int& ext = 0,
-           const initcond& ic = zero ) {
-    for (int j = 0; j < w; j++, inout += 1) {
+           const bool& ff = false ) {
+    for (int j = 0; j < w; j++) {
         int i;
         // pp=p=0 is not initial condition based, it is due
         // to the filter order outside image + extension
         T pp = (T)0;
         T p = (T)0;
         T c;
-        for (i = -ext; i < h+ext; i++) {
-            c = lookat( inout, i, h, ic, w );
+        for (i = 0; i < h; i++) {
+            c = inout[i*w+j];
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
             p = c;
-            if( i >= 0 and i < h ) // in image range
-                inout[i*w] = p;
+            inout[i*w+j] = p;
         }
         if( ff ) continue;
         pp = p = (T)0;
         for (i--; i >= 0; i--) {
-            c = lookat( inout, i, h, ic, w );
+            c = inout[i*w+j];
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
             p = c;
-            if( i >= 0 and i < h ) // in image range
-                inout[i*w] = p;
+            inout[i*w+j] = p;
         }
     }
 }
@@ -280,8 +230,6 @@ void rcfr( T *inout,
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ic Initial condition (for outside access)
  *  @tparam T Image value type
  */
 template< class T >
@@ -291,9 +239,7 @@ void rrfr( T *inout,
            const T& b0,
            const T& a1,
            const T& a2,
-           const bool& ff = false,
-           const int& ext = 0,
-           const initcond& ic = zero ) {
+           const bool& ff = false ) {
     for (int i = 0; i < h; i++, inout += w) {
         int j;
         // pp=p=0 is not initial condition based, it is due
@@ -301,23 +247,21 @@ void rrfr( T *inout,
         T pp = (T)0;
         T p = (T)0;
         T c;
-        for (j = -ext; j < w+ext; j++) {
-            c = lookat( inout, j, w, ic );
+        for (j = 0; j < w; j++) {
+            c = inout[j];
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
             p = c;
-            if( j >= 0 and j < w ) // in image range
-                inout[j] = p;
+            inout[j] = p;
         }
         if( ff ) continue;
         pp = p = (T)0;
         for (j--; j >= 0; j--) {
-            c = lookat( inout, j, w, ic );
+            c = inout[j];
             c = c*b0 - p*a1 - pp*a2;
             pp = p;
             p = c;
-            if( j >= 0 and j < w ) // in image range
-                inout[j] = p;
+            inout[j] = p;
         }
     }
 }
@@ -341,8 +285,6 @@ void rrfr( T *inout,
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ic Initial condition (for outside access)
  *  @tparam T Image value type
  */
 template< class T >
@@ -352,11 +294,75 @@ void r( T *inout,
         const T& b0,
         const T& a1,
         const T& a2,
-        const bool& ff = false,
-        const int& ext = 0,
-        const initcond& ic = zero ) {
-    rcfr(inout, h, w, b0, a1, a2, ff, ext, ic);
-    rrfr(inout, h, w, b0, a1, a2, ff, ext, ic);
+        const bool& ff = false ) {
+    rcfr(inout, h, w, b0, a1, a2, ff);
+    rrfr(inout, h, w, b0, a1, a2, ff);
+}
+
+/**
+ *  @ingroup api_cpu
+ *  @brief Extend an image to consider initial condition outside
+ *
+ *  Given an input 2D image extend it including a given initial
+ *  condition for outside access.
+ *
+ *  @param[out] ext_img The extended 2D image (to be allocated)
+ *  @param[out] ext_h Height of the extended image
+ *  @param[out] ext_w Width of the extended image
+ *  @param[in] img The 2D image to extend
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
+ *  @param[in] ic Initial condition (for outside access)
+ *  @param[in] extp Extension (in pixels) to consider outside image
+ *  @tparam T Image value type
+ */
+template< class T >
+void extend_image( T *& ext_img,
+                   int& ext_h,
+                   int& ext_w,
+                   const T *img,
+                   const int& h,
+                   const int& w,
+                   const initcond& ic,
+                   const int& extp ) {
+    ext_h = h + 2*extp;
+    ext_w = w + 2*extp;
+    ext_img = new float[ ext_h * ext_w ];
+    for (int i = -extp; i < h+extp; ++i) {
+        for (int j = -extp; j < w+extp; ++j) {
+            ext_img[(i+extp)*ext_w+(j+extp)] = lookat( img, i, j, h, w, ic );
+        }
+    }
+}
+
+/**
+ *  @ingroup api_cpu
+ *  @brief Extract an image from an extended image
+ *
+ *  Given an input 2D extended image (with initial conditions) extract
+ *  the original image in the middle.
+ *
+ *  @param[out] img The 2D image to extract
+ *  @param[in] h Height of the extracted image
+ *  @param[in] w Width of the extracted image
+ *  @param[in,out] ext_img The extended 2D image (to be deallocated)
+ *  @param[in] ext_w Width of the extended image
+ *  @param[in] extp Extension (in pixels) considered in extended image
+ *  @tparam T Image value type
+ */
+template< class T >
+void extract_image( T *img,
+                    const int& h,
+                    const int& w,
+                    T *& ext_img,
+                    const int& ext_w,
+                    const int& extp ) {
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            img[i*w+j] = ext_img[(i+extp)*ext_w+(j+extp)];
+        }
+    }
+    delete [] ext_img;
 }
 
 /**
@@ -368,15 +374,15 @@ void r( T *inout,
  *  initial conditions.
  *
  *  @param[in,out] in The 2D image to compute the SAT
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
  *  @tparam T Image value type
  */
 template< class T >
 void sat_cpu( T *in,
-              const int& hin,
-              const int& win ) {
-    r(in, hin, win, (T)1, (T)-1, true);
+              const int& h,
+              const int& w ) {
+    r(in, h, w, (T)1, (T)-1, true);
 }
 /**
  *  @example example_sat1.cc
@@ -388,36 +394,6 @@ void sat_cpu( T *in,
  */
 
 /**
- *  @ingroup cpu
- *  @overload
- *  @brief Compute second-order recursive filtering
- *
- *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
- *  @param[in] w Width of the input image
- *  @param[in] b0 Feedforward coefficient
- *  @param[in] a1 Feedback first-order coefficient
- *  @param[in] a2 Feedback second-order coefficient
- *  @param[in] ic Initial condition (for outside access)
- *  @param[in] ext Extension (in pixels) to consider outside image
- *  @param[in] ff Forward-only (ignore anticausal filter) flag
- *  @tparam T Image value type
- */
-template< class T >
-void r( T *inout,
-        const int& h,
-        const int& w,
-        const T& b0,
-        const T& a1,
-        const T& a2,
-        const initcond& ic,
-        const int& ext = 0,
-        const bool& ff = false ) {
-    rcfr(inout, h, w, b0, a1, a2, ff, ext, ic);
-    rrfr(inout, h, w, b0, a1, a2, ff, ext, ic);
-}
-
-/**
  *  @ingroup api_cpu
  *  @brief Gaussian blur an image in the CPU
  *
@@ -426,28 +402,37 @@ void r( T *inout,
  *  initial conditions.
  *
  *  @param[in,out] in The 2D image to compute Gaussian blur
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] s Sigma support of Gaussian blur computation
  *  @param[in] ic Initial condition (for outside access) (default clamp)
- *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
 void gaussian_cpu( T **in,
-                   const int& hin,
-                   const int& win,
+                   const int& h,
+                   const int& w,
                    const int& depth,
                    const T& s,
                    const initcond& ic = clamp,
-                   const int& ext = WS ) {
+                   const int& extp = WS ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, b10, a11, ic, ext);
-        r(in[c], hin, win, b20, a21, a22, ic, ext);
+        if( extp > 0 ) {
+            int ext_h, ext_w;
+            float *ext_in;
+            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extp);
+            r(ext_in, ext_h, ext_w, b10, a11);
+            r(ext_in, ext_h, ext_w, b20, a21, a22);
+            extract_image(in[c], h, w, ext_in, ext_w, extp);
+        } else {
+            r(in[c], h, w, b10, a11);
+            r(in[c], h, w, b20, a21, a22);
+        }
     }
 }
 /**
@@ -466,25 +451,34 @@ void gaussian_cpu( T **in,
  *  @brief Gaussian blur a single-channel image in the CPU
  *
  *  @param[in,out] in The single-channel 2D image to compute Gaussian blur
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
  *  @param[in] s Sigma support of Gaussian blur computation
  *  @param[in] ic Initial condition (for outside access) (default clamp)
- *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
 void gaussian_cpu( T *in,
-                   const int& hin,
-                   const int& win,
+                   const int& h,
+                   const int& w,
                    const T& s,
                    const initcond& ic = clamp,
-                   const int& ext = WS ) {
+                   const int& extp = WS ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
-    r(in, hin, win, b10, a11, ic, ext);
-    r(in, hin, win, b20, a21, a22, ic, ext);
+    if( extp > 0 ) {
+        int ext_h, ext_w;
+        float *ext_in;
+        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extp);
+        r(ext_in, ext_h, ext_w, b10, a11);
+        r(ext_in, ext_h, ext_w, b20, a21, a22);
+        extract_image(in, h, w, ext_in, ext_w, extp);
+    } else {
+        r(in, h, w, b10, a11);
+        r(in, h, w, b20, a21, a22);
+    }
 }
 /**
  *  @example example_gauss.cc
@@ -504,23 +498,31 @@ void gaussian_cpu( T *in,
  *  clamp-to-border initial conditions.
  *
  *  @param[in,out] in The 2D image to compute the Bicubic B-Spline interpolation
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] ic Initial condition (for outside access) (default mirror)
- *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
 void bspline3i_cpu( T **in,
-                    const int& hin,
-                    const int& win,
+                    const int& h,
+                    const int& w,
                     const int& depth,
                     const initcond& ic = mirror,
-                    const int& ext = WS ) {
+                    const int& extp = WS ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
-        r(in[c], hin, win, (T)1+alpha, alpha, ic, ext);
+        if( extp > 0 ) {
+            int ext_h, ext_w;
+            float *ext_in;
+            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extp);
+            r(ext_in, ext_h, ext_w, (T)1+alpha, alpha);
+            extract_image(in[c], h, w, ext_in, ext_w, extp);
+        } else {
+            r(in[c], h, w, (T)1+alpha, alpha);
+        }
     }
 }
 
@@ -530,20 +532,28 @@ void bspline3i_cpu( T **in,
  *  @brief Compute the Bicubic B-Spline interpolation of a single-channel image in the CPU
  *
  *  @param[in,out] in The single-channel 2D image to compute the Bicubic B-Spline interpolation
- *  @param[in] hin Height of the input image
- *  @param[in] win Width of the input image
+ *  @param[in] h Height of the input image
+ *  @param[in] w Width of the input image
  *  @param[in] ic Initial condition (for outside access) (default mirror)
- *  @param[in] ext Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
  *  @tparam T Image value type
  */
 template< class T >
 void bspline3i_cpu( T *in,
-                    const int& hin,
-                    const int& win,
+                    const int& h,
+                    const int& w,
                     const initcond& ic = mirror,
-                    const int& ext = WS ) {
+                    const int& extp = WS ) {
     const T alpha = (T)2 - sqrt((T)3);
-    r(in, hin, win, (T)1+alpha, alpha, ic, ext);
+    if( extp > 0 ) {
+        int ext_h, ext_w;
+        float *ext_in;
+        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extp);
+        r(ext_in, ext_h, ext_w, (T)1+alpha, alpha);
+        extract_image(in, h, w, ext_in, ext_w, extp);
+    } else {
+        r(in, h, w, (T)1+alpha, alpha);
+    }
 }
 /**
  *  @example example_bspline.cc
