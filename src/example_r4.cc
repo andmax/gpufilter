@@ -38,7 +38,7 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int in_w = 1024, in_h = 1024;
-    const float b0 = 0.0060625f, a1 = -1.89282f, a2 = 0.89888f;
+    const float b0 = 0.425294, a1 = -0.885641, a2 = 0.310935;
 
     std::cout << "[r4] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << std::scientific;
 
-    std::cout << "[r4] Maximum error: " << me << "\n";
+    std::cout << "[r4] Maximum relative error: " << mre << " ; Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

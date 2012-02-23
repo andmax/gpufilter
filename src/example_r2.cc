@@ -15,6 +15,8 @@
 #include <cpuground.h>
 #include <gpufilter.h>
 
+#include <util.h>
+
 // Check computation
 void check_reference( const float *ref,
                       const float *res,
@@ -38,7 +40,7 @@ void check_reference( const float *ref,
 int main(int argc, char *argv[]) {
 
     const int in_w = 1024, in_h = 1024;
-    const float b0 = 1.f, a1 = -1.f;
+    const float b0 = 0.482305, a1 = -0.517695;
 
     std::cout << "[r2] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
@@ -85,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << std::resetiosflags( std::ios_base::floatfield );
 
-    std::cout << "[r2] Maximum relative error: " << mre << "\n";
+    std::cout << "[r2] Maximum relative error: " << mre << " ; Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

@@ -219,6 +219,13 @@ public:
     }
 
     /**
+     *  @brief Fill this vector with zeroes
+     */
+    void fill_zero() {
+       cudaMemset(m_data, 0, m_size*sizeof(T));
+    }
+
+    /**
      *  @brief Check if this vector is empty
      *  @return True if this vector is empty
      */

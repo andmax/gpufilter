@@ -13,11 +13,168 @@
 #include <cassert>
 #include <iostream>
 
+#ifdef  __CUDA_ARCH__
+#   ifdef assert
+#       undef assert
+#   endif
+#   define assert (void)
+#endif
+
 //== NAMESPACES ===============================================================
 
 namespace gpufilter {
 
 //== CLASS DEFINITION =========================================================
+
+/**
+ *  @class Vector util.h
+ *  @ingroup utils
+ *  @brief Vector class
+ *
+ *  Vector class to represent special small vectors, such as the
+ *  vector of filter weights \f$a_k\f$ used in forward and reverse
+ *  filter computation (see equations 1 and 3 in [Nehab:2011] cited in
+ *  alg5()).
+ *
+ *  @tparam T Vector value type
+ *  @tparam N Number of elements
+ */
+template <class T, int N>
+class Vector {
+    
+public:
+
+    /**
+     *  @brief Convert a vector of this class to an stl vector
+     *  @return STL Vector
+     */
+    std::vector<T> to_vector() const {
+        return std::vector<T>(&m_data[0], &m_data[0]+size());
+    }
+
+    /**
+     *  @brief Access (constant) operator
+     *  @param[in] i Position to access
+     *  @return Value (constant reference) at given position
+     */
+    __host__ __device__ const T& operator [] ( int i ) const {
+        assert(i >= 0 && i < size());
+        return m_data[i];
+    }
+
+    /**
+     *  @brief Access operator
+     *  @param[in] i Position to access
+     *  @return Value at given position
+     */
+    __host__ __device__ T& operator [] ( int i ) {
+        assert(i >= 0 && i < size());
+        return m_data[i];
+    }
+
+    /**
+     *  @brief Get size (number of elements) of this vector
+     *  @return Vector size
+     */
+    __host__ __device__ int size() const { return N; }
+
+    /**
+     *  @brief Output stream operator
+     *  @param[out] out Output stream
+     *  @param[in] v Vector to output values from
+     *  @return Output stream
+     */
+    friend std::ostream& operator << ( std::ostream& out,
+                                       const Vector& v ) {
+        out << '[';
+        for(int i=0; i<v.size(); ++i) {
+            out << v[i];
+            if( i < v.size()-1 ) out << ',';
+        }
+        return out << ']';
+    }
+
+    /**
+     *  @brief Add-then-assign operator
+     *  @param[in] v Vector to add values from
+     *  @return This vector added with the input vector
+     */
+    __host__ __device__ Vector& operator += ( const Vector& v ) {
+        assert(size() == v.size());
+#pragma unroll
+        for(int j=0; j<size(); ++j)
+            m_data[j] += v[j];
+        return *this;
+    }
+
+    /**
+     *  @brief Add operator
+     *  @param[in] v Vector to add values from
+     *  @return Vector resulting from the addition with the input vector
+     */
+    __host__ __device__ Vector operator + ( const Vector& v ) const {
+        return Vector(*this) += v;
+    }
+
+    /**
+     *  @brief Multiply-then-assign operator
+     *  @param[in] v Vector to multiply values from
+     *  @return This vector multiplied with the input vector
+     */
+    __host__ __device__ Vector &operator *= ( const T& v ) {
+#pragma unroll
+        for(int j=0; j<size(); ++j)
+            m_data[j] *= v;
+        return *this;
+    }
+
+    /**
+     *  @brief Multiply operator
+     *  @param[in] v Vector to multiply values from
+     *  @return Vector resulting from the multiplication with the input vector
+     */
+    __host__ __device__ Vector operator * ( const T& v ) const {
+        return Vector(*this) *= v;
+    }
+
+    /**
+     *  @brief Divide-then-assign operator
+     *  @param[in] v Vector to divide values from
+     *  @return This vector divided with the input vector
+     */
+    __host__ __device__ Vector& operator /= ( const T& v ) {
+#pragma unroll
+        for(int j=0; j<size(); ++j)
+            m_data[j] /= v;
+        return *this;
+    }
+
+    /**
+     *  @brief Divide operator
+     *  @param[in] v Vector to divide values from
+     *  @return Vector resulting from the division with the input vector
+     */
+    __host__ __device__ Vector operator / ( const T& v ) const {
+        return Vector(*this) /= v;
+    }
+
+    /**
+     *  @brief Pointer-access operator (constant)
+     *  @return Pointer to the first element of this vector
+     */
+    __host__ __device__ operator const T* () const { return &m_data[0]; }
+
+    /**
+     *  @brief Pointer-access operator
+     *  @return Pointer to the first element of this vector
+     */
+    __host__ __device__ operator T* () { return &m_data[0]; }
+
+private:
+
+    T m_data[N]; ///< Vector values
+
+};
 
 /**
  *  @class Matrix util.h
@@ -28,123 +185,45 @@ namespace gpufilter {
  *  \f$A_{FB}\f$ and \f$A_{RB}\f$ described in the paper ([Nehab:2011]
  *  cited in alg5()).
  *
+ *  @tparam T Matrix value type
  *  @tparam M Number of rows
  *  @tparam N Number of columns
- *  @tparam T Matrix value type
  */
-template <int M, int N=M, class T=float>
+template <class T, int M, int N=M>
 class Matrix {
-
-    /**
-     *  @struct row_proxy
-     *  @brief Row proxy to access matrix rows
-     *
-     *  Proxies are used to enable checking row index range (hopefully
-     *  the compiler will optimize them out).
-     */
-    struct row_proxy
-    {
-        /**
-         *  Constructor
-         *  @param[in] row Pointer to the matrix row array
-         */
-        row_proxy( T *row ) : m_row(row) { }
-
-        /**
-         *  @brief Construct an STL-based vector from the matrix row
-         *  @return STL-based vector
-         */
-        std::vector<T> to_vector() const {
-            return std::vector<T>(m_row, m_row+N);
-        }
-
-        /**
-         *  @brief Access operator
-         *  @param[in] j Position to access
-         *  @return Value at given position
-         */
-        T& operator [] ( int j ) const {
-            assert(j>=0 && j<N);
-            return m_row[j];
-        }
-
-        /**
-         *  @brief Address (constant) operator
-         *  @return Pointer to matrix row array
-         */
-        T *operator & () { return m_row; }
-
-        /**
-         *  @brief Address (constant) operator
-         *  @return Constant pointer to matrix row array
-         */
-        const T *operator & () const { return m_row; }
-
-    private:
-
-        T *m_row; ///< Row array pointer
-
-    };
-
-    /**
-     *  @struct const_row_proxy
-     *  @brief Row proxy (constant) to access matrix rows
-     *
-     *  Proxies are used to enable checking row index range (hopefully
-     *  the compiler will optimize them out).
-     */
-    struct const_row_proxy
-    {
-        /**
-         *  Constructor
-         *  @param[in] row Constant pointer to the matrix row array
-         */
-        const_row_proxy( const T *row ) : m_row(row) { }
-
-        /**
-         *  @brief Construct an STL-based vector from the matrix row
-         *  @return STL-based vector
-         */
-        std::vector<T> to_vector() const {
-            return std::vector<T>(m_row, m_row+N);
-        }
-
-        /**
-         *  @brief Access (constant) operator
-         *  @param[in] j Position to access
-         *  @return Value (constant reference) at given position
-         */
-        const T& operator [] ( int j ) const {
-            assert(j>=0 && j<N);
-            return m_row[j];
-        }
-
-    private:
-
-        const T *m_row; ///< Row array constant pointer
-
-    };
 
 public:
 
     /**
+     *  @brief Get number of rows of this matrix
+     *  @return Number of rows
+     */
+    __host__ __device__ int rows() const { return M; }
+
+    /**
+     *  @brief Get number of columns of this matrix
+     *  @return Number of columns
+     */
+    __host__ __device__ int cols() const { return N; }
+
+    /**
      *  @brief Access (constant) operator
      *  @param[in] i Row of the matrix to access
-     *  @return Array (constant) row proxy
+     *  @return Vector (constant) of the corresponding row
      */
-    const_row_proxy operator [] ( int i ) const {
-        assert(i >= 0 && i < M);
-        return const_row_proxy(m_data[i]);
+    __host__ __device__ const Vector<T,N>& operator [] ( int i ) const {
+        assert(i >= 0 && i < rows());
+        return m_data[i];
     }
 
     /**
      *  @brief Access operator
      *  @param[in] i Row of the matrix to access
-     *  @return Array row proxy
+     *  @return Vector of the corresponding row
      */
-    row_proxy operator [] ( int i ) {
-        assert(i >= 0 && i < M);
-        return row_proxy(m_data[i]);
+    __host__ __device__ Vector<T,N>& operator [] ( int i ) {
+        assert(i >= 0 && i < rows());
+        return m_data[i];
     }
 
     /**
@@ -156,12 +235,12 @@ public:
     friend std::ostream& operator << ( std::ostream& out,
                                        const Matrix& m ) {
         out << '[';
-        for(int i=0; i<M; ++i) {
-            for(int j=0; j<N; ++j) {
+        for(int i=0; i<m.rows(); ++i) {
+            for(int j=0; j<m.cols(); ++j) {
                 out << m[i][j];
-                if(j < N-1) out << ',';
+                if(j < m.cols()-1) out << ',';
             }
-            if(i < M-1) out << ";\n";
+            if(i < m.rows()-1) out << ";\n";
         }
         return out << ']';
     }
@@ -174,13 +253,13 @@ public:
      *  @tparam Q Number of columns of other matrix
      */
     template <int P, int Q>
-    Matrix<M,Q,T> operator * ( const Matrix<P,Q,T>& rhs ) const {
-        assert(N==P);
-        Matrix<M,Q,T> r;
-        for(int i=0; i<M; ++i) {
-            for(int j=0; j<Q; ++j) {
+    __host__ __device__ Matrix<T,M,Q> operator * ( const Matrix<T,P,Q>& rhs ) const {
+        assert(cols()==rhs.rows());
+        Matrix<T,M,Q> r;
+        for(int i=0; i<r.rows(); ++i) {
+            for(int j=0; j<r.cols(); ++j) {
                 r[i][j] = m_data[i][0]*rhs[0][j];
-                for(int k=1; k<N; ++k)
+                for(int k=1; k<cols(); ++k)
                     r[i][j] += m_data[i][k]*rhs[k][j];
             }
         }
@@ -192,21 +271,48 @@ public:
      *  @param[in] val Scalar value to multilpy matrix to
      *  @return Resulting matrix from multiplication
      */
-    Matrix& operator *= ( const T& val ) {
-        for(int i=0; i<M; ++i)
-            for(int j=0; j<N; ++j)
+    __host__ __device__ Matrix& operator *= ( T val ) {
+#pragma unroll
+        for(int i=0; i<rows(); ++i)
+#pragma unroll
+            for(int j=0; j<cols(); ++j)
                 m_data[i][j] *= val;
         return *this;
+    }
+
+    /**
+     *  @brief Get column j of this matrix
+     *  @param[in] j Index of column to get
+     *  @return Column j as a vector
+     */
+    __host__ __device__ Vector<T,M> col( int j ) const {
+        Vector<T,M> c;
+#pragma unroll
+        for(int i=0; i<rows(); ++i)
+            c[i] = m_data[i][j];
+        return c;
+    }
+
+    /**
+     *  @brief Set column j of this matrix
+     *  @param[in] j Index of column to set
+     *  @param[in] c Vector to place in matrix column
+     */
+    __host__ __device__ void set_col( int j,
+                                      const Vector<T,M>& c ) {
+#pragma unroll
+        for(int i=0; i<rows(); ++i)
+            m_data[i][j] = c[i];
     }
 
     /**
      *  @brief Multiply operator
      *  @param[in] m Matrix to multiply
      *  @param[in] val Scalar value to multiply matrix to
-     *  @return Resulting matrix from multiplication
+     *  @return Resulting matrix from the multiplication
      */
-    friend Matrix operator * ( const Matrix& m,
-                               const T& val ) {
+    __host__ __device__ friend Matrix operator * ( const Matrix& m,
+                                                   T val ) {
         return Matrix(m) *= val;
     }
 
@@ -214,117 +320,148 @@ public:
      *  @brief Multiply operator
      *  @param[in] val Scalar value to multiply matrix to
      *  @param[in] m Matrix to multiply
-     *  @return Resulting matrix from multiplication
+     *  @return Resulting matrix from the multiplication
      */
-    friend Matrix operator * ( const T& val,
-                               const Matrix &m ) {
+    __host__ __device__ friend Matrix operator * ( T val,
+                                                   const Matrix& m ) {
         return operator*(m,val);
     }
 
-private:
-
-    T m_data[M][N]; ///< Matrix values
-
-};
-
-/**
- *  @class Vector util.h
- *  @ingroup utils
- *  @brief Vector class
- *
- *  Vector class to represent special small vectors, such as the
- *  vector of filter weights \f$a_k\f$ used in forward and reverse
- *  filter computation (see equations 1 and 3 in [Nehab:2011] cited in
- *  alg5()).
- *
- *  @tparam M Number of elements
- *  @tparam T Vector value type
- */
-template <int M, class T=float>
-class Vector {
-    
-public:
-
     /**
-     *  Constructor
+     *  @brief Add-then-assign operator
+     *  @param[in] rhs Right-hand-side matrix in addition
+     *  @return Resulting matrix from the addition
      */
-    Vector() { for(int i=0; i<M; ++i) m_data[i] = (T)0; }
-
-    /**
-     *  Constructor
-     *  @param[in] m Matrix with 1 column to initiate this vector
-     */
-    Vector( const Matrix<M,1,T>& m ) {
-        for (int i=0; i<M; ++i)
-            m_data[i] = m[i][0];
+    __host__ __device__ Matrix& operator += ( const Matrix& rhs ) {
+#pragma unroll
+        for(int i=0; i<rows(); ++i)
+#pragma unroll
+            for(int j=0; j<cols(); ++j)
+                m_data[i][j] += rhs[i][j];
+        return *this;
     }
 
     /**
-     *  @brief Access operator
-     *  @param[in] i Position to access
-     *  @return Value at given position
+     *  @brief Add operator
+     *  @param[in] lhs Left-hand-side matrix in addition
+     *  @param[in] rhs Right-hand-side matrix in addition
+     *  @return Resulting matrix from the addition
      */
-    T& operator [] ( int i ) {
-        assert(i >= 0 && i < M);
-        return m_data[i];
+    __host__ __device__ friend Matrix operator + ( const Matrix& lhs,
+                                                   const Matrix& rhs ) {
+        return Matrix(lhs) += rhs;
     }
 
     /**
-     *  @brief Access (constant) operator
-     *  @param[in] i Position to access
-     *  @return Value (constant reference) at given position
+     *  @brief Subtract-then-assign operator
+     *  @param[in] rhs Right-hand-side matrix in subtraction
+     *  @return Resulting matrix from the subtraction
      */
-    const T& operator [] ( int i ) const {
-        assert(i >= 0 && i < M);
-        return m_data[i];
+    __host__ __device__ Matrix& operator -= ( const Matrix& rhs ) {
+#pragma unroll
+        for(int i=0; i<rows(); ++i)
+#pragma unroll
+            for(int j=0; j<cols(); ++j)
+                m_data[i][j] -= rhs[i][j];
+        return *this;
     }
 
     /**
-     *  @brief Output stream operator
-     *  @param[out] out Output stream
-     *  @param[in] v Vector to output values from
-     *  @return Output stream
+     *  @brief Subtract operator
+     *  @param[in] lhs Left-hand-side matrix in subtraction
+     *  @param[in] rhs Right-hand-side matrix in subtraction
+     *  @return Resulting matrix from the subtraction
      */
-    friend std::ostream& operator << ( std::ostream& out,
-                                       const Vector& v ) {
-        out << '[';
-        for(int i=0; i<M; ++i) {
-            out << v[i];
-            if(i < M-1) out << ',';
-        }
-        return out << ']';
+    __host__ __device__ friend Matrix operator - ( const Matrix& lhs,
+                                                   const Matrix& rhs ) {
+        return Matrix(lhs) -= rhs;
     }
 
 private:
 
-    T m_data[M]; ///< Vector values
+    Vector<T,N> m_data[M]; ///< Matrix values
 
 };
 
 /**
  *  @relates Matrix
+ *  @brief Multiply vector-to-matrix operator
+ *  @param[in] v Vector to multiply the matrix
+ *  @param[in] m Matrix to be multiplied by vector
+ *  @return Resulting vector from the multiplication
+ */
+template <class T, int M, int N>
+__host__ __device__ Vector<T,N> operator * ( const Vector<T,M>& v,
+                                             const Matrix<T,M,N>& m ) {
+    assert(v.size() == m.rows());
+    Vector<T,N> r;
+#pragma unroll
+    for(int j=0; j<m.cols(); ++j) {
+        r[j] = v[0]*m[0][j];
+#pragma unroll
+        for(int i=1; i<m.rows(); ++i)
+            r[j] += v[i]*m[i][j];
+    }
+    return r;
+}
+
+/**
+ *  @relates Vector
+ *  @brief Instantiate a vector with zeros
+ *  @tparam T Vector value type
+ *  @tparam N Number of elements
+ */
+template <class T, int N>
+__host__ __device__ Vector<T,N> zeros() {
+    Vector<T,N> v;
+    if(N>0)
+    {
+#if __CUDA_ARCH__
+#pragma unroll
+        for(int j=0; j<v.size(); ++j)
+            v[j] = T();
+#else
+        std::fill(&v[0], &v[N-1]+1, T());
+#endif
+    }
+    return v; // I'm hoping that RVO will kick in
+}
+
+/**
+ *  @relates Matrix
  *  @brief Instantiate a matrix with zeros
+ *  @tparam T Matrix value type
  *  @tparam M Number of rows
  *  @tparam N Number of columns
- *  @tparam T Matrix value type
  */
-template <int M, int N, class T>
-Matrix<M,N,T> zeros() {
-    Matrix<M,N,T> mat;
-    std::fill(&mat[0][0], &mat[M-1][N-1]+1, T());
+template <class T, int M, int N>
+__host__ __device__ Matrix<T,M,N> zeros() {
+    Matrix<T,M,N> mat;
+    if(M>0 && N>0)
+    {
+#if __CUDA_ARCH__
+#pragma unroll
+        for(int i=0; i<mat.rows(); ++i)
+#pragma unroll
+            for(int j=0; j<mat.cols(); ++j)
+                mat[i][j] = T();
+#else
+        std::fill(&mat[0][0], &mat[M-1][N-1]+1, T());
+#endif
+    }
     return mat; // I'm hoping that RVO will kick in
 }
 
 /**
  *  @relates Matrix
  *  @brief Instantiate an identity matrix
+ *  @tparam T Matrix value type
  *  @tparam M Number of rows
  *  @tparam N Number of columns
- *  @tparam T Matrix value type
  */
-template <int M, int N, class T>
-Matrix<M,N,T> identity() {
-    Matrix<M,N,T> mat;
+template <class T, int M, int N>
+Matrix<T,M,N> identity() {
+    Matrix<T,M,N> mat;
     for(int i=0; i<M; ++i)
         for(int j=0; j<N; ++j)
             mat[i][j] = i==j ? 1 : 0;
@@ -335,17 +472,52 @@ Matrix<M,N,T> identity() {
  *  @relates Matrix
  *  @brief Instantiate the transposed version of a given matrix
  *  @param[in] m Given matrix
+ *  @tparam T Matrix value type
  *  @tparam M Number of rows
  *  @tparam N Number of columns
- *  @tparam T Matrix value type
  */
-template <int M, int N, class T>
-Matrix<N,M,T> transp( const Matrix<M,N,T>& m ) {
-    Matrix<N,M,T> tm;
-    for(int i=0; i<M; ++i)
-        for(int j=0; j<N; ++j)
+template <class T, int M, int N>
+__host__ __device__ Matrix<T,N,M> transp( const Matrix<T,M,N>& m ) {
+    Matrix<T,N,M> tm;
+#pragma unroll
+    for(int i=0; i<m.rows(); ++i)
+#pragma unroll
+        for(int j=0; j<m.cols(); ++j)
             tm[j][i] = m[i][j];
     return tm;
+}
+
+//-- fwd
+
+/**
+ *  @relates Matrix
+ *  @brief
+ */
+template <class T, int N, int R>
+void fwd_inplace( const Vector<T,R>& p,
+                  Vector<T,N>& b,
+                  const Vector<T,R+1>& w ) {
+    for(int j=0; j<b.size(); ++j) {
+        b[j] *= w[0];
+        for(int k=1; k<w.size(); ++k) {
+            if(j-k < 0)
+                b[j] -= p[p.size()+j-k]*w[k]; // use data from prologue
+            else
+                b[j] -= b[j-k]*w[k];
+        }
+    }
+}
+
+/**
+ *  @relates Matrix
+ *  @brief
+ */
+template <class T, int M, int N, int R>
+void fwd_inplace( const Matrix<T,M,R>& p,
+                  Matrix<T,M,N>& b,
+                  const Vector<T,R+1>& w ) {
+    for(int i=0; i<b.rows(); ++i)
+        fwd_inplace(p[i], b[i], w);
 }
 
 /**
@@ -368,21 +540,24 @@ Matrix<N,M,T> transp( const Matrix<M,N,T>& m ) {
  *  @tparam R Number of feedback coefficients
  *  @tparam T Matrix value type
  */
-template <int M, int N, int R, class T>
-Matrix<M,N,T> fwd( const Matrix<R,N,T> &p,
-                   const Matrix<M,N,T> &b,
-                   const Vector<R+1,T> &w ) {
-    Matrix<M,N,T> fb;
-    for(int j=0; j<N; ++j) {
-        for(int i=0; i<M; ++i) {
-            fb[i][j] = b[i][j]*w[0];
-            for(int k=1; k<R+1; ++k) {
-                if(i-k < 0) fb[i][j] -= p[R+i-k][j]*w[k]; // use data from prologue
-                else fb[i][j] -= fb[i-k][j]*w[k];
-            }
-        }
-    }
+template <class T, int M, int N, int R>
+Matrix<T,M,N> fwd( const Matrix<T,M,R>& p,
+                   const Matrix<T,M,N>& b, 
+                   const Vector<T,R+1>& w) {
+    Matrix<T,M,N> fb = b;
+    fwd_inplace(p, fb, w);
     return fb;
+}
+
+/**
+ *  @relates Matrix
+ *  @brief
+ */
+template <class T, int M, int N, int R>
+void fwd_inplace( const Matrix<T,R,N>& p,
+                  Matrix<T,M,N>& b,
+                  const Vector<T,R+1>& w ) {
+    b = fwd(p, b, w);
 }
 
 /**
@@ -406,11 +581,44 @@ Matrix<M,N,T> fwd( const Matrix<R,N,T> &p,
  *  @tparam R Number of feedback coefficients
  *  @tparam T Matrix value type
  */
-template <int M, int N, int R, class T>
-Matrix<M,N,T> fwdT( const Matrix<M,R,T>& pT,
-                    const Matrix<M,N,T>& b,
-                    const Vector<R+1,T>& w ) {
+template <class T, int M, int N, int R>
+Matrix<T,M,N> fwd( const Matrix<T,R,N>& pT,
+                   const Matrix<T,M,N>& b, 
+                   const Vector<T,R+1>& w ) {
     return transp(fwd(transp(pT), transp(b), w));
+}
+
+//-- rev
+
+/**
+ *  @relates Matrix
+ *  @brief
+ */
+template <class T, int N, int R>
+void rev_inplace( Vector<T,N>& b,
+                  const Vector<T,R>& e,
+                  const Vector<T,R+1>& w ) {
+    for(int j=b.size()-1; j>=0; --j) {
+        b[j] *= w[0];
+        for(int k=1; k<w.size(); ++k) {
+            if(j+k >= b.size())
+                b[j] -= e[j+k-b.size()]*w[k]; // use data from epilogue
+            else
+                b[j] -= b[j+k]*w[k];
+        }
+    }
+}
+
+/**
+ *  @relates Matrix
+ *  @brief
+ */
+template <class T, int M, int N, int R>
+void rev_inplace( Matrix<T,M,N>& b,
+                  const Matrix<T,M,R>& e,
+                  const Vector<T,R+1>& w ) {
+    for(int i=0; i<b.rows(); ++i)
+        rev_inplace(b[i], e[i], w);
 }
 
 /**
@@ -433,21 +641,24 @@ Matrix<M,N,T> fwdT( const Matrix<M,R,T>& pT,
  *  @tparam R Number of feedback coefficients
  *  @tparam T Matrix value type
  */
-template <int M, int N, int R, class T>
-Matrix<M,N,T> rev( const Matrix<M,N,T>& b,
-                   const Matrix<R,N,T>& e, 
-                   const Vector<R+1,T>& w ) {
-    Matrix<M,N,T> rb;
-    for(int j=0; j<N; ++j) {
-        for(int i=M-1; i>=0; --i) {
-            rb[i][j] = b[i][j]*w[0];
-            for(int k=1; k<R+1; ++k) {
-                if(i+k >= M) rb[i][j] -= e[i+k-M][j]*w[k]; // use data from epilogue
-                else rb[i][j] -= rb[i+k][j]*w[k];
-            }
-        }
-    }
+template <class T, int M, int N, int R>
+Matrix<T,M,N> rev( const Matrix<T,M,N>& b,
+                   const Matrix<T,M,R>& e, 
+                   const Vector<T,R+1>& w ) {
+    Matrix<T,M,N> rb = b;
+    rev_inplace(rb, e, w);
     return rb;
+}
+
+/**
+ *  @relates Matrix
+ *  @brief
+ */
+template <class T, int M, int N, int R>
+void rev_inplace( Matrix<T,M,N>& b,
+                  const Matrix<T,R,N>& p,
+                  const Vector<T,R+1>& w ) {
+    b = rev(b, p, w);
 }
 
 /**
@@ -471,10 +682,10 @@ Matrix<M,N,T> rev( const Matrix<M,N,T>& b,
  *  @tparam R Number of feedback coefficients
  *  @tparam T Matrix value type
  */
-template <int M, int N, int R, class T>
-Matrix<M,N,T> revT( const Matrix<M,N,T>& b,
-                    const Matrix<M,R,T>& eT,
-                    const Vector<R+1,T>& w ) {
+template <class T, int M, int N, int R>
+Matrix<T,M,N> rev( const Matrix<T,M,N>& b,
+                   const Matrix<T,R,N>& eT,
+                   const Vector<T,R+1>& w ) {
     return transp(rev(transp(b), transp(eT), w));
 }
 
@@ -504,10 +715,11 @@ Matrix<M,N,T> revT( const Matrix<M,N,T>& b,
  *  @tparam T Matrix value type
  */
 template <int R, int M, int N, class T>
-Matrix<R,N,T> head( const Matrix<M,N,T>& mat ) {
-    Matrix<R,N,T> h;
-    for(int i=0; i<R; ++i)
-        for(int j=0; j<N; ++j)
+Matrix<T,M,R> head( const Matrix<T,M,N>& mat ) {
+    assert(mat.cols() >= R);
+    Matrix<T,M,R> h;
+    for(int j=0; j<R; ++j)
+        for(int i=0; i<mat.rows(); ++i)
             h[i][j] = mat[i][j];
     return h;
 }
@@ -535,8 +747,8 @@ Matrix<R,N,T> head( const Matrix<M,N,T>& mat ) {
  *  @tparam T Matrix value type
  */
 template <int R, int M, int N, class T>
-Matrix<M,R,T> headT( const Matrix<M,N,T>& mat ) {
-    return transp(head(transp(mat)));
+Matrix<T,R,N> headT( const Matrix<T,M,N>& mat ) {
+    return transp(head<R>(transp(mat)));
 }
 
 /**
@@ -562,11 +774,12 @@ Matrix<M,R,T> headT( const Matrix<M,N,T>& mat ) {
  *  @tparam T Matrix value type
  */
 template <int R, int M, int N, class T>
-Matrix<R,N,T> tail( const Matrix<M,N,T>& mat ) {
-    Matrix<R,N,T> t;
-    for(int i=0; i<R; ++i)
-        for(int j=0; j<N; ++j)
-            t[i][j] = mat[M-R+i][j];
+Matrix<T,M,R> tail( const Matrix<T,M,N>& mat ) {
+    assert(mat.cols() >= R);
+    Matrix<T,M,R> t;
+    for(int j=0; j<R; ++j)
+        for(int i=0; i<mat.rows(); ++i)
+            t[i][j] = mat[i][mat.cols()-R+j];
     return t;
 }
 
@@ -593,8 +806,16 @@ Matrix<R,N,T> tail( const Matrix<M,N,T>& mat ) {
  *  @tparam T Matrix value type
  */
 template <int R, int M, int N, class T>
-Matrix<M,R,T> tailT( const Matrix<M,N,T>& mat ) {
-    return transp(head(transp(mat)));
+Matrix<T,R,N> tailT( const Matrix<T,M,N>& mat ) {
+    return transp(tail<R>(transp(mat)));
+}
+
+
+template <class T> 
+__device__ inline void swap(T& a, T& b) {
+    T c = a;
+    a = b;
+    b = c;
 }
 
 //=============================================================================

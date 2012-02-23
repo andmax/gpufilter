@@ -32,14 +32,12 @@ namespace gpufilter {
  *  @param[out] g_transp_ezhat All \f$E_{m,n}(\hat{Z})\f$
  *  @param[out] g_ptucheck All \f$P^T_{m,n}(\check{U})\f$
  *  @param[out] g_etvtilde All \f$E^T_{m,n}(\tilde{V})\f$
- *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 __global__
 void alg5_stage1( float *g_transp_pybar,
                   float *g_transp_ezhat,
                   float *g_ptucheck,
-                  float *g_etvtilde,
-                  int extb = 0 );
+                  float *g_etvtilde );
 
 /**
  *  @ingroup gpu
@@ -61,12 +59,12 @@ void alg5_stage1( float *g_transp_pybar,
  *  idiosyncrasies and should not be used lightly.
  *
  *  @see [Nehab:2011] cited in alg5()
- *  @param[in,out] g_transp_ybar All \f$P_{m,n}(\bar{Y})\f$ fixed to \f$P_{m,n}(Y)\f$
- *  @param[in,out] g_transp_zhat All \f$E_{m,n}(\hat{Z})\f$ fixed to \f$E_{m,n}(Z)\f$
+ *  @param[in,out] g_transp_pybar All \f$P_{m,n}(\bar{Y})\f$ fixed to \f$P_{m,n}(Y)\f$
+ *  @param[in,out] g_transp_ezhat All \f$E_{m,n}(\hat{Z})\f$ fixed to \f$E_{m,n}(Z)\f$
  */
 __global__
-void alg5_stage2_3( float *g_transp_ybar,
-                    float *g_transp_zhat );
+void alg5_stage2_3( float *g_transp_pybar,
+                    float *g_transp_ezhat );
 
 /**
  *  @ingroup gpu
@@ -122,15 +120,13 @@ void alg5_stage4_5( float *g_ptucheck,
  *  @param[in] g_transp_ez All \f$E_{m,n}(Z)\f$
  *  @param[in] g_ptu All \f$P^T_{m,n}(U)\f$
  *  @param[in] g_etv All \f$E^T_{m,n}(V)\f$
- *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 __global__
 void alg5_stage6( float *g_out,
                   const float *g_transp_py,
                   const float *g_transp_ez,
                   const float *g_ptu,
-                  const float *g_etv,
-                  int extb = 0 );
+                  const float *g_etv );
 
 //=============================================================================
 } // namespace gpufilter

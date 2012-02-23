@@ -39,8 +39,8 @@ void gaussian_gpu( float **inout,
     weights1( s, b10, a11 );
     weights2( s, b20, a21, a22 );
     for (int c = 0; c < d; c++) {
-        alg5( inout[c], h, w, b10, a11 );
-        alg4( inout[c], h, w, b20, a21, a22 );
+        alg5( inout[c], h, w, b10, a11, ic, extb );
+        alg4( inout[c], h, w, b20, a21, a22, ic, extb );
     }
 }
 
@@ -54,8 +54,8 @@ void gaussian_gpu( float *inout,
     float b10, a11, b20, a21, a22;
     weights1( s, b10, a11 );
     weights2( s, b20, a21, a22 );
-    alg5( inout, h, w, b10, a11 );
-    alg4( inout, h, w, b20, a21, a22 );
+    alg5( inout, h, w, b10, a11, ic, extb );
+    alg4( inout, h, w, b20, a21, a22, ic, extb );
 }
 
 __host__

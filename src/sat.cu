@@ -102,7 +102,7 @@ void algSAT_stage2( float *g_ybar,
 	if( tx < HWS ) s_block[ty][tx] = 0.f;
 	else s_block[ty][ln] = 0.f;
 
-	for (int m = 1; m < c_m_size; ++m) {
+	for (int n = 1; n < c_n_size; ++n) {
 
         // calculate ysum -----------------------
 
@@ -116,7 +116,7 @@ void algSAT_stage2( float *g_ybar,
 
 		if( tx == WS-1 ) {
 			*g_ysum = s_block[ty][ln];
-			g_ysum += c_n_size;
+			g_ysum += c_m_size;
 		}
 
         // fix ybar -> y -------------------------
@@ -140,9 +140,9 @@ void algSAT_stage3( const float *g_ysum,
 	float y = 0.f, v = 0.f;
 
 	if( row0 > 0 )
-		g_ysum += (row0-1)*c_n_size;
+		g_ysum += (row0-1)*c_m_size;
 
-	for (int n = 0; n < c_n_size; ++n) {
+	for (int m = 0; m < c_m_size; ++m) {
 
         // fix vhat -> v -------------------------
 
@@ -341,23 +341,6 @@ void prepare_algSAT( dvector<float>& d_inout,
 }
 
 __host__
-void algSAT( float *h_inout,
-             const int& h,
-             const int& w ) {
-
-    dim3 cg_img, cg_ybar, cg_vhat;
-    dvector<float> d_out, d_ybar, d_vhat, d_ysum;
-    int h_out, w_out;
-
-    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, h_inout, h, w );
-
-    algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
-
-    d_out.copy_to( h_inout, h_out, w_out, h, w );
-
-}
-
-__host__
 void algSAT( dvector<float>& d_out,
              const dvector<float>& d_in,
              dvector<float>& d_ybar,
@@ -393,6 +376,23 @@ void algSAT( dvector<float>& d_inout,
     algSAT_stage3<<< cg_vhat, dim3(WS, MW) >>>( d_ysum, d_vhat );
 
     algSAT_stage4<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
+
+}
+
+__host__
+void algSAT( float *h_inout,
+             const int& h,
+             const int& w ) {
+
+    dim3 cg_img, cg_ybar, cg_vhat;
+    dvector<float> d_out, d_ybar, d_vhat, d_ysum;
+    int h_out, w_out;
+
+    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, h_inout, h, w );
+
+    algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+
+    d_out.copy_to( h_inout, h_out, w_out, h, w );
 
 }
 

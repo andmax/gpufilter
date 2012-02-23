@@ -22,6 +22,8 @@ namespace gpufilter {
 
 //== IMPLEMENTATION ===========================================================
 
+//-- First-order Filter -------------------------------------------------------
+
 /**
  *  @ingroup cpu
  *  @brief Compute first-order recursive filtering on columns forward and reverse
@@ -155,6 +157,8 @@ void r( T *inout,
     rcfr(inout, h, w, b0, a1, ff);
     rrfr(inout, h, w, b0, a1, ff);
 }
+
+//-- Second-order Filter ------------------------------------------------------
 
 /**
  *  @ingroup cpu
@@ -299,6 +303,8 @@ void r( T *inout,
     rrfr(inout, h, w, b0, a1, a2, ff);
 }
 
+//-- Image --------------------------------------------------------------------
+
 /**
  *  @ingroup api_cpu
  *  @brief Extend an image to consider initial condition outside
@@ -313,7 +319,7 @@ void r( T *inout,
  *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
  *  @param[in] ic Initial condition (for outside access)
- *  @param[in] extp Extension (in pixels) to consider outside image
+ *  @param[in] extb Extension (in blocks) to consider outside image
  *  @tparam T Image value type
  */
 template< class T >
@@ -324,13 +330,15 @@ void extend_image( T *& ext_img,
                    const int& h,
                    const int& w,
                    const initcond& ic,
-                   const int& extp ) {
-    ext_h = h + 2*extp;
-    ext_w = w + 2*extp;
-    ext_img = new float[ ext_h * ext_w ];
-    for (int i = -extp; i < h+extp; ++i) {
-        for (int j = -extp; j < w+extp; ++j) {
-            ext_img[(i+extp)*ext_w+(j+extp)] = lookat( img, i, j, h, w, ic );
+                   const int& extb ) {
+    int bleft, btop, bright, bbottom;
+    calc_borders( bleft, btop, bright, bbottom, h, w, extb );
+    ext_w = w+bleft+bright;
+    ext_h = h+btop+bbottom;
+    ext_img = new float[ ext_w * ext_h ];
+    for (int i = -btop; i < h+bbottom; ++i) {
+        for (int j = -bleft; j < w+bright; ++j) {
+            ext_img[(i+btop)*ext_w+(j+bleft)] = lookat(img, i, j, h, w, ic);
         }
     }
 }
@@ -347,7 +355,7 @@ void extend_image( T *& ext_img,
  *  @param[in] w Width of the extracted image
  *  @param[in,out] ext_img The extended 2D image (to be deallocated)
  *  @param[in] ext_w Width of the extended image
- *  @param[in] extp Extension (in pixels) considered in extended image
+ *  @param[in] extb Extension (in blocks) considered in extended image
  *  @tparam T Image value type
  */
 template< class T >
@@ -356,14 +364,18 @@ void extract_image( T *img,
                     const int& w,
                     T *& ext_img,
                     const int& ext_w,
-                    const int& extp ) {
+                    const int& extb ) {
+    int bleft, btop, bright, bbottom;
+    calc_borders( bleft, btop, bright, bbottom, h, w, extb );
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
-            img[i*w+j] = ext_img[(i+extp)*ext_w+(j+extp)];
+            img[i*w+j] = ext_img[(i+btop)*ext_w+(j+bleft)];
         }
     }
     delete [] ext_img;
 }
+
+//-- SAT ----------------------------------------------------------------------
 
 /**
  *  @ingroup api_cpu
@@ -393,6 +405,8 @@ void sat_cpu( T *in,
  *  @see cpuground.h
  */
 
+//-- Gaussian -----------------------------------------------------------------
+
 /**
  *  @ingroup api_cpu
  *  @brief Gaussian blur an image in the CPU
@@ -407,7 +421,7 @@ void sat_cpu( T *in,
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] s Sigma support of Gaussian blur computation
  *  @param[in] ic Initial condition (for outside access) (default clamp)
- *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
  *  @tparam T Image value type
  */
 template< class T >
@@ -417,18 +431,18 @@ void gaussian_cpu( T **in,
                    const int& depth,
                    const T& s,
                    const initcond& ic = clamp,
-                   const int& extp = WS ) {
+                   const int& extb = 1 ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
-        if( extp > 0 ) {
+        if( extb > 0 ) {
             int ext_h, ext_w;
             float *ext_in;
-            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extp);
+            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extb);
             r(ext_in, ext_h, ext_w, b10, a11);
             r(ext_in, ext_h, ext_w, b20, a21, a22);
-            extract_image(in[c], h, w, ext_in, ext_w, extp);
+            extract_image(in[c], h, w, ext_in, ext_w, extb);
         } else {
             r(in[c], h, w, b10, a11);
             r(in[c], h, w, b20, a21, a22);
@@ -455,7 +469,7 @@ void gaussian_cpu( T **in,
  *  @param[in] w Width of the input image
  *  @param[in] s Sigma support of Gaussian blur computation
  *  @param[in] ic Initial condition (for outside access) (default clamp)
- *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
  *  @tparam T Image value type
  */
 template< class T >
@@ -464,17 +478,17 @@ void gaussian_cpu( T *in,
                    const int& w,
                    const T& s,
                    const initcond& ic = clamp,
-                   const int& extp = WS ) {
+                   const int& extb = 1 ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
-    if( extp > 0 ) {
+    if( extb > 0 ) {
         int ext_h, ext_w;
         float *ext_in;
-        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extp);
+        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extb);
         r(ext_in, ext_h, ext_w, b10, a11);
         r(ext_in, ext_h, ext_w, b20, a21, a22);
-        extract_image(in, h, w, ext_in, ext_w, extp);
+        extract_image(in, h, w, ext_in, ext_w, extb);
     } else {
         r(in, h, w, b10, a11);
         r(in, h, w, b20, a21, a22);
@@ -489,6 +503,8 @@ void gaussian_cpu( T *in,
  *  @see cpuground.h
  */
 
+//-- BSpline ------------------------------------------------------------------
+
 /**
  *  @ingroup api_cpu
  *  @brief Compute the Bicubic B-Spline interpolation of an image in the CPU
@@ -502,7 +518,7 @@ void gaussian_cpu( T *in,
  *  @param[in] w Width of the input image
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] ic Initial condition (for outside access) (default mirror)
- *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
  *  @tparam T Image value type
  */
 template< class T >
@@ -511,15 +527,15 @@ void bspline3i_cpu( T **in,
                     const int& w,
                     const int& depth,
                     const initcond& ic = mirror,
-                    const int& extp = WS ) {
+                    const int& extb = 1 ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
-        if( extp > 0 ) {
+        if( extb > 0 ) {
             int ext_h, ext_w;
             float *ext_in;
-            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extp);
+            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extb);
             r(ext_in, ext_h, ext_w, (T)1+alpha, alpha);
-            extract_image(in[c], h, w, ext_in, ext_w, extp);
+            extract_image(in[c], h, w, ext_in, ext_w, extb);
         } else {
             r(in[c], h, w, (T)1+alpha, alpha);
         }
@@ -535,7 +551,7 @@ void bspline3i_cpu( T **in,
  *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
  *  @param[in] ic Initial condition (for outside access) (default mirror)
- *  @param[in] extp Extension (in pixels) to consider outside image (default block-size)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
  *  @tparam T Image value type
  */
 template< class T >
@@ -543,14 +559,14 @@ void bspline3i_cpu( T *in,
                     const int& h,
                     const int& w,
                     const initcond& ic = mirror,
-                    const int& extp = WS ) {
+                    const int& extb = 1 ) {
     const T alpha = (T)2 - sqrt((T)3);
-    if( extp > 0 ) {
+    if( extb > 0 ) {
         int ext_h, ext_w;
         float *ext_in;
-        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extp);
+        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extb);
         r(ext_in, ext_h, ext_w, (T)1+alpha, alpha);
-        extract_image(in, h, w, ext_in, ext_w, extp);
+        extract_image(in, h, w, ext_in, ext_w, extb);
     } else {
         r(in, h, w, (T)1+alpha, alpha);
     }

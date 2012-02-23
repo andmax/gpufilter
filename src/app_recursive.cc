@@ -123,6 +123,8 @@ int main(int argc, char *argv[]) {
             gpufilter::gaussian_cpu(flat_in, in_h, in_w, depth, sigma);
         else if( strcmp(unit, "gpu") == 0 )
             gpufilter::gaussian_gpu(flat_in, in_h, in_w, depth, sigma);
+        else
+            printf("Nothing done: invalid unit!\n");
 
     } else if (strcmp(filter, "bspline3i") == 0) {
 
@@ -132,6 +134,8 @@ int main(int argc, char *argv[]) {
             gpufilter::bspline3i_cpu(flat_in, in_h, in_w, depth);
         else if( strcmp(unit, "gpu") == 0 )
             gpufilter::bspline3i_gpu(flat_in, in_h, in_w, depth);
+        else
+            printf("Nothing done: invalid unit!\n");
 
     } else {
 

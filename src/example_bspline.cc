@@ -12,9 +12,11 @@
 #include <iomanip>
 
 #include <timer.h>
-#include <cpuground.h>
-#include <gpufilter.h>
+
 #include <gpudefs.h>
+#include <gpufilter.h>
+
+#include <cpuground.h>
 
 // Check computation
 void check_reference( const float *ref,
@@ -38,9 +40,9 @@ void check_reference( const float *ref,
 // Main
 int main(int argc, char *argv[]) {
 
-    const int in_w = 1024, in_h = 1024;
+    const int in_w = 1025, in_h = 1025;
     const gpufilter::initcond ic = gpufilter::mirror;
-    const int extb = 1, extp = WS*extb;
+    const int extb = 1;
 
     std::cout << "[bspline] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
 
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     int ext_h, ext_w;
     float *ext_cpu;
-    gpufilter::extend_image( ext_cpu, ext_h, ext_w, in_cpu, in_h, in_w, ic, extp );
+    gpufilter::extend_image( ext_cpu, ext_h, ext_w, in_cpu, in_h, in_w, ic, extb );
 
     std::cout << "done!\n[bspline] Computing in the CPU ... " << std::flush;
 
@@ -87,7 +89,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[bspline] Extracting CPU image ... " << std::flush;
 
-    gpufilter::extract_image( in_cpu, in_h, in_w, ext_cpu, ext_w, extp );
+    gpufilter::extract_image( in_cpu, in_h, in_w, ext_cpu, ext_w, extb );
 
     std::cout << "done!\n[bspline] Checking GPU result with CPU reference values\n";
 

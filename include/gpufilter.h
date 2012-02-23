@@ -275,6 +275,8 @@ void weights2( const T1& s,
 
 //== EXTERNS ==================================================================
 
+//-- SAT ----------------------------------------------------------------------
+
 /**
  *  @ingroup api_gpu
  *  @brief Prepare for Algorithm SAT
@@ -317,49 +319,6 @@ void prepare_algSAT( dvector<float>& d_inout,
  *
  *  This is an example of how to use the prepare_algSAT() function and
  *  algSAT() function in the GPU.
- *
- *  @see gpufilter.h
- */
-
-/**
- *  @ingroup api_gpu
- *  @brief Compute Algorithm SAT
- *
- *  This function computes the summed-area table (SAT) of an input 2D
- *  image using algorithm SAT.
- *
- *  The algorithm SAT is discussed in depth in our paper (see
- *  [Nehab:2011] in alg5() function) where the following image
- *  illustrates the process:
- *
- *  @image html sat-stages.png "Illustration of Algorithm SAT"
- *  @image latex sat-stages.eps "Illustration of Algorithm SAT" width=\textwidth
- *
- *  Overlapped summed-area table computation according to algorithm
- *  SAT.  Stage S.1 reads the input (in gray) then computes and stores
- *  incomplete prologues \f$P_{m,n}(\bar{Y})\f$ (in red) and
- *  \f$P^T_{m,n}(\hat{V})\f$ (in blue).  Stage S.2 completes prologues
- *  \f$P_{m,n}(Y)\f$ and computes scalars
- *  \f$s\big(P_{m-1,n}(Y)\big)\f$ (in yellow).  Stage S.3 completes
- *  prologues \f$P^T_{m,n}(V)\f$. Finally, stage S.4 reads the input
- *  and completed prologues, then computes and stores the final
- *  summed-area table.
- *
- *  @note For performance purposes (in CUDA kernels implementation)
- *  this function works better in multiples of 32 in each dimension.
- *
- *  @param[in,out] inout The in/output 2D image to compute SAT
- *  @param[in] h Image height
- *  @param[in] w Image width
- */
-extern
-void algSAT( float *inout,
-             const int& h,
-             const int& w );
-/**
- *  @example example_sat2.cc
- *
- *  This is an example of how to use the algSAT() function in the GPU.
  *
  *  @see gpufilter.h
  */
@@ -420,6 +379,87 @@ void algSAT( dvector<float>& d_inout,
 
 /**
  *  @ingroup api_gpu
+ *  @brief Compute Algorithm SAT
+ *
+ *  This function computes the summed-area table (SAT) of an input 2D
+ *  image using algorithm SAT.
+ *
+ *  The algorithm SAT is discussed in depth in our paper (see
+ *  [Nehab:2011] in alg5() function) where the following image
+ *  illustrates the process:
+ *
+ *  @image html sat-stages.png "Illustration of Algorithm SAT"
+ *  @image latex sat-stages.eps "Illustration of Algorithm SAT" width=\textwidth
+ *
+ *  Overlapped summed-area table computation according to algorithm
+ *  SAT.  Stage S.1 reads the input (in gray) then computes and stores
+ *  incomplete prologues \f$P_{m,n}(\bar{Y})\f$ (in red) and
+ *  \f$P^T_{m,n}(\hat{V})\f$ (in blue).  Stage S.2 completes prologues
+ *  \f$P_{m,n}(Y)\f$ and computes scalars
+ *  \f$s\big(P_{m-1,n}(Y)\big)\f$ (in yellow).  Stage S.3 completes
+ *  prologues \f$P^T_{m,n}(V)\f$. Finally, stage S.4 reads the input
+ *  and completed prologues, then computes and stores the final
+ *  summed-area table.
+ *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function works better in multiples of 32 in each dimension.
+ *
+ *  @param[in,out] inout The in/output 2D image to compute SAT
+ *  @param[in] h Image height
+ *  @param[in] w Image width
+ */
+extern
+void algSAT( float *inout,
+             const int& h,
+             const int& w );
+/**
+ *  @example example_sat2.cc
+ *
+ *  This is an example of how to use the algSAT() function in the GPU.
+ *
+ *  @see gpufilter.h
+ */
+
+//-- Alg4 ---------------------------------------------------------------------
+
+
+extern
+void prepare_alg4( dvector<float>& d_out,
+                   dvector<float>& d_transp_out,
+                   int& transp_out_height,
+                   cudaArray *& a_in,
+                   dvector<float2>& d_transp_pybar,
+                   dvector<float2>& d_transp_ezhat,
+                   dvector<float2>& d_pubar,
+                   dvector<float2>& d_evhat,
+                   dim3& cg_img,
+                   const float *h_in,
+                   const int& h,
+                   const int& w,
+                   const float& b0,
+                   const float& a1,
+                   const float& a2,
+                   const initcond& ic = zero,
+                   const int& extb = 0 );
+
+
+
+extern
+void alg4( dvector<float>& d_out,
+           dvector<float>& d_transp_out,
+           int& transp_out_height,
+           const int& h,
+           const int& w,
+           const cudaArray *a_in,
+           dvector<float2>& d_transp_pybar,
+           dvector<float2>& d_transp_ezhat,
+           dvector<float2>& d_pubar,
+           dvector<float2>& d_evhat,
+           const dim3& cg_img );
+
+
+/**
+ *  @ingroup api_gpu
  *  @brief Compute Algorithm 4 (second-order)
  *
  *  This function computes second-order recursive filtering with given
@@ -433,20 +473,24 @@ void algSAT( dvector<float>& d_inout,
  *  this function only works with \f$64^2\f$ minimum image resolution,
  *  and only in multiples of 64 in each dimension.
  *
- *  @param[in,out] inout The in/output 2D image to compute recursive filtering
+ *  @param[in,out] h_inout The in/output 2D image to compute recursive filtering
  *  @param[in] h Image height
  *  @param[in] w Image width
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
+ *  @param[in] ic Initial condition (for outside access) (default zero)
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
  */
 extern
-void alg4( float *inout,
+void alg4( float *h_inout,
            const int& h,
            const int& w,
            const float& b0,
            const float& a1,
-           const float& a2 );
+           const float& a2,
+           const initcond& ic = zero,
+           const int& extb = 0 );
 /**
  *  @example example_r4.cc
  *
@@ -456,6 +500,8 @@ void alg4( float *inout,
  *
  *  @see gpufilter.h
  */
+
+//-- Alg5 ---------------------------------------------------------------------
 
 /**
  *  @ingroup api_gpu
@@ -509,6 +555,28 @@ void prepare_alg5( dvector<float>& d_out,
 
 /**
  *  @ingroup api_gpu
+ *  @overload
+ *  @brief Compute Algorithm 5 (first-order)
+ *
+ *  @param[out] d_out The output 2D image allocated in device memory
+ *  @param[in] a_in The input 2D image allocated in device memory as cudaArray
+ *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
+ *  @param[out] d_transp_ezhat The \f$E_{m,n}(\hat{Z})\f$ allocated in device memory
+ *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ allocated in device memory
+ *  @param[out] d_etvtilde The \f$E^T_{m,n}(\tilde{U})\f$ allocated in device memory
+ *  @param[in] cg_img Computation grid for algorithm 5
+ */
+extern
+void alg5( dvector<float>& d_out,
+           const cudaArray *a_in,
+           dvector<float>& d_transp_pybar,
+           dvector<float>& d_transp_ezhat,
+           dvector<float>& d_ptucheck,
+           dvector<float>& d_etvtilde,
+           const dim3& cg_img );
+
+/**
+ *  @ingroup api_gpu
  *  @brief Compute Algorithm 5 (first-order)
  *
  *  This function computes first-order recursive filtering with given
@@ -529,9 +597,6 @@ void prepare_alg5( dvector<float>& d_out,
   publisher = {ACM},
   address = {{N}ew {Y}ork, {NY}, {USA}}
 }   @endverbatim
- *
- *  @note For performance purposes (in CUDA kernels implementation)
- *  this function only works with multiples of 32 in each dimension.
  *
  *  @param[in,out] h_inout The in/output 2D image to compute recursive filtering in host memory
  *  @param[in] h Image height
@@ -559,32 +624,7 @@ void alg5( float *h_inout,
  *  @see gpufilter.h
  */
 
-/**
- *  @ingroup api_gpu
- *  @overload
- *  @brief Compute Algorithm 5 (first-order)
- *
- *  @note For performance purposes (in CUDA kernels implementation)
- *  this function only works with multiples of 32 in each dimension.
- *
- *  @param[out] d_out The output 2D image allocated in device memory
- *  @param[in] a_in The input 2D image allocated in device memory as cudaArray
- *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
- *  @param[out] d_transp_ezhat The \f$E_{m,n}(\hat{Z})\f$ allocated in device memory
- *  @param[out] d_ptucheck The \f$P^T_{m,n}(\check{U})\f$ allocated in device memory
- *  @param[out] d_etvtilde The \f$E^T_{m,n}(\tilde{U})\f$ allocated in device memory
- *  @param[in] cg_img Computation grid for algorithm 5
- *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
- */
-extern
-void alg5( dvector<float>& d_out,
-           const cudaArray *a_in,
-           dvector<float>& d_transp_pybar,
-           dvector<float>& d_transp_ezhat,
-           dvector<float>& d_ptucheck,
-           dvector<float>& d_etvtilde,
-           const dim3& cg_img,
-           const int& extb = 0 );
+//-- Gaussian -----------------------------------------------------------------
 
 /**
  *  @ingroup api_gpu
@@ -631,6 +671,8 @@ void gaussian_gpu( float *inout,
                    const float& s,
                    const initcond& ic = clamp,
                    const int& extb = 1 );
+
+//-- BSpline ------------------------------------------------------------------
 
 /**
  *  @ingroup api_gpu
