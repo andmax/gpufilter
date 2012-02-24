@@ -15,8 +15,8 @@
 
 // Print a matrix of values
 void print_matrix( const float *img,
-                   const int& h,
                    const int& w,
+                   const int& h,
                    const int& fw = 4 ) {
     for (int i = 0; i < h; ++i) {
         std::cout << std::setw(fw) << img[i*w];
@@ -31,26 +31,29 @@ int main(int argc, char *argv[]) {
 
     const int in_w = 8, in_h = 8;
 
-    std::cout << "[sat1] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
+    std::cout << "[sat1] Generating random input image (" << in_w << "x"
+              << in_h << ") ... " << std::flush;
 
-    float *in = new float[in_h*in_w];
+    float *in = new float[in_w*in_h];
 
     srand(time(0));
 
-    for (int i = 0; i < in_h*in_w; ++i)
+    for (int i = 0; i < in_w*in_h; ++i)
         in[i] = rand() % 8;
 
     std::cout << "done!\n";
 
-    print_matrix(in, in_h, in_w, 2);
+    print_matrix(in, in_w, in_h, 2);
 
-    std::cout << "[sat1] Computing summed-area table in the CPU ... " << std::flush;
+    std::cout << "[sat1] Computing summed-area table in the CPU ... "
+              << std::flush;
 
-    gpufilter::sat_cpu( in, in_h, in_w );
+    gpufilter::sat_cpu( in, in_w, in_h );
 
-    std::cout << "done!\n[sat1] Output matrix " << in_w << " x " << in_h << " :\n";
+    std::cout << "done!\n[sat1] Output matrix " << in_w << " x "
+              << in_h << " :\n";
 
-    print_matrix(in, in_h, in_w, 4);
+    print_matrix(in, in_w, in_h, 4);
 
     delete [] in;
 

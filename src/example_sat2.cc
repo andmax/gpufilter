@@ -40,45 +40,50 @@ int main(int argc, char *argv[]) {
 
     const int in_w = 1024, in_h = 1024;
 
-    std::cout << "[sat2] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
+    std::cout << "[sat2] Generating random input image (" << in_w << "x"
+              << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[in_h*in_w];
-    float *in_gpu = new float[in_h*in_w];
+    float *in_cpu = new float[in_w*in_h];
+    float *in_gpu = new float[in_w*in_h];
 
     srand(time(0));
 
-    for (int i = 0; i < in_h*in_w; ++i)
+    for (int i = 0; i < in_w*in_h; ++i)
         in_gpu[i] = in_cpu[i] = rand() % 256;
 
-    std::cout << "done!\n[sat2] Computing summed-area table in the CPU ... " << std::flush;
+    std::cout << "done!\n[sat2] Computing summed-area table in the CPU ... "
+              << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::sat_cpu( in_cpu, in_h, in_w );
+        gpufilter::sat_cpu( in_cpu, in_w, in_h );
 
-        std::cout << "done!\n[sat2] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[sat2] CPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[sat2] Computing summed-area table in the GPU ... " << std::flush;
+    std::cout << "[sat2] Computing summed-area table in the GPU ... "
+              << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::algSAT( in_gpu, in_h, in_w );
+        gpufilter::algSAT( in_gpu, in_w, in_h );
 
-        std::cout << "done!\n[sat2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[sat2] GPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[sat2] GPU Timing includes memory transfers from and to the CPU\n";
-
-    std::cout << "[sat2] Checking GPU result with CPU reference values\n";
+    std::cout << "[sat2] GPU Timing includes memory transfers from "
+              << "and to the CPU\n"
+              << "[sat2] Checking GPU result against CPU reference\n";
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
+    check_reference( in_cpu, in_gpu, in_w*in_h, me, mre );
 
     std::cout << std::resetiosflags( std::ios_base::floatfield );
 

@@ -12,9 +12,11 @@
 
 #include <cuda_runtime.h>
 
+#include <defs.h>
+#include <extension.h>
+
 //== DEFINITIONS ===============================================================
 
-#define WS 32 // Warp size (defines b x b block size where b = WS)
 #define HWS 16 // Half Warp Size
 #define DW 8 // Default number of warps (computational block height)
 #define CHW 7 // Carry-heavy number of warps (computational block height for some kernels)
@@ -32,76 +34,78 @@
 
 namespace gpufilter {
 
+//== CLASS DEFINITION =========================================================
+
+/**
+ *  @struct _alg_setup gpudefs.h
+ *  @ingroup api_gpu
+ *  @brief Algorithm setup to configure the GPU to run
+ */
+typedef struct _alg_setup {
+    int width, ///< Image width
+        height, ///< Image height
+        m_size, ///< Number of column-blocks
+        n_size, ///< Number of row-blocks
+        last_m, ///< Last valid column-block
+        last_n, ///< Last valid row-block
+        border, ///< Border extension to consider outside image
+        carry_height, ///< Auxiliary carry-image height
+        carry_width; ///< Auxiliary carry-image width
+    float inv_width, ///< Inverse of image width
+        inv_height; ///< Inverse of image height
+} alg_setup; ///< @see _alg_setup
+
 //== PROTOTYPES ===============================================================
 
 /**
  *  @ingroup api_gpu
- *  @brief Calculate image borders
+ *  @brief Calculate algorithm setup values
  *
- *  Given the image size and an extension to consider calculates the
- *  four-directional border pixels (left, top, right and bottom)
- *  needed by algorithm 4 and 5.
+ *  Given the dimensions of the 2D work image, calculate the device
+ *  constant memory size-related values.  It returns the setup to run
+ *  any GPU algorithm.
  *
- *  @param[out] left Extension (in pixels) in the left border of the image
- *  @param[out] top Extension (in pixels) in the top border of the image
- *  @param[out] right Extension (in pixels) in the right border of the image
- *  @param[out] bottom Extension (in pixels) in the bottom border of the image
- *  @param[in] h Height of the image
- *  @param[in] w Width of the image
- *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
- */
-extern
-void calc_borders( int& left,
-                   int& top,
-                   int& right,
-                   int& bottom,
-                   const int& h,
-                   const int& w,
-                   const int& extb );
-
-/**
- *  @ingroup api_gpu
- *  @brief Upload device constants sizes
- *
- *  Given the dimensions of the 2D work image, upload to the device
- *  constant memory size-related values.  It returns the computational
- *  grid domain.
- *
- *  @param[out] g Computation grid dimension considering a b x b block size where b = 32
- *  @param[in] h Height of the work image
+ *  @param[out] algs Algorithm setup to be uploaded to the GPU
  *  @param[in] w Width of the work image
+ *  @param[in] h Height of the work image
  */
 extern
-void up_constants_sizes( dim3& g,
-                         const int& h,
-                         const int& w );
-
+void calc_alg_setup( alg_setup& algs,
+                     const int& w,
+                     const int& h );
 
 /**
  *  @ingroup api_gpu
- *  @overload void up_constants_sizes( dim3& g, int& ext_h, int& ext_w, const int& h, const int& w, const int& extb )
+ *  @overload
  *  @brief Upload device constants sizes
  *
- *  Given the dimensions of the 2D work image, upload to the device
+ *  Given the dimensions of the 2D work image, calculate the device
  *  constant memory size-related values.  The work image is the
- *  original image plus extension blocks to compute filtering
- *  out-of-bounds.  It returns the extended image size and
- *  computational grid domain.
+ *  original image plus extension blocks to run algorithms
+ *  out-of-bounds.  It returns the setup to run any GPU algorithm.
  *
- *  @param[out] g Computation grid dimension considering a b x b block size where b = 32
- *  @param[out] ext_h Height of the extended image
- *  @param[out] ext_w Width of the extended image
- *  @param[in] h Height of the work image
+ *  @param[out] algs Algorithm setup to be uploaded to the GPU
  *  @param[in] w Width of the work image
- *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
+ *  @param[in] h Height of the work image
+ *  @param[in] extb Extension (in blocks) to consider outside image
  */
 extern
-void up_constants_sizes( dim3& g,
-                         int& ext_h,
-                         int& ext_w,
-                         const int& h,
-                         const int& w,
-                         const int& extb = 0 );
+void calc_alg_setup( alg_setup& algs,
+                     const int& w,
+                     const int& h,
+                     const int& extb );
+
+/**
+ *  @ingroup api_gpu
+ *  @brief Upload algorithm setup values
+ *
+ *  Given the algorithm setup, upload the values to the device
+ *  constant memory.
+ *
+ *  @param[in] algs Algorithm setup to upload to the GPU
+ */
+extern
+void up_alg_setup( const alg_setup& algs );
 
 /**
  *  @ingroup api_gpu

@@ -13,7 +13,7 @@
 
 #include <cmath>
 
-#include <gpudefs.h>
+#include <defs.h>
 #include <extension.h>
 
 //== NAMESPACES ===============================================================
@@ -21,6 +21,78 @@
 namespace gpufilter {
 
 //== IMPLEMENTATION ===========================================================
+
+//-- Image --------------------------------------------------------------------
+
+/**
+ *  @ingroup api_cpu
+ *  @brief Extend an image to consider initial condition outside
+ *
+ *  Given an input 2D image extend it including a given initial
+ *  condition for outside access.
+ *
+ *  @param[out] ext_img The extended 2D image (to be allocated)
+ *  @param[out] ext_w Width of the extended image
+ *  @param[out] ext_h Height of the extended image
+ *  @param[in] img The 2D image to extend
+ *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
+ *  @param[in] extb Extension (in blocks) to consider outside image
+ *  @param[in] ic Initial condition (for outside access)
+ *  @tparam T Image value type
+ */
+template< class T >
+void extend_image( T *& ext_img,
+                   int& ext_w,
+                   int& ext_h,
+                   const T *img,
+                   const int& w,
+                   const int& h,
+                   const int& extb,
+                   const initcond& ic ) {
+    int bleft, btop, bright, bbottom;
+    calc_borders( bleft, btop, bright, bbottom, w, h, extb );
+    ext_w = w+bleft+bright;
+    ext_h = h+btop+bbottom;
+    ext_img = new float[ ext_w * ext_h ];
+    for (int i = -btop; i < h+bbottom; ++i) {
+        for (int j = -bleft; j < w+bright; ++j) {
+            ext_img[(i+btop)*ext_w+(j+bleft)] = lookat(img, i, j, h, w, ic);
+        }
+    }
+}
+
+/**
+ *  @ingroup api_cpu
+ *  @brief Extract an image from an extended image
+ *
+ *  Given an input 2D extended image (with initial conditions) extract
+ *  the original image in the middle.
+ *
+ *  @param[out] img The 2D image to extract
+ *  @param[in] w Width of the extracted image
+ *  @param[in] h Height of the extracted image
+ *  @param[in,out] ext_img The extended 2D image (to be deallocated)
+ *  @param[in] ext_w Width of the extended image
+ *  @param[in] extb Extension (in blocks) considered in extended image
+ *  @tparam T Image value type
+ */
+template< class T >
+void extract_image( T *img,
+                    const int& w,
+                    const int& h,
+                    T *& ext_img,
+                    const int& ext_w,
+                    const int& extb ) {
+    int bleft, btop, bright, bbottom;
+    calc_borders( bleft, btop, bright, bbottom, w, h, extb );
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            img[i*w+j] = ext_img[(i+btop)*ext_w+(j+bleft)];
+        }
+    }
+    delete [] ext_img;
+}
 
 //-- First-order Filter -------------------------------------------------------
 
@@ -37,8 +109,8 @@ namespace gpufilter {
  *  single-core CPU fashion.
  *
  *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
@@ -46,8 +118,8 @@ namespace gpufilter {
  */
 template< class T >
 void rcfr( T *inout,
-           const int& h,
            const int& w,
+           const int& h,
            const T& b0,
            const T& a1,
            const bool& ff = false ) {
@@ -62,7 +134,7 @@ void rcfr( T *inout,
             p = c*b0 - p*a1;
             inout[i*w+j] = p;
         }
-        if( ff ) continue;
+        if (ff) continue;
         p = (T)0;
         for (i--; i >= 0; i--) {
             c = inout[i*w+j];
@@ -85,8 +157,8 @@ void rcfr( T *inout,
  *  single-core CPU fashion.
  *
  *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
@@ -94,8 +166,8 @@ void rcfr( T *inout,
  */
 template< class T >
 void rrfr( T *inout,
-           const int& h,
            const int& w,
+           const int& h,
            const T& b0,
            const T& a1,
            const bool& ff = false ) {
@@ -110,7 +182,7 @@ void rrfr( T *inout,
             p = c*b0 - p*a1;
             inout[j] = p;
         }
-        if( ff ) continue;
+        if (ff) continue;
         p = (T)0;
         for (j--; j >= 0; j--) {
             c = inout[j];
@@ -140,22 +212,35 @@ void rrfr( T *inout,
  *  a naïve single-core CPU fashion.
  *
  *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
+ *  @param[in] ic Initial condition (for outside access) (default zero)
  *  @tparam T Image value type
  */
 template< class T >
 void r( T *inout,
-        const int& h,
         const int& w,
+        const int& h,
         const T& b0,
         const T& a1,
-        const bool& ff = false ) {
-    rcfr(inout, h, w, b0, a1, ff);
-    rrfr(inout, h, w, b0, a1, ff);
+        const bool& ff = false,
+        const int& extb = 0,
+        const initcond& ic = zero ) {
+    if (extend(w, h, extb)) {
+        int ext_w, ext_h;
+        float *ext_inout;
+        extend_image(ext_inout, ext_w, ext_h, inout, w, h, extb, ic);
+        rcfr(ext_inout, ext_w, ext_h, b0, a1, ff);
+        rrfr(ext_inout, ext_w, ext_h, b0, a1, ff);
+        extract_image(inout, w, h, ext_inout, ext_w, extb);
+    } else {
+        rcfr(inout, w, h, b0, a1, ff);
+        rrfr(inout, w, h, b0, a1, ff);
+    }
 }
 
 //-- Second-order Filter ------------------------------------------------------
@@ -173,8 +258,8 @@ void r( T *inout,
  *  a naïve single-core CPU fashion.
  *
  *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
@@ -183,8 +268,8 @@ void r( T *inout,
  */
 template< class T >
 void rcfr( T *inout,
-           const int& h,
            const int& w,
+           const int& h,
            const T& b0,
            const T& a1,
            const T& a2,
@@ -203,7 +288,7 @@ void rcfr( T *inout,
             p = c;
             inout[i*w+j] = p;
         }
-        if( ff ) continue;
+        if (ff) continue;
         pp = p = (T)0;
         for (i--; i >= 0; i--) {
             c = inout[i*w+j];
@@ -228,8 +313,8 @@ void rcfr( T *inout,
  *  a naïve single-core CPU fashion.
  *
  *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
@@ -238,8 +323,8 @@ void rcfr( T *inout,
  */
 template< class T >
 void rrfr( T *inout,
-           const int& h,
            const int& w,
+           const int& h,
            const T& b0,
            const T& a1,
            const T& a2,
@@ -258,7 +343,7 @@ void rrfr( T *inout,
             p = c;
             inout[j] = p;
         }
-        if( ff ) continue;
+        if (ff) continue;
         pp = p = (T)0;
         for (j--; j >= 0; j--) {
             c = inout[j];
@@ -283,96 +368,37 @@ void rrfr( T *inout,
  *  sequentially in a naïve single-core CPU fashion.
  *
  *  @param[in,out] inout The 2D image to compute recursive filtering
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] b0 Feedforward coefficient
  *  @param[in] a1 Feedback first-order coefficient
  *  @param[in] a2 Feedback second-order coefficient
  *  @param[in] ff Forward-only (ignore anticausal filter) flag
+ *  @param[in] extb Extension (in blocks) to consider outside image (default 0)
+ *  @param[in] ic Initial condition (for outside access) (default zero)
  *  @tparam T Image value type
  */
 template< class T >
 void r( T *inout,
-        const int& h,
         const int& w,
+        const int& h,
         const T& b0,
         const T& a1,
         const T& a2,
-        const bool& ff = false ) {
-    rcfr(inout, h, w, b0, a1, a2, ff);
-    rrfr(inout, h, w, b0, a1, a2, ff);
-}
-
-//-- Image --------------------------------------------------------------------
-
-/**
- *  @ingroup api_cpu
- *  @brief Extend an image to consider initial condition outside
- *
- *  Given an input 2D image extend it including a given initial
- *  condition for outside access.
- *
- *  @param[out] ext_img The extended 2D image (to be allocated)
- *  @param[out] ext_h Height of the extended image
- *  @param[out] ext_w Width of the extended image
- *  @param[in] img The 2D image to extend
- *  @param[in] h Height of the input image
- *  @param[in] w Width of the input image
- *  @param[in] ic Initial condition (for outside access)
- *  @param[in] extb Extension (in blocks) to consider outside image
- *  @tparam T Image value type
- */
-template< class T >
-void extend_image( T *& ext_img,
-                   int& ext_h,
-                   int& ext_w,
-                   const T *img,
-                   const int& h,
-                   const int& w,
-                   const initcond& ic,
-                   const int& extb ) {
-    int bleft, btop, bright, bbottom;
-    calc_borders( bleft, btop, bright, bbottom, h, w, extb );
-    ext_w = w+bleft+bright;
-    ext_h = h+btop+bbottom;
-    ext_img = new float[ ext_w * ext_h ];
-    for (int i = -btop; i < h+bbottom; ++i) {
-        for (int j = -bleft; j < w+bright; ++j) {
-            ext_img[(i+btop)*ext_w+(j+bleft)] = lookat(img, i, j, h, w, ic);
-        }
+        const bool& ff = false,
+        const int& extb = 0,
+        const initcond& ic = zero ) {
+    if (extend(w, h, extb)) {
+        int ext_w, ext_h;
+        float *ext_inout;
+        extend_image(ext_inout, ext_w, ext_h, inout, w, h, extb, ic);
+        rcfr(ext_inout, ext_w, ext_h, b0, a1, a2, ff);
+        rrfr(ext_inout, ext_w, ext_h, b0, a1, a2, ff);
+        extract_image(inout, w, h, ext_inout, ext_w, extb);
+    } else {
+        rcfr(inout, w, h, b0, a1, a2, ff);
+        rrfr(inout, w, h, b0, a1, a2, ff);
     }
-}
-
-/**
- *  @ingroup api_cpu
- *  @brief Extract an image from an extended image
- *
- *  Given an input 2D extended image (with initial conditions) extract
- *  the original image in the middle.
- *
- *  @param[out] img The 2D image to extract
- *  @param[in] h Height of the extracted image
- *  @param[in] w Width of the extracted image
- *  @param[in,out] ext_img The extended 2D image (to be deallocated)
- *  @param[in] ext_w Width of the extended image
- *  @param[in] extb Extension (in blocks) considered in extended image
- *  @tparam T Image value type
- */
-template< class T >
-void extract_image( T *img,
-                    const int& h,
-                    const int& w,
-                    T *& ext_img,
-                    const int& ext_w,
-                    const int& extb ) {
-    int bleft, btop, bright, bbottom;
-    calc_borders( bleft, btop, bright, bbottom, h, w, extb );
-    for (int i = 0; i < h; ++i) {
-        for (int j = 0; j < w; ++j) {
-            img[i*w+j] = ext_img[(i+btop)*ext_w+(j+bleft)];
-        }
-    }
-    delete [] ext_img;
 }
 
 //-- SAT ----------------------------------------------------------------------
@@ -386,15 +412,15 @@ void extract_image( T *img,
  *  initial conditions.
  *
  *  @param[in,out] in The 2D image to compute the SAT
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @tparam T Image value type
  */
 template< class T >
 void sat_cpu( T *in,
-              const int& h,
-              const int& w ) {
-    r(in, h, w, (T)1, (T)-1, true);
+              const int& w,
+              const int& h ) {
+    r(in, w, h, (T)1, (T)-1, true);
 }
 /**
  *  @example example_sat1.cc
@@ -416,37 +442,28 @@ void sat_cpu( T *in,
  *  initial conditions.
  *
  *  @param[in,out] in The 2D image to compute Gaussian blur
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] depth Depth of the input image (color channels)
  *  @param[in] s Sigma support of Gaussian blur computation
- *  @param[in] ic Initial condition (for outside access) (default clamp)
  *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
+ *  @param[in] ic Initial condition (for outside access) (default clamp)
  *  @tparam T Image value type
  */
 template< class T >
 void gaussian_cpu( T **in,
-                   const int& h,
                    const int& w,
+                   const int& h,
                    const int& depth,
                    const T& s,
-                   const initcond& ic = clamp,
-                   const int& extb = 1 ) {
+                   const int& extb = 1,
+                   const initcond& ic = clamp ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
     for (int c = 0; c < depth; c++) {
-        if( extb > 0 ) {
-            int ext_h, ext_w;
-            float *ext_in;
-            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extb);
-            r(ext_in, ext_h, ext_w, b10, a11);
-            r(ext_in, ext_h, ext_w, b20, a21, a22);
-            extract_image(in[c], h, w, ext_in, ext_w, extb);
-        } else {
-            r(in[c], h, w, b10, a11);
-            r(in[c], h, w, b20, a21, a22);
-        }
+        r(in[c], w, h, b10, a11, false, extb, ic);
+        r(in[c], w, h, b20, a21, a22, false, extb, ic);
     }
 }
 /**
@@ -465,34 +482,25 @@ void gaussian_cpu( T **in,
  *  @brief Gaussian blur a single-channel image in the CPU
  *
  *  @param[in,out] in The single-channel 2D image to compute Gaussian blur
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] s Sigma support of Gaussian blur computation
- *  @param[in] ic Initial condition (for outside access) (default clamp)
  *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
+ *  @param[in] ic Initial condition (for outside access) (default clamp)
  *  @tparam T Image value type
  */
 template< class T >
 void gaussian_cpu( T *in,
-                   const int& h,
                    const int& w,
+                   const int& h,
                    const T& s,
-                   const initcond& ic = clamp,
-                   const int& extb = 1 ) {
+                   const int& extb = 1,
+                   const initcond& ic = clamp ) {
     T b10, a11, b20, a21, a22;
     weights1(s, b10, a11);
     weights2(s, b20, a21, a22);
-    if( extb > 0 ) {
-        int ext_h, ext_w;
-        float *ext_in;
-        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extb);
-        r(ext_in, ext_h, ext_w, b10, a11);
-        r(ext_in, ext_h, ext_w, b20, a21, a22);
-        extract_image(in, h, w, ext_in, ext_w, extb);
-    } else {
-        r(in, h, w, b10, a11);
-        r(in, h, w, b20, a21, a22);
-    }
+    r(in, w, h, b10, a11, false, extb, ic);
+    r(in, w, h, b20, a21, a22, false, extb, ic);
 }
 /**
  *  @example example_gauss.cc
@@ -514,31 +522,23 @@ void gaussian_cpu( T *in,
  *  clamp-to-border initial conditions.
  *
  *  @param[in,out] in The 2D image to compute the Bicubic B-Spline interpolation
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
+ *  @param[in] h Height of the input image
  *  @param[in] depth Depth of the input image (color channels)
- *  @param[in] ic Initial condition (for outside access) (default mirror)
  *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
+ *  @param[in] ic Initial condition (for outside access) (default mirror)
  *  @tparam T Image value type
  */
 template< class T >
 void bspline3i_cpu( T **in,
-                    const int& h,
                     const int& w,
+                    const int& h,
                     const int& depth,
-                    const initcond& ic = mirror,
-                    const int& extb = 1 ) {
+                    const int& extb = 1,
+                    const initcond& ic = mirror ) {
     const T alpha = (T)2 - sqrt((T)3);
     for (int c = 0; c < depth; c++) {
-        if( extb > 0 ) {
-            int ext_h, ext_w;
-            float *ext_in;
-            extend_image(ext_in, ext_h, ext_w, in[c], h, w, ic, extb);
-            r(ext_in, ext_h, ext_w, (T)1+alpha, alpha);
-            extract_image(in[c], h, w, ext_in, ext_w, extb);
-        } else {
-            r(in[c], h, w, (T)1+alpha, alpha);
-        }
+        r(in[c], w, h, (T)1+alpha, alpha, false, extb, ic);
     }
 }
 
@@ -548,28 +548,20 @@ void bspline3i_cpu( T **in,
  *  @brief Compute the Bicubic B-Spline interpolation of a single-channel image in the CPU
  *
  *  @param[in,out] in The single-channel 2D image to compute the Bicubic B-Spline interpolation
- *  @param[in] h Height of the input image
  *  @param[in] w Width of the input image
- *  @param[in] ic Initial condition (for outside access) (default mirror)
+ *  @param[in] h Height of the input image
  *  @param[in] extb Extension (in blocks) to consider outside image (default 1)
+ *  @param[in] ic Initial condition (for outside access) (default mirror)
  *  @tparam T Image value type
  */
 template< class T >
 void bspline3i_cpu( T *in,
-                    const int& h,
                     const int& w,
-                    const initcond& ic = mirror,
-                    const int& extb = 1 ) {
+                    const int& h,
+                    const int& extb = 1,
+                    const initcond& ic = mirror ) {
     const T alpha = (T)2 - sqrt((T)3);
-    if( extb > 0 ) {
-        int ext_h, ext_w;
-        float *ext_in;
-        extend_image(ext_in, ext_h, ext_w, in, h, w, ic, extb);
-        r(ext_in, ext_h, ext_w, (T)1+alpha, alpha);
-        extract_image(in, h, w, ext_in, ext_w, extb);
-    } else {
-        r(in, h, w, (T)1+alpha, alpha);
-    }
+    r(in, w, h, (T)1+alpha, alpha, false, extb, ic);
 }
 /**
  *  @example example_bspline.cc

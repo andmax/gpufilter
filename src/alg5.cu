@@ -53,7 +53,7 @@ void alg5_stage1( float *g_transp_pybar,
 
     int i;
 #pragma unroll
-    for(i=0; i<WS-(WS%DW); i+=DW)
+    for (i=0; i<WS-(WS%DW); i+=DW)
     {
         **bdata = tex2D(t_in, tu, tv);
         bdata += DW;
@@ -64,7 +64,7 @@ void alg5_stage1( float *g_transp_pybar,
         tv += DW*c_inv_height;
     }
 
-    if(ty < WS%DW)
+    if (ty < WS%DW)
     {
         **bdata = tex2D(t_in, tu, tv);
         **bdata2 = tex2D(t_in, tu+WS*c_inv_width, tv);
@@ -82,12 +82,12 @@ void alg5_stage1( float *g_transp_pybar,
 
     __syncthreads();
 
-    if(m >= c_m_size)
+    if (m >= c_m_size)
         return;
 
     float prev;
 
-    if(ty < 2)
+    if (ty < 2)
     {
         { // scan rows
             float *bdata = s_block[tx+ty*WS];
@@ -96,7 +96,7 @@ void alg5_stage1( float *g_transp_pybar,
             prev = *bdata++;
 
 #pragma unroll
-            for(int j=1; j<WS; ++j, ++bdata)
+            for (int j=1; j<WS; ++j, ++bdata)
                 prev = *bdata -= prev*c_a1;
 
             *g_transp_pybar = prev*c_b0;
@@ -106,7 +106,7 @@ void alg5_stage1( float *g_transp_pybar,
             --bdata;
 
 #pragma unroll
-            for(int j=WS-2; j>=0; --j, --bdata)
+            for (int j=WS-2; j>=0; --j, --bdata)
                 prev = *bdata -= prev*c_a1;
 
             *g_transp_ezhat = prev*(c_b0*c_b0);
@@ -120,19 +120,19 @@ void alg5_stage1( float *g_transp_pybar,
             prev = **bdata++;
 
 #pragma unroll
-            for(int i=1; i<WS; ++i, ++bdata)
+            for (int i=1; i<WS; ++i, ++bdata)
                 prev = **bdata -= prev*c_a1;
 
             *g_ptucheck = prev*c_b0*c_b0*c_b0;
 
             // calculate etvtilde, scan bottom -> up
-            if(n > 0)
+            if (n > 0)
             {
                 prev = **--bdata;
                 --bdata;
 
 #pragma unroll
-                for(int i=WS-2; i>=0; --i, --bdata)
+                for (int i=WS-2; i>=0; --i, --bdata)
                     prev = **bdata - prev*c_a1;
 
                 *g_etvtilde = prev*c_b0*c_b0*c_b0*c_b0;
@@ -153,7 +153,7 @@ void alg5_stage2_3( float *g_transp_pybar,
     float *bdata = &s_transp_block[ty][tx];
 
     // P(ybar) -> P(y) processing --------------------------------------
-    if(c_m_size<=1)
+    if (c_m_size<=1)
         return;
 
     float *transp_pybar = g_transp_pybar + ty*c_carry_height + n*WS+tx;
@@ -167,7 +167,7 @@ void alg5_stage2_3( float *g_transp_pybar,
 
     __syncthreads();
 
-    if(ty == 0)
+    if (ty == 0)
     {
         float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 
@@ -175,34 +175,34 @@ void alg5_stage2_3( float *g_transp_pybar,
         py = **bdata++;
 
 #pragma unroll
-        for(int m=1; m<blockDim.y; ++m, ++bdata)
+        for (int m=1; m<blockDim.y; ++m, ++bdata)
             **bdata = py = **bdata + c_AbF*py;
     }
 
     __syncthreads();
 
     // write P(y)
-    if(ty > 0) // first one doesn't need fixing
+    if (ty > 0) // first one doesn't need fixing
         *transp_pybar = *bdata;
 
     transp_pybar += c_carry_height*blockDim.y;
 
     // middle column-blocks
     int m = blockDim.y;
-    if(m == DW)
+    if (m == DW)
     {
         int mmax = c_m_size-(c_m_size%DW)-1;
-        for(; m<mmax; m+=DW)
+        for (; m<mmax; m+=DW)
         {
             *bdata = *transp_pybar;
 
             __syncthreads();
 
-            if(ty == 0)
+            if (ty == 0)
             {
                 float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 #pragma unroll
-                for(int dm=0; dm<DW; ++dm, ++bdata)
+                for (int dm=0; dm<DW; ++dm, ++bdata)
                     **bdata = py = **bdata + c_AbF*py;
             }
 
@@ -214,27 +214,27 @@ void alg5_stage2_3( float *g_transp_pybar,
     }
 
     // remaining column-blocks
-    if(m < c_m_size-1)
+    if (m < c_m_size-1)
     {
-        if(m+ty < c_m_size-1)
+        if (m+ty < c_m_size-1)
             *bdata = *transp_pybar;
 
         int remaining = c_m_size-1 - m;
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 #pragma unroll
-            for(int dm=0; dm<remaining; ++dm, ++bdata)
+            for (int dm=0; dm<remaining; ++dm, ++bdata)
                 **bdata = py = **bdata + c_AbF*py;
 
         }
 
         __syncthreads();
 
-        if(m+ty < c_m_size-1)
+        if (m+ty < c_m_size-1)
             *transp_pybar = *bdata;
     }
 
@@ -256,17 +256,17 @@ void alg5_stage2_3( float *g_transp_pybar,
     {
         *bdata = *transp_ezhat;
 
-        if(m-ty > 0)
+        if (m-ty > 0)
             *bdata += *transp_pm1y*c_HARB_AFP;
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
             ez = **bdata++;
 
-            for(int dm=1; dm<blockDim.y; ++dm, ++bdata)
+            for (int dm=1; dm<blockDim.y; ++dm, ++bdata)
                 **bdata = ez = **bdata + c_AbR*ez;
         }
 
@@ -280,25 +280,25 @@ void alg5_stage2_3( float *g_transp_pybar,
 
     // middle column-blocks
     m = c_m_size-1 - blockDim.y;
-    if(blockDim.y == DW)
+    if (blockDim.y == DW)
     {
         int mmin = c_m_size%DW;
-        for(; m>=mmin; m-=DW)
+        for (; m>=mmin; m-=DW)
         {
-            if(m > 0)
+            if (m > 0)
             {
                 *bdata = *transp_ezhat;
 
-                if(m-ty > 0)
+                if (m-ty > 0)
                     *bdata += *transp_pm1y*c_HARB_AFP;
 
                 __syncthreads();
 
-                if(ty == 0)
+                if (ty == 0)
                 {
                     float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
 #pragma unroll
-                    for(int dm=0; dm<DW; ++dm, ++bdata)
+                    for (int dm=0; dm<DW; ++dm, ++bdata)
                         **bdata = ez = **bdata + c_AbR*ez;
                 }
 
@@ -313,32 +313,32 @@ void alg5_stage2_3( float *g_transp_pybar,
     }
 
     // remaining column-blocks (except first column-block, it isn't needed)
-    if(m > 0)
+    if (m > 0)
     {
-        if(m-ty > 0)
+        if (m-ty > 0)
         {
             *bdata = *transp_ezhat;
         
-            if(m-ty > 0)
+            if (m-ty > 0)
                 *bdata += *transp_pm1y*c_HARB_AFP;
         }
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             int remaining = m;
 
             float (*bdata)[WS] = (float (*)[WS]) &s_transp_block[0][tx];
             // (24): P_m(y) = P_m(ybar) + A^b_F * P_{m-1}(y)
 #pragma unroll
-            for(int dm=0; dm<remaining; ++dm, ++bdata)
+            for (int dm=0; dm<remaining; ++dm, ++bdata)
                 **bdata = ez = **bdata + c_AbR*ez;
         }
 
         __syncthreads();
 
-        if(m-ty > 0)
+        if (m-ty > 0)
             *transp_ezhat = *bdata;
     }
 }
@@ -362,7 +362,7 @@ void alg5_stage4_5( float *g_ptucheck,
 	volatile float (*block_RD)[WS/2+WS+1] = 
             (float (*)[WS/2+WS+1]) &s_block_RD_raw[0][WS/2];
 
-    if(ty < CHW)
+    if (ty < CHW)
         s_block_RD_raw[ty][tx] = 0;
 
 #define CALC_DOT(RES, V1, V2, last) \
@@ -385,18 +385,18 @@ void alg5_stage4_5( float *g_ptucheck,
 
     float ptu;
 
-    if(ty < c_n_size-1)
+    if (ty < c_n_size-1)
     {
         // read P(ucheck)
         *bdata = *ptucheck;
 
-        if(m < c_m_size-1)
+        if (m < c_m_size-1)
         {
             CALC_DOT(dot, *transp_em1z, c_TAFB[tx], WS-1);
             *bdata += dot*c_ARE[tx];
         }
 
-        if(m > 0)
+        if (m > 0)
         {
             CALC_DOT(dot, *transp_pm1y, c_TAFB[tx], WS-1);
             *bdata += dot*c_ARB_AFP_T[tx];
@@ -407,14 +407,14 @@ void alg5_stage4_5( float *g_ptucheck,
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             float (*bdata2)[WS] = (float (*)[WS]) bdata;
 
             ptu = **bdata2++;
 
 #pragma unroll
-            for(int n=1; n<blockDim.y; ++n, ++bdata2)
+            for (int n=1; n<blockDim.y; ++n, ++bdata2)
                 **bdata2 = ptu = **bdata2 + c_AbF*ptu;
         }
 
@@ -428,24 +428,24 @@ void alg5_stage4_5( float *g_ptucheck,
 
     // middle row-blocks
     int n = blockDim.y;
-    if(n == CHW)
+    if (n == CHW)
     {
         int nmax = c_n_size-(c_n_size%CHW);
 
-        for(; n<nmax; n+=CHW)
+        for (; n<nmax; n+=CHW)
         {
-            if(n < c_n_size-1)
+            if (n < c_n_size-1)
             {
                 *bdata = *ptucheck;
 
-                if(m < c_m_size-1)
+                if (m < c_m_size-1)
                 {
                     CALC_DOT(dot, *transp_em1z, c_TAFB[tx], WS-1);
                     *bdata += dot*c_ARE[tx];
 
                 }
 
-                if(m > 0)
+                if (m > 0)
                 {
                     CALC_DOT(dot, *transp_pm1y, c_TAFB[tx], WS-1);
                     *bdata += dot*c_ARB_AFP_T[tx];
@@ -456,12 +456,12 @@ void alg5_stage4_5( float *g_ptucheck,
 
                 __syncthreads();
 
-                if(ty == 0)
+                if (ty == 0)
                 {
                     float (*bdata2)[WS] = (float (*)[WS]) bdata;
 
 #pragma unroll
-                    for(int dn=0; dn<CHW; ++dn, ++bdata2)
+                    for (int dn=0; dn<CHW; ++dn, ++bdata2)
                         **bdata2 = ptu = **bdata2 + c_AbF*ptu;
                 }
 
@@ -475,19 +475,19 @@ void alg5_stage4_5( float *g_ptucheck,
     }
 
     // remaining row-blocks
-    if(n < c_n_size-1)
+    if (n < c_n_size-1)
     {
-        if(n+ty < c_n_size-1)
+        if (n+ty < c_n_size-1)
         {
             *bdata = *ptucheck;
 
-            if(m < c_m_size-1)
+            if (m < c_m_size-1)
             {
                 CALC_DOT(dot, *transp_em1z, c_TAFB[tx], WS-1);
                 *bdata += dot*c_ARE[tx];
             }
 
-            if(m > 0)
+            if (m > 0)
             {
                 CALC_DOT(dot, *transp_pm1y, c_TAFB[tx], WS-1);
                 *bdata += dot*c_ARB_AFP_T[tx];
@@ -496,19 +496,19 @@ void alg5_stage4_5( float *g_ptucheck,
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             int remaining = c_n_size-1-n;
 
             float (*bdata2)[WS] = (float (*)[WS]) bdata;
 #pragma unroll
-            for(int dn=0; dn<remaining; ++dn, ++bdata2)
+            for (int dn=0; dn<remaining; ++dn, ++bdata2)
                 **bdata2 = ptu = **bdata2 + c_AbF*ptu;
         }
 
         __syncthreads();
 
-        if(n+ty < c_n_size-1)
+        if (n+ty < c_n_size-1)
             *ptucheck = *bdata;
     }
     }
@@ -535,20 +535,20 @@ void alg5_stage4_5( float *g_ptucheck,
     {
         *bdata = *etvtilde;
         
-        if(m < c_m_size-1)
+        if (m < c_m_size-1)
         {
             CALC_DOT(dot, *transp_em1z, c_HARB_AFB[tx], WS-1);
             *bdata += dot*c_ARE[tx];
         }
 
-        if(m > 0)
+        if (m > 0)
         {
             CALC_DOT(dot, *transp_pm1y, c_HARB_AFB[tx], WS-1);
 
             *bdata += dot*c_ARB_AFP_T[tx];
         }
 
-        if(n > 0)
+        if (n > 0)
             *bdata += *ptmn1u*c_HARB_AFP;
 
         transp_pm1y -= WS*blockDim.y;
@@ -557,14 +557,14 @@ void alg5_stage4_5( float *g_ptucheck,
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             float (*bdata2)[WS] = (float (*)[WS]) bdata;
 
             etv = **bdata2++;
 
 #pragma unroll
-            for(int dn=1; dn<blockDim.y; ++dn, ++bdata2)
+            for (int dn=1; dn<blockDim.y; ++dn, ++bdata2)
                 **bdata2 = etv = **bdata2 + c_AbR*etv;
         }
 
@@ -578,27 +578,27 @@ void alg5_stage4_5( float *g_ptucheck,
     }
 
     // middle row-blocks
-    if(blockDim.y == CHW)
+    if (blockDim.y == CHW)
     {
         int nmin = c_n_size%CHW;
 
-        for(; n>=nmin; n-=CHW)
+        for (; n>=nmin; n-=CHW)
         {
             *bdata = *etvtilde;
 
-            if(m < c_m_size-1)
+            if (m < c_m_size-1)
             {
                 CALC_DOT(dot, *transp_em1z, c_HARB_AFB[tx], WS-1);
                 *bdata += dot*c_ARE[tx];
             }
 
-            if(m > 0)
+            if (m > 0)
             {
                 CALC_DOT(dot, *transp_pm1y, c_HARB_AFB[tx], WS-1);
                 *bdata += dot*c_ARB_AFP_T[tx];
             }
 
-            if(n > 0)
+            if (n > 0)
                 *bdata += *ptmn1u*c_HARB_AFP;
 
             transp_pm1y -= WS*CHW;
@@ -607,11 +607,11 @@ void alg5_stage4_5( float *g_ptucheck,
 
             __syncthreads();
 
-            if(ty == 0)
+            if (ty == 0)
             {
                 float (*bdata2)[WS] = (float (*)[WS]) bdata;
 #pragma unroll
-                for(int dn=0; dn<CHW; ++dn, ++bdata2)
+                for (int dn=0; dn<CHW; ++dn, ++bdata2)
                     **bdata2 = etv = **bdata2 + c_AbR*etv;
             }
 
@@ -624,19 +624,19 @@ void alg5_stage4_5( float *g_ptucheck,
     }
 
     // remaining row-blocks
-    if(n+ty >= 0)
+    if (n+ty >= 0)
     {
-        if(n > 0)
+        if (n > 0)
         {
             *bdata = *etvtilde + *ptmn1u*c_HARB_AFP;
 
-            if(m < c_m_size-1)
+            if (m < c_m_size-1)
             {
                 CALC_DOT(dot, *transp_em1z, c_HARB_AFB[tx], WS-1);
                 *bdata += dot*c_ARE[tx];
             }
 
-            if(m > 0)
+            if (m > 0)
             {
                 CALC_DOT(dot, *transp_pm1y, c_HARB_AFB[tx], WS-1);
                 *bdata += dot*c_ARB_AFP_T[tx];
@@ -646,18 +646,18 @@ void alg5_stage4_5( float *g_ptucheck,
 
         __syncthreads();
 
-        if(ty == 0)
+        if (ty == 0)
         {
             int remaining = n+1;
             float (*bdata2)[WS] = (float (*)[WS]) bdata;
 #pragma unroll
-            for(int dn=0; dn<remaining; ++dn, ++bdata2)
+            for (int dn=0; dn<remaining; ++dn, ++bdata2)
                 **bdata2 = etv = **bdata2 + c_AbR*etv;
         }
 
         __syncthreads();
 
-        if(n > 0)
+        if (n > 0)
             *etvtilde = *bdata;
     }
 #undef CALC_DOT
@@ -685,7 +685,7 @@ void alg5_stage6( float *g_out,
     bool inside = m+1 >= c_border && m <= c_last_m &&
                     n >= c_border && n <= c_last_n;
 
-    if(inside)
+    if (inside)
     {
         {
             // load data into shared memory
@@ -693,7 +693,7 @@ void alg5_stage6( float *g_out,
                   tv = ((n-c_border)*WS+ty + 0.5f)*c_inv_height;
 
 #pragma unroll
-            for(int i=0; i<WS-(WS%DW); i+=DW)
+            for (int i=0; i<WS-(WS%DW); i+=DW)
             {
                 **bdata = tex2D(t_in, tu, tv);
                 bdata += DW;
@@ -704,56 +704,56 @@ void alg5_stage6( float *g_out,
                 tv += DW*c_inv_height;
             }
 
-            if(ty < WS%DW)
+            if (ty < WS%DW)
             {
                 **bdata = tex2D(t_in, tu, tv);
                 **bdata2 = tex2D(t_in, tu+WS*c_inv_width, tv);
             }
         }
 
-        if(ty < 2)
+        if (ty < 2)
         {
             m += ty;
 
-            if(m >= c_border && m <= c_last_m)
+            if (m >= c_border && m <= c_last_m)
             {
-                if(m > 0)
+                if (m > 0)
                     s_py[ty][tx] = g_transp_py[(n*WS + tx) + (m-1)*c_carry_height] * c_inv_b0;
                 else
                     s_py[ty][tx] = 0;
             }
         }
-        else if(ty < 4)
+        else if (ty < 4)
         {
             m += ty-2;
 
-            if(m >= c_border && m <= c_last_m)
+            if (m >= c_border && m <= c_last_m)
             {
-                if(m < c_m_size-1)
+                if (m < c_m_size-1)
                     s_ez[ty-2][tx] = g_transp_ez[(n*WS + tx) + (m+1)*c_carry_height];
                 else
                     s_ez[ty-2][tx] = 0;
             }
         }
-        else if(ty < 6)
+        else if (ty < 6)
         {
             m += ty-4;
 
-            if(m >= c_border && m <= c_last_m)
+            if (m >= c_border && m <= c_last_m)
             {
-                if(n > 0)
+                if (n > 0)
                     s_ptu[ty-4][tx] = g_ptu[(m*WS + tx) + (n-1)*c_carry_width] * c_inv_b0;
                 else
                     s_ptu[ty-4][tx] = 0;
             }
         }
-        else if(ty < 8)
+        else if (ty < 8)
         {
             m += ty-6;
 
-            if(m >= c_border && m <= c_last_m)
+            if (m >= c_border && m <= c_last_m)
             {
-                if(n < c_n_size-1)
+                if (n < c_n_size-1)
                     s_etv[ty-6][tx] = g_etv[(m*WS + tx) + (n+1)*c_carry_width];
                 else
                     s_etv[ty-6][tx] = 0;
@@ -763,10 +763,10 @@ void alg5_stage6( float *g_out,
 
     __syncthreads();
 
-    if(!inside || m < c_border || m > c_last_m)
+    if (!inside || m < c_border || m > c_last_m)
         return;
 
-    if(ty < 2)
+    if (ty < 2)
     {
         const float b0_2 = c_b0*c_b0;
 
@@ -779,7 +779,7 @@ void alg5_stage6( float *g_out,
             float prev = s_py[ty][tx];
 
 #pragma unroll
-            for(int j=0; j<WS; ++j, ++bdata)
+            for (int j=0; j<WS; ++j, ++bdata)
                 *bdata = prev = *bdata - prev*c_a1;
 
             // calculate z ---------------------
@@ -788,7 +788,7 @@ void alg5_stage6( float *g_out,
             --bdata;
 
 #pragma unroll
-            for(int j=WS-1; j>=0; --j, --bdata)
+            for (int j=WS-1; j>=0; --j, --bdata)
                 *bdata = prev = *bdata*b0_2 - prev*c_a1;
         }
 
@@ -801,13 +801,13 @@ void alg5_stage6( float *g_out,
             float prev = s_ptu[ty][tx];
 
 #pragma unroll
-            for(int i=0; i<WS; ++i, ++bdata)
+            for (int i=0; i<WS; ++i, ++bdata)
                 **bdata = prev = **bdata - prev*c_a1;
 
             // calculate v ---------------------
 
             int x = (m-c_border)*WS+tx;
-            if(x >= c_width)
+            if (x >= c_width)
                 return;
 
             prev = s_etv[ty][tx];
@@ -815,18 +815,18 @@ void alg5_stage6( float *g_out,
 
             int y = (n-c_border+1)*WS-1;
 
-            if(y >= c_height)
+            if (y >= c_height)
             {
                 int i;
 
 #pragma unroll
-                for(i=y; i>=c_height; --i)
+                for (i=y; i>=c_height; --i)
                      prev = **bdata-- *b0_2 - prev*c_a1;
 
                 float *out = g_out + (c_height-1)*c_width + x;
 
 #pragma unroll
-                for(;i>=(n-c_border)*WS; --i)
+                for (;i>=(n-c_border)*WS; --i)
                 {
                     *out = prev = **bdata-- *b0_2 - prev*c_a1;
                     out -= c_width;
@@ -838,7 +838,7 @@ void alg5_stage6( float *g_out,
                 float *out = g_out + y*c_width + x;
 
 #pragma unroll
-                for(int i=WS-1; i>=0; --i) 
+                for (int i=WS-1; i>=0; --i) 
                 {
                     *out = prev = **bdata-- *b0_2 - prev*c_a1;
                     out -= c_width;
@@ -851,72 +851,51 @@ void alg5_stage6( float *g_out,
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void prepare_alg5( dvector<float>& d_out,
-                   cudaArray *& a_in,
+void prepare_alg5( alg_setup& algs,
+                   dvector<float>& d_out,
                    dvector<float>& d_transp_pybar,
                    dvector<float>& d_transp_ezhat,
                    dvector<float>& d_ptucheck,
                    dvector<float>& d_etvtilde,
-                   dim3& cg_img,
+                   cudaArray *& a_in,
                    const float *h_in,
-                   const int& h,
                    const int& w,
+                   const int& h,
                    const float& b0,
                    const float& a1,
-                   const initcond& ic,
-                   const int& extb )
+                   const int& extb,
+                   const initcond& ic )
 {
 
     up_constants_coefficients1( b0, a1 );
 
-    // cuda channel descriptor for texture
-    cudaChannelFormatDesc ccd = cudaCreateChannelDesc<float>();
-    cudaMallocArray( &a_in, &ccd, w, h );
-    cudaMemcpyToArray( a_in, 0, 0, h_in, w*h*sizeof(float), cudaMemcpyHostToDevice );
-
     d_out.resize( w * h );
 
-    int ext_h, ext_w;
-    up_constants_sizes( cg_img, ext_h, ext_w, h, w, extb );
+    calc_alg_setup( algs, w, h, extb );
+    up_alg_setup( algs );
 
-    d_transp_pybar.resize( cg_img.x * ext_h );
-    d_transp_ezhat.resize( cg_img.x * ext_h );
-    d_ptucheck.resize( cg_img.y * ext_w );
-    d_etvtilde.resize( cg_img.y * ext_w );
+    d_transp_pybar.resize( algs.m_size * algs.carry_height );
+    d_transp_ezhat.resize( algs.m_size * algs.carry_height );
+    d_ptucheck.resize( algs.n_size  * algs.carry_width );
+    d_etvtilde.resize( algs.n_size * algs.carry_width );
 
     d_transp_pybar.fill_zero();
     d_transp_ezhat.fill_zero();
     d_ptucheck.fill_zero();
     d_etvtilde.fill_zero();
 
-    t_in.normalized = true;
-    t_in.filterMode = cudaFilterModePoint;
-
-    switch( ic ) {
-    case zero:
-        t_in.addressMode[0] = t_in.addressMode[1] = cudaAddressModeBorder; // defaults to zero-border
-        break;
-    case clamp:
-        t_in.addressMode[0] = t_in.addressMode[1] = cudaAddressModeClamp;
-        break;
-    case repeat:
-        t_in.addressMode[0] = t_in.addressMode[1] = cudaAddressModeWrap; // implements repeat
-        break;
-    case mirror:
-        t_in.addressMode[0] = t_in.addressMode[1] = cudaAddressModeMirror;
-        break;
-    }
+    up_texture( a_in, h_in, w, h, ic );
 
 }
 
 __host__
 void alg5( dvector<float>& d_out,
-           const cudaArray *a_in,
            dvector<float>& d_transp_pybar,
            dvector<float>& d_transp_ezhat,
            dvector<float>& d_ptucheck,
            dvector<float>& d_etvtilde,
-           const dim3& cg_img )
+           const cudaArray *a_in,
+           const alg_setup& algs )
 {
 
     dvector<float> d_transp_py, d_transp_ez, d_ptu, d_etv;
@@ -924,25 +903,25 @@ void alg5( dvector<float>& d_out,
     cudaBindTextureToArray( t_in, a_in );
 
     alg5_stage1<<<
-        dim3((cg_img.x+2-1)/2, cg_img.y), dim3(WS, DW) >>>(
+        dim3((algs.m_size+2-1)/2, algs.n_size), dim3(WS, DW) >>>(
             d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde );
 
     alg5_stage2_3<<<
-        dim3(1, cg_img.y), dim3(WS, std::min<int>(cg_img.x, DW)) >>>(
+        dim3(1, algs.n_size), dim3(WS, std::min<int>(algs.m_size, DW)) >>>(
             d_transp_pybar, d_transp_ezhat );
 
     swap(d_transp_pybar, d_transp_py);
     swap(d_transp_ezhat, d_transp_ez);
 
     alg5_stage4_5<<<
-        dim3(cg_img.x, 1), dim3(WS, std::min<int>(cg_img.y, CHW)) >>>(
+        dim3(algs.m_size, 1), dim3(WS, std::min<int>(algs.n_size, CHW)) >>>(
             d_ptucheck, d_etvtilde, d_transp_py, d_transp_ez );
 
     swap(d_ptucheck, d_ptu);
     swap(d_etvtilde, d_etv);
 
     alg5_stage6<<<
-        dim3((cg_img.x+2-1)/2, cg_img.y), dim3(WS, DW) >>>(
+        dim3((algs.m_size+2-1)/2, algs.n_size), dim3(WS, DW) >>>(
             d_out, d_transp_py, d_transp_ez, d_ptu, d_etv );
 
     swap(d_etv, d_etvtilde);
@@ -956,24 +935,24 @@ void alg5( dvector<float>& d_out,
 
 __host__
 void alg5( float *h_inout,
-           const int& h,
            const int& w,
+           const int& h,
            const float& b0,
            const float& a1,
-           const initcond& ic,
-           const int& extb )
+           const int& extb,
+           const initcond& ic )
 {
 
-    dim3 cg_img;
+    alg_setup algs;
     dvector<float> d_out;
     dvector<float> d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde;
     cudaArray *a_in;
 
-    prepare_alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck,
-                  d_etvtilde, cg_img, h_inout, h, w, b0, a1, ic, extb );
+    prepare_alg5( algs, d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck,
+                  d_etvtilde, a_in, h_inout, w, h, b0, a1, extb, ic );
 
-    alg5( d_out, a_in, d_transp_pybar, d_transp_ezhat, d_ptucheck,
-          d_etvtilde, cg_img );
+    alg5( d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck, d_etvtilde,
+          a_in, algs );
 
     d_out.copy_to( h_inout, w * h );
 

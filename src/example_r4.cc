@@ -40,52 +40,60 @@ int main(int argc, char *argv[]) {
     const int in_w = 1024, in_h = 1024;
     const float b0 = 0.425294, a1 = -0.885641, a2 = 0.310935;
 
-    std::cout << "[r4] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
+    std::cout << "[r4] Generating random input image (" << in_w << "x" 
+              << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[in_h*in_w];
-    float *in_gpu = new float[in_h*in_w];
+    float *in_cpu = new float[in_w*in_h];
+    float *in_gpu = new float[in_w*in_h];
 
     srand(time(0));
 
-    for (int i = 0; i < in_h*in_w; ++i)
+    for (int i = 0; i < in_w*in_h; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
-    std::cout << "done!\n[r4] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1} - a2 * y_{i-2}\n";
-    std::cout << "[r4] Considering forward and reverse on rows and columns\n";
-    std::cout << "[r4] Coefficients are: b0 = " << b0 << " ; a1 = " << a1 << " ; a2 = " << a2 << "\n";
-    std::cout << "[r4] CPU Computing second-order recursive filtering ... " << std::flush;
+    std::cout << "done!\n[r4] Recursive filter: y_i = b0 * x_i - a1 * "
+              << "y_{i-1} - a2 * y_{i-2}\n[r4] Considering forward and "
+              << "reverse on rows and columns\n[r4] Coefficients are: "
+              << "b0 = " << b0 << " ; a1 = " << a1 << " ; a2 = " << a2 << "\n"
+              << "[r4] CPU Computing second-order recursive filtering ... "
+              << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r( in_cpu, in_h, in_w, b0, a1, a2 );
+        gpufilter::r( in_cpu, in_w, in_h, b0, a1, a2 );
 
-        std::cout << "done!\n[r4] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[r4] CPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[r4] GPU Computing second-order recursive filtering using Algorithm 4 ... " << std::flush;
+    std::cout << "[r4] GPU Computing second-order recursive filtering using "
+              << "Algorithm 4 ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::alg4( in_gpu, in_h, in_w, b0, a1, a2 );
+        gpufilter::alg4( in_gpu, in_w, in_h, b0, a1, a2 );
 
-        std::cout << "done!\n[r4] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[r4] GPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[r4] GPU Timing includes pre-computation and memory transfers\n";
+    std::cout << "[r4] GPU Timing includes pre-computation and memory"
+              << "transfers\n";
 
-    std::cout << "[r4] Checking GPU result with CPU reference values\n";
+    std::cout << "[r4] Checking GPU result against CPU reference\n";
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
+    check_reference( in_cpu, in_gpu, in_w*in_h, me, mre );
 
     std::cout << std::scientific;
 
-    std::cout << "[r4] Maximum relative error: " << mre << " ; Maximum error: " << me << "\n";
+    std::cout << "[r4] Maximum relative error: " << mre
+              << " ; Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

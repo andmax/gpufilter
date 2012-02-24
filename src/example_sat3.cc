@@ -17,7 +17,6 @@
 
 #include <cpuground.h>
 
-#include <gpudefs.h>
 #include <gpufilter.h>
 
 #include <sat.cuh>
@@ -48,41 +47,47 @@ int main(int argc, char *argv[]) {
 
     const int in_w = 4096, in_h = 4096;
 
-    std::cout << "[sat3] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
+    std::cout << "[sat3] Generating random input image (" << in_w << "x"
+              << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[in_h*in_w];
-    float *in_gpu = new float[in_h*in_w];
+    float *in_cpu = new float[in_w*in_h];
+    float *in_gpu = new float[in_w*in_h];
 
     srand(time(0));
 
-    for (int i = 0; i < in_h*in_w; ++i)
+    for (int i = 0; i < in_w*in_h; ++i)
         in_gpu[i] = in_cpu[i] = rand() % 256;
 
-    std::cout << "done!\n[sat3] Computing summed-area table in the CPU ... " << std::flush;
+    std::cout << "done!\n[sat3] Computing summed-area table in the CPU ... "
+              << std::flush;
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU", in_h*in_w, "iP") );
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add(
+                                              "CPU", in_w*in_h, "iP") );
 
-        gpufilter::sat_cpu( in_cpu, in_h, in_w );
+        gpufilter::sat_cpu( in_cpu, in_w, in_h );
     }
 
     std::cout << "done!\n[sat3] Configuring the GPU to run ... " << std::flush;
 
-    dim3 cg_img, cg_ybar, cg_vhat;
+    gpufilter::alg_setup algs;
     gpufilter::dvector<float> d_in_gpu, d_ybar, d_vhat, d_ysum;
-    int h_out, w_out;
 
-    gpufilter::prepare_algSAT( d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, in_gpu, in_h, in_w );
+    gpufilter::prepare_algSAT( algs, d_in_gpu, d_ybar, d_vhat, d_ysum, in_gpu,
+                               in_w, in_h );
 
-    gpufilter::dvector<float> d_out_gpu( h_out*w_out );
+    gpufilter::dvector<float> d_out_gpu( algs.width*algs.height );
 
-    std::cout << "done!\n[sat3] Computing summed-area table in the GPU ... " << std::flush;
+    std::cout << "done!\n[sat3] Computing summed-area table in the GPU ... "
+              << std::flush;
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU", in_h*in_w*REPEATS, "iP") );
+        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add(
+                                              "GPU", in_w*in_h*REPEATS, "iP") );
 
         for (int i = 0; i < REPEATS; ++i)
-            gpufilter::algSAT( d_out_gpu, d_in_gpu, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+            gpufilter::algSAT( d_out_gpu, d_ybar, d_vhat, d_ysum, d_in_gpu,
+                               algs );
     }
 
     std::cout << "done!\n";
@@ -91,13 +96,13 @@ int main(int argc, char *argv[]) {
 
     std::cout << "[sat3] Copying result back from the GPU ... " << std::flush;
 
-    d_out_gpu.copy_to( in_gpu, h_out, w_out, in_h, in_w );
+    d_out_gpu.copy_to( in_gpu, algs.width, algs.height, in_w, in_h );
 
-    std::cout << "done!\n[sat3] Checking GPU result with CPU reference values\n";
+    std::cout << "done!\n[sat3] Checking GPU result against CPU reference\n";
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
+    check_reference( in_cpu, in_gpu, in_w*in_h, me, mre );
 
     std::cout << "[sat3] Maximum relative error: " << mre << "\n";
 

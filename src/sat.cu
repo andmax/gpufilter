@@ -308,47 +308,44 @@ void algSAT_stage4( float *g_out,
 //-- Host ---------------------------------------------------------------------
 
 __host__
-void prepare_algSAT( dvector<float>& d_inout,
+void prepare_algSAT( alg_setup& algs,
+                     dvector<float>& d_inout,
                      dvector<float>& d_ybar,
                      dvector<float>& d_vhat,
                      dvector<float>& d_ysum,
-                     dim3& cg_img,
-                     dim3& cg_ybar,
-                     dim3& cg_vhat,
-                     int& out_h,
-                     int& out_w,
                      const float *h_in,
-                     const int& h,
-                     const int& w ) {
+                     const int& w,
+                     const int& h ) {
 
-    out_h = h;
-    out_w = w;
+    algs.width = w;
+    algs.height = h;
 
-    if( h % 32 > 0 ) out_h += (32 - (h % 32));
-    if( w % 32 > 0 ) out_w += (32 - (w % 32));
+    if( w % 32 > 0 ) algs.width += (32 - (w % 32));
+    if( h % 32 > 0 ) algs.height += (32 - (h % 32));
 
-    up_constants_sizes( cg_img, out_h, out_w );
+    calc_alg_setup( algs, algs.width, algs.height );
+    up_alg_setup( algs );
 
-    d_inout.copy_from( h_in, h, w, out_h, out_w );
-    d_ybar.resize( cg_img.y * out_w );
-    d_vhat.resize( cg_img.x * out_h );
-    d_ysum.resize( cg_img.x * cg_img.y );
+    d_inout.copy_from( h_in, w, h, algs.width, algs.height );
 
-	const int nWm = (out_w+MTS-1)/MTS, nHm = (out_h+MTS-1)/MTS;
-    cg_ybar = dim3(nWm, 1);
-    cg_vhat = dim3(1, nHm);
+    d_ybar.resize( algs.n_size * algs.width );
+    d_vhat.resize( algs.m_size * algs.height );
+    d_ysum.resize( algs.m_size * algs.n_size );
 
 }
 
 __host__
 void algSAT( dvector<float>& d_out,
-             const dvector<float>& d_in,
              dvector<float>& d_ybar,
              dvector<float>& d_vhat,
              dvector<float>& d_ysum,
-             const dim3& cg_img,
-             const dim3& cg_ybar,
-             const dim3& cg_vhat ) {
+             const dvector<float>& d_in,
+             const alg_setup& algs ) {
+
+	const int nWm = (algs.width+MTS-1)/MTS, nHm = (algs.height+MTS-1)/MTS;
+    const dim3 cg_img( algs.m_size, algs.n_size );
+    const dim3 cg_ybar( nWm, 1 );
+    const dim3 cg_vhat( 1, nHm );
 
     algSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_in, d_ybar, d_vhat );
 
@@ -365,9 +362,12 @@ void algSAT( dvector<float>& d_inout,
              dvector<float>& d_ybar,
              dvector<float>& d_vhat,
              dvector<float>& d_ysum,
-             const dim3& cg_img,
-             const dim3& cg_ybar,
-             const dim3& cg_vhat ) {
+             const alg_setup& algs ) {
+
+	const int nWm = (algs.width+MTS-1)/MTS, nHm = (algs.height+MTS-1)/MTS;
+    const dim3 cg_img( algs.m_size, algs.n_size );
+    const dim3 cg_ybar( nWm, 1 );
+    const dim3 cg_vhat( 1, nHm );
 
     algSAT_stage1<<< cg_img, dim3(WS, SOW) >>>( d_inout, d_ybar, d_vhat );
 
@@ -381,18 +381,17 @@ void algSAT( dvector<float>& d_inout,
 
 __host__
 void algSAT( float *h_inout,
-             const int& h,
-             const int& w ) {
+             const int& w,
+             const int& h ) {
 
-    dim3 cg_img, cg_ybar, cg_vhat;
+    alg_setup algs;
     dvector<float> d_out, d_ybar, d_vhat, d_ysum;
-    int h_out, w_out;
 
-    prepare_algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat, h_out, w_out, h_inout, h, w );
+    prepare_algSAT( algs, d_out, d_ybar, d_vhat, d_ysum, h_inout, w, h );
 
-    algSAT( d_out, d_ybar, d_vhat, d_ysum, cg_img, cg_ybar, cg_vhat );
+    algSAT( d_out, d_ybar, d_vhat, d_ysum, algs );
 
-    d_out.copy_to( h_inout, h_out, w_out, h, w );
+    d_out.copy_to( h_inout, algs.width, algs.height, w, h );
 
 }
 

@@ -115,6 +115,8 @@ struct _mirror {
     }
 };
 
+//== IMPLEMENTATION ===========================================================
+
 /**
  *  @ingroup utils
  *  @brief Look in an input at a given index range

@@ -56,17 +56,17 @@ public:
     /**
      *  Constructor
      *  @param[in] data Vector data in 2D to be copied into this object
-     *  @param[in] h_data Height of the vector data
      *  @param[in] w_data Width of the vector data
-     *  @param[in] h Height of the vector data in device memory
+     *  @param[in] h_data Height of the vector data
      *  @param[in] w Width of the vector data in device memory
+     *  @param[in] h Height of the vector data in device memory
      */
     dvector( const T *data,
-             const size_t& h_data,
              const size_t& w_data,
-             const size_t& h,
-             const size_t& w ) : m_size(0), m_capacity(0), m_data(0) {
-        copy_from( data, h_data, w_data, h, w );
+             const size_t& h_data,
+             const size_t& w,
+             const size_t& h ) : m_size(0), m_capacity(0), m_data(0) {
+        copy_from( data, w_data, h_data, w, h );
     }
 
     /**
@@ -171,16 +171,16 @@ public:
     /**
      *  @brief Copy values from this vector in 2D to a host (CPU) vector
      *  @param[out] data Host Vector to copy values to
-     *  @param[in] h Height of the vector data in device memory
      *  @param[in] w Width of the vector data in device memory
-     *  @param[in] h_data Height of the vector data to copy values to
+     *  @param[in] h Height of the vector data in device memory
      *  @param[in] w_data Width of the vector data to copy values to
+     *  @param[in] h_data Height of the vector data to copy values to
      */
     void copy_to( T *data,
-                  const size_t& h,
                   const size_t& w,
-                  const size_t& h_data,
-                  const size_t& w_data ) const {
+                  const size_t& h,
+                  const size_t& w_data,
+                  const size_t& h_data ) const {
         cudaMemcpy2D(data, w_data*sizeof(T), this->data(), w*sizeof(T), w_data*sizeof(T), h_data, cudaMemcpyDeviceToHost);
         cuda_error("Error during memcpy2D from device to host");
     }
@@ -201,16 +201,16 @@ public:
     /**
      *  @brief Copy values from a 2D host (CPU) vector to this vector
      *  @param[in] data Vector data in 2D to be copied into this object
-     *  @param[in] h_data Height of the vector data
      *  @param[in] w_data Width of the vector data
-     *  @param[in] h Height of the vector data in device memory
+     *  @param[in] h_data Height of the vector data
      *  @param[in] w Width of the vector data in device memory
+     *  @param[in] h Height of the vector data in device memory
      */
     void copy_from( const T *data,
-                    const size_t& h_data,
                     const size_t& w_data,
-                    const size_t& h,
-                    const size_t& w ) {
+                    const size_t& h_data,
+                    const size_t& w,
+                    const size_t& h ) {
         resize(w*h);
         cudaMemcpy2D(this->data(), w*sizeof(T),
                      const_cast<T *>(data), w_data*sizeof(T), w_data*sizeof(T),
@@ -244,7 +244,7 @@ public:
     T *data() { return m_data; }
 
     /**
-     *  @overload const T *data() const
+     *  @overload
      *  @return Constant vector data
      */
     const T *data() const { return m_data; }

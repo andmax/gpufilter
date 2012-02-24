@@ -42,52 +42,59 @@ int main(int argc, char *argv[]) {
     const int in_w = 1024, in_h = 1024;
     const float b0 = 0.482305, a1 = -0.517695;
 
-    std::cout << "[r2] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
+    std::cout << "[r2] Generating random input image (" << in_w << "x"
+              << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[in_h*in_w];
-    float *in_gpu = new float[in_h*in_w];
+    float *in_cpu = new float[in_w*in_h];
+    float *in_gpu = new float[in_w*in_h];
 
     srand(time(0));
 
-    for (int i = 0; i < in_h*in_w; ++i)
+    for (int i = 0; i < in_w*in_h; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
-    std::cout << "done!\n[r2] Recursive filter: y_i = b0 * x_i - a1 * y_{i-1}\n";
-    std::cout << "[r2] Considering forward and reverse on rows and columns\n";
-    std::cout << "[r2] Feedforward and feedback coefficients are: b0 = " << b0 << " ; a1 = " << a1 << "\n";
-    std::cout << "[r2] CPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "done!\n[r2] Recursive filter: y_i = b0 * x_i - a1 * "
+              << "y_{i-1}\n[r2] Considering forward and reverse on rows "
+              << "and columns\n[r2] Feedforward and feedback coefficients "
+              << "are: b0 = " << b0 << " ; a1 = " << a1 << "\n"
+              << "[r2] CPU Computing first-order recursive filtering with "
+              << "zero-border ... " << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::r( in_cpu, in_h, in_w, b0, a1 );
+        gpufilter::r( in_cpu, in_w, in_h, b0, a1 );
 
-        std::cout << "done!\n[r2] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[r2] CPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[r2] GPU Computing first-order recursive filtering with zero-border ... " << std::flush;
+    std::cout << "[r2] GPU Computing first-order recursive filtering with "
+              << "zero-border ... " << std::flush;
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::alg5( in_gpu, in_h, in_w, b0, a1 );
+        gpufilter::alg5( in_gpu, in_w, in_h, b0, a1 );
 
-        std::cout << "done!\n[r2] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[r2] GPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[r2] GPU Timing includes memory transfers from and to the CPU\n";
-
-    std::cout << "[r2] Checking GPU result with CPU reference values\n";
+    std::cout << "[r2] GPU Timing includes memory transfers from and to "
+              << "the CPU\n"
+              << "[r2] Checking GPU result against CPU reference\n";
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
+    check_reference( in_cpu, in_gpu, in_w*in_h, me, mre );
 
     std::cout << std::resetiosflags( std::ios_base::floatfield );
 
-    std::cout << "[r2] Maximum relative error: " << mre << " ; Maximum error: " << me << "\n";
+    std::cout << "[r2] Maximum relative error: " << mre
+              << " ; Maximum error: " << me << "\n";
 
     delete [] in_cpu;
     delete [] in_gpu;

@@ -40,29 +40,31 @@ int main(int argc, char *argv[]) {
     const int in_w = 1024, in_h = 1024;
     const float sigma = 16.f;
 
-    std::cout << "[gauss] Generating random input image (" << in_w << "x" << in_h << ") ... " << std::flush;
+    std::cout << "[gauss] Generating random input image (" << in_w
+              << "x" << in_h << ") ... " << std::flush;
 
-    float *in_cpu = new float[in_h*in_w];
-    float *in_gpu = new float[in_h*in_w];
+    float *in_cpu = new float[in_w*in_h];
+    float *in_gpu = new float[in_w*in_h];
 
     srand(time(0));
 
-    for (int i = 0; i < in_h*in_w; ++i)
+    for (int i = 0; i < in_w*in_h; ++i)
         in_gpu[i] = in_cpu[i] = rand() / (float)RAND_MAX;
 
-    std::cout << "done!\n[gauss] Applying Gaussian filter with sigma = " << sigma << "\n";
-    std::cout << "[gauss] Considering zero-border as initial condition.\n";
-
-    std::cout << "[gauss] Computing in the CPU ... " << std::flush;
+    std::cout << "done!\n[gauss] Applying Gaussian filter with sigma = "
+              << sigma << "\n[gauss] Considering zero-border as initial "
+              << "condition.\n[gauss] Computing in the CPU ... "
+              << std::flush;
 
     std::cout << std::fixed << std::setprecision(2);
 
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.cpu_add("CPU") );
 
-        gpufilter::gaussian_cpu( in_cpu, in_h, in_w, sigma );
+        gpufilter::gaussian_cpu( in_cpu, in_w, in_h, sigma );
 
-        std::cout << "done!\n[gauss] CPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[gauss] CPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
     std::cout << "[gauss] Computing in the GPU ... " << std::flush;
@@ -70,18 +72,20 @@ int main(int argc, char *argv[]) {
     {
         gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add("GPU") );
 
-        gpufilter::gaussian_gpu( in_gpu, in_h, in_w, sigma );
+        gpufilter::gaussian_gpu( in_gpu, in_w, in_h, sigma );
 
-        std::cout << "done!\n[gauss] GPU Timing: " << sts.elapsed()*1000 << " ms\n";
+        std::cout << "done!\n[gauss] GPU Timing: " << sts.elapsed()*1000
+                  << " ms\n";
     }
 
-    std::cout << "[gauss] GPU Timing includes memory transfers from and to the CPU\n";
+    std::cout << "[gauss] GPU Timing includes memory transfers from and to "
+              << "the CPU\n";
 
-    std::cout << "[gauss] Checking GPU result with CPU reference values\n";
+    std::cout << "[gauss] Checking GPU result against CPU reference\n";
 
     float me, mre;
 
-    check_reference( in_cpu, in_gpu, in_h*in_w, me, mre );
+    check_reference( in_cpu, in_gpu, in_w*in_h, me, mre );
 
     std::cout << std::scientific;
 

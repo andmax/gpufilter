@@ -17,6 +17,8 @@
 #include <gpufilter.h>
 #include <cpuground.h>
 
+typedef unsigned char uchar;
+
 //-----------------------------------------------------------------------------
 // Aborts and prints an error message
 void errorf(const char *fmt, ...) {
@@ -108,7 +110,8 @@ int main(int argc, char *argv[]) {
 
         for (int i = 0; i < in_h; ++i)
             for (int j = 0; j < in_w; ++j)
-                flat_in[c][i*in_w+j] = ((unsigned char *)(uc_img->imageData + i*uc_img->widthStep))[j]/255.f;
+                flat_in[c][i*in_w+j] =
+                    ((uchar*)(uc_img->imageData+i*uc_img->widthStep))[j]/255.f;
 
         cvReleaseImage(&ch_img);
         cvReleaseImage(&uc_img);
@@ -117,10 +120,11 @@ int main(int argc, char *argv[]) {
 
     if( strcmp(filter, "gaussian") == 0 ) {
 
-        printf("Applying filter gaussian in the %s (sigma = %g)\n", unit, sigma);
+        printf("Applying filter gaussian in the %s (sigma = %g)\n",
+               unit, sigma);
 
         if( strcmp(unit, "cpu") == 0 )
-            gpufilter::gaussian_cpu(flat_in, in_h, in_w, depth, sigma);
+            gpufilter::gaussian_cpu(flat_in, in_w, in_h, depth, sigma);
         else if( strcmp(unit, "gpu") == 0 )
             gpufilter::gaussian_gpu(flat_in, in_h, in_w, depth, sigma);
         else
@@ -131,7 +135,7 @@ int main(int argc, char *argv[]) {
         printf("Applying filter bspline3i in the %s\n", unit);
 
         if( strcmp(unit, "cpu") == 0 )
-            gpufilter::bspline3i_cpu(flat_in, in_h, in_w, depth);
+            gpufilter::bspline3i_cpu(flat_in, in_w, in_h, depth);
         else if( strcmp(unit, "gpu") == 0 )
             gpufilter::bspline3i_gpu(flat_in, in_h, in_w, depth);
         else
@@ -151,7 +155,9 @@ int main(int argc, char *argv[]) {
     for (int c = 0; c < depth; c++)
         for (int i = 0; i < in_h; ++i)
             for (int j = 0; j < in_w; ++j)
-                ((unsigned char *)(out_img->imageData + i*out_img->widthStep))[j*depth + c] = (unsigned char) (floorf(clamp(flat_in[c][i*in_w+j])*255.f+0.5f));
+                ((uchar*)(out_img->imageData+i*out_img->widthStep))
+                    [j*depth + c] = (uchar)(floorf(clamp(flat_in[c][i*in_w+j])
+                                                   *255.f+0.5f));
 
     printf("Saving output image '%s'\n", file_out);
 

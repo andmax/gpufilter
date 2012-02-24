@@ -2,6 +2,7 @@
  *  @file util.h
  *  @brief Matrix and vector utility classes to facilitate head/tail operations
  *  @author Rodolfo Lima
+ *  @author Andre Maximo
  *  @date December, 2011
  */
 
@@ -80,16 +81,16 @@ public:
 
     /**
      *  @brief Output stream operator
-     *  @param[out] out Output stream
+     *  @param[in,out] out Output stream
      *  @param[in] v Vector to output values from
      *  @return Output stream
      */
     friend std::ostream& operator << ( std::ostream& out,
                                        const Vector& v ) {
         out << '[';
-        for(int i=0; i<v.size(); ++i) {
+        for (int i=0; i<v.size(); ++i) {
             out << v[i];
-            if( i < v.size()-1 ) out << ',';
+            if (i < v.size()-1) out << ',';
         }
         return out << ']';
     }
@@ -102,7 +103,7 @@ public:
     __host__ __device__ Vector& operator += ( const Vector& v ) {
         assert(size() == v.size());
 #pragma unroll
-        for(int j=0; j<size(); ++j)
+        for (int j=0; j<size(); ++j)
             m_data[j] += v[j];
         return *this;
     }
@@ -123,7 +124,7 @@ public:
      */
     __host__ __device__ Vector &operator *= ( const T& v ) {
 #pragma unroll
-        for(int j=0; j<size(); ++j)
+        for (int j=0; j<size(); ++j)
             m_data[j] *= v;
         return *this;
     }
@@ -144,7 +145,7 @@ public:
      */
     __host__ __device__ Vector& operator /= ( const T& v ) {
 #pragma unroll
-        for(int j=0; j<size(); ++j)
+        for (int j=0; j<size(); ++j)
             m_data[j] /= v;
         return *this;
     }
@@ -228,19 +229,19 @@ public:
 
     /**
      *  @brief Output stream operator
-     *  @param[out] out Output stream
+     *  @param[in,out] out Output stream
      *  @param[in] m Matrix to output values from
      *  @return Output stream
      */
     friend std::ostream& operator << ( std::ostream& out,
                                        const Matrix& m ) {
         out << '[';
-        for(int i=0; i<m.rows(); ++i) {
-            for(int j=0; j<m.cols(); ++j) {
+        for (int i=0; i<m.rows(); ++i) {
+            for (int j=0; j<m.cols(); ++j) {
                 out << m[i][j];
-                if(j < m.cols()-1) out << ',';
+                if (j < m.cols()-1) out << ',';
             }
-            if(i < m.rows()-1) out << ";\n";
+            if (i < m.rows()-1) out << ";\n";
         }
         return out << ']';
     }
@@ -256,10 +257,10 @@ public:
     __host__ __device__ Matrix<T,M,Q> operator * ( const Matrix<T,P,Q>& rhs ) const {
         assert(cols()==rhs.rows());
         Matrix<T,M,Q> r;
-        for(int i=0; i<r.rows(); ++i) {
-            for(int j=0; j<r.cols(); ++j) {
+        for (int i=0; i<r.rows(); ++i) {
+            for (int j=0; j<r.cols(); ++j) {
                 r[i][j] = m_data[i][0]*rhs[0][j];
-                for(int k=1; k<cols(); ++k)
+                for (int k=1; k<cols(); ++k)
                     r[i][j] += m_data[i][k]*rhs[k][j];
             }
         }
@@ -273,9 +274,9 @@ public:
      */
     __host__ __device__ Matrix& operator *= ( T val ) {
 #pragma unroll
-        for(int i=0; i<rows(); ++i)
+        for (int i=0; i<rows(); ++i)
 #pragma unroll
-            for(int j=0; j<cols(); ++j)
+            for (int j=0; j<cols(); ++j)
                 m_data[i][j] *= val;
         return *this;
     }
@@ -288,7 +289,7 @@ public:
     __host__ __device__ Vector<T,M> col( int j ) const {
         Vector<T,M> c;
 #pragma unroll
-        for(int i=0; i<rows(); ++i)
+        for (int i=0; i<rows(); ++i)
             c[i] = m_data[i][j];
         return c;
     }
@@ -301,7 +302,7 @@ public:
     __host__ __device__ void set_col( int j,
                                       const Vector<T,M>& c ) {
 #pragma unroll
-        for(int i=0; i<rows(); ++i)
+        for (int i=0; i<rows(); ++i)
             m_data[i][j] = c[i];
     }
 
@@ -334,9 +335,9 @@ public:
      */
     __host__ __device__ Matrix& operator += ( const Matrix& rhs ) {
 #pragma unroll
-        for(int i=0; i<rows(); ++i)
+        for (int i=0; i<rows(); ++i)
 #pragma unroll
-            for(int j=0; j<cols(); ++j)
+            for (int j=0; j<cols(); ++j)
                 m_data[i][j] += rhs[i][j];
         return *this;
     }
@@ -359,9 +360,9 @@ public:
      */
     __host__ __device__ Matrix& operator -= ( const Matrix& rhs ) {
 #pragma unroll
-        for(int i=0; i<rows(); ++i)
+        for (int i=0; i<rows(); ++i)
 #pragma unroll
-            for(int j=0; j<cols(); ++j)
+            for (int j=0; j<cols(); ++j)
                 m_data[i][j] -= rhs[i][j];
         return *this;
     }
@@ -383,6 +384,10 @@ private:
 
 };
 
+//== IMPLEMENTATION ===========================================================
+
+//-- Multiply -----------------------------------------------------------------
+
 /**
  *  @relates Matrix
  *  @brief Multiply vector-to-matrix operator
@@ -396,14 +401,16 @@ __host__ __device__ Vector<T,N> operator * ( const Vector<T,M>& v,
     assert(v.size() == m.rows());
     Vector<T,N> r;
 #pragma unroll
-    for(int j=0; j<m.cols(); ++j) {
+    for (int j=0; j<m.cols(); ++j) {
         r[j] = v[0]*m[0][j];
 #pragma unroll
-        for(int i=1; i<m.rows(); ++i)
+        for (int i=1; i<m.rows(); ++i)
             r[j] += v[i]*m[i][j];
     }
     return r;
 }
+
+//-- Basics -------------------------------------------------------------------
 
 /**
  *  @relates Vector
@@ -414,11 +421,11 @@ __host__ __device__ Vector<T,N> operator * ( const Vector<T,M>& v,
 template <class T, int N>
 __host__ __device__ Vector<T,N> zeros() {
     Vector<T,N> v;
-    if(N>0)
+    if (N>0)
     {
 #if __CUDA_ARCH__
 #pragma unroll
-        for(int j=0; j<v.size(); ++j)
+        for (int j=0; j<v.size(); ++j)
             v[j] = T();
 #else
         std::fill(&v[0], &v[N-1]+1, T());
@@ -437,13 +444,13 @@ __host__ __device__ Vector<T,N> zeros() {
 template <class T, int M, int N>
 __host__ __device__ Matrix<T,M,N> zeros() {
     Matrix<T,M,N> mat;
-    if(M>0 && N>0)
+    if (M>0 && N>0)
     {
 #if __CUDA_ARCH__
 #pragma unroll
-        for(int i=0; i<mat.rows(); ++i)
+        for (int i=0; i<mat.rows(); ++i)
 #pragma unroll
-            for(int j=0; j<mat.cols(); ++j)
+            for (int j=0; j<mat.cols(); ++j)
                 mat[i][j] = T();
 #else
         std::fill(&mat[0][0], &mat[M-1][N-1]+1, T());
@@ -462,8 +469,8 @@ __host__ __device__ Matrix<T,M,N> zeros() {
 template <class T, int M, int N>
 Matrix<T,M,N> identity() {
     Matrix<T,M,N> mat;
-    for(int i=0; i<M; ++i)
-        for(int j=0; j<N; ++j)
+    for (int i=0; i<M; ++i)
+        for (int j=0; j<N; ++j)
             mat[i][j] = i==j ? 1 : 0;
     return mat;
 }
@@ -480,27 +487,36 @@ template <class T, int M, int N>
 __host__ __device__ Matrix<T,N,M> transp( const Matrix<T,M,N>& m ) {
     Matrix<T,N,M> tm;
 #pragma unroll
-    for(int i=0; i<m.rows(); ++i)
+    for (int i=0; i<m.rows(); ++i)
 #pragma unroll
-        for(int j=0; j<m.cols(); ++j)
+        for (int j=0; j<m.cols(); ++j)
             tm[j][i] = m[i][j];
     return tm;
 }
 
-//-- fwd
+//-- Forward ------------------------------------------------------------------
 
 /**
- *  @relates Matrix
- *  @brief
+ *  @relates Vector
+ *  @brief Computes the \a forward operator on vectors (in-place)
+ *
+ *  For more information see fwd().
+ *
+ *  @param[in] p Prologue \f$R\f$ vector (\f$R\f$ is the filter order)
+ *  @param[in,out] b In(out)put \f$N\f$ vector
+ *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @tparam N Number of elements
+ *  @tparam R Number of feedback coefficients
+ *  @tparam T Matrix value type
  */
 template <class T, int N, int R>
 void fwd_inplace( const Vector<T,R>& p,
                   Vector<T,N>& b,
                   const Vector<T,R+1>& w ) {
-    for(int j=0; j<b.size(); ++j) {
+    for (int j=0; j<b.size(); ++j) {
         b[j] *= w[0];
-        for(int k=1; k<w.size(); ++k) {
-            if(j-k < 0)
+        for (int k=1; k<w.size(); ++k) {
+            if (j-k < 0)
                 b[j] -= p[p.size()+j-k]*w[k]; // use data from prologue
             else
                 b[j] -= b[j-k]*w[k];
@@ -510,13 +526,23 @@ void fwd_inplace( const Vector<T,R>& p,
 
 /**
  *  @relates Matrix
- *  @brief
+ *  @brief Computes the \a forward operator on matrices (in-place)
+ *
+ *  For more information see rev().
+ *
+ *  @param[in] p Prologue \f$M \times R\f$ matrix (\f$R\f$ is the filter order)
+ *  @param[in,out] b In(out)put \f$M \times N\f$ matrix
+ *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @tparam M Number of rows
+ *  @tparam N Number of columns
+ *  @tparam R Number of feedback coefficients
+ *  @tparam T Matrix value type
  */
 template <class T, int M, int N, int R>
 void fwd_inplace( const Matrix<T,M,R>& p,
                   Matrix<T,M,N>& b,
                   const Vector<T,R+1>& w ) {
-    for(int i=0; i<b.rows(); ++i)
+    for (int i=0; i<b.rows(); ++i)
         fwd_inplace(p[i], b[i], w);
 }
 
@@ -551,7 +577,18 @@ Matrix<T,M,N> fwd( const Matrix<T,M,R>& p,
 
 /**
  *  @relates Matrix
- *  @brief
+ *  @overload
+ *  @brief Computes the \a forward operator on matrices (in-place)
+ *
+ *  For more information see fwd().
+ *
+ *  @param[in] p Prologue \f$R \times N\f$ matrix (\f$R\f$ is the filter order)
+ *  @param[in,out] b In(out)put \f$M \times N\f$ matrix
+ *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @tparam M Number of rows
+ *  @tparam N Number of columns
+ *  @tparam R Number of feedback coefficients
+ *  @tparam T Matrix value type
  */
 template <class T, int M, int N, int R>
 void fwd_inplace( const Matrix<T,R,N>& p,
@@ -582,26 +619,35 @@ void fwd_inplace( const Matrix<T,R,N>& p,
  *  @tparam T Matrix value type
  */
 template <class T, int M, int N, int R>
-Matrix<T,M,N> fwd( const Matrix<T,R,N>& pT,
-                   const Matrix<T,M,N>& b, 
-                   const Vector<T,R+1>& w ) {
+Matrix<T,M,N> fwdT( const Matrix<T,R,N>& pT,
+                    const Matrix<T,M,N>& b, 
+                    const Vector<T,R+1>& w ) {
     return transp(fwd(transp(pT), transp(b), w));
 }
 
-//-- rev
+//-- Reverse ------------------------------------------------------------------
 
 /**
- *  @relates Matrix
- *  @brief
+ *  @relates Vector
+ *  @brief Computes the \a reverse operator on vectors (in-place)
+ *
+ *  For more information see rev().
+ *
+ *  @param[in,out] b In(out)put \f$N\f$ vector
+ *  @param[in] e Epilogue \f$R\f$ vector (\f$R\f$ is the filter order)
+ *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @tparam N Number of elements
+ *  @tparam R Number of feedback coefficients
+ *  @tparam T Matrix value type
  */
 template <class T, int N, int R>
 void rev_inplace( Vector<T,N>& b,
                   const Vector<T,R>& e,
                   const Vector<T,R+1>& w ) {
-    for(int j=b.size()-1; j>=0; --j) {
+    for (int j=b.size()-1; j>=0; --j) {
         b[j] *= w[0];
-        for(int k=1; k<w.size(); ++k) {
-            if(j+k >= b.size())
+        for (int k=1; k<w.size(); ++k) {
+            if (j+k >= b.size())
                 b[j] -= e[j+k-b.size()]*w[k]; // use data from epilogue
             else
                 b[j] -= b[j+k]*w[k];
@@ -611,13 +657,23 @@ void rev_inplace( Vector<T,N>& b,
 
 /**
  *  @relates Matrix
- *  @brief
+ *  @brief Computes the \a reverse operator on matrices (in-place)
+ *
+ *  For more information see rev().
+ *
+ *  @param[in,out] b In(out)put \f$M \times N\f$ matrix
+ *  @param[in] e Epilogue \f$M \times R\f$ matrix (\f$R\f$ is the filter order)
+ *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @tparam M Number of rows
+ *  @tparam N Number of columns
+ *  @tparam R Number of feedback coefficients
+ *  @tparam T Matrix value type
  */
 template <class T, int M, int N, int R>
 void rev_inplace( Matrix<T,M,N>& b,
                   const Matrix<T,M,R>& e,
                   const Vector<T,R+1>& w ) {
-    for(int i=0; i<b.rows(); ++i)
+    for (int i=0; i<b.rows(); ++i)
         rev_inplace(b[i], e[i], w);
 }
 
@@ -634,8 +690,9 @@ void rev_inplace( Matrix<T,M,N>& b,
  *  \times N\f$ and it has the same size as the input \f$b\f$.
  *
  *  @param[in] b Input \f$M \times N\f$ matrix
- *  @param[in] e Epilogue \f$R \times N\f$ matrix (\f$R\f$ is the filter order)
+ *  @param[in] e Epilogue \f$M \times R\f$ matrix (\f$R\f$ is the filter order)
  *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @return Matrix resulting from applying the \a reverse operator
  *  @tparam M Number of rows
  *  @tparam N Number of columns
  *  @tparam R Number of feedback coefficients
@@ -652,13 +709,24 @@ Matrix<T,M,N> rev( const Matrix<T,M,N>& b,
 
 /**
  *  @relates Matrix
- *  @brief
+ *  @overload
+ *  @brief Computes the \a reverse operator on matrices (in-place)
+ *
+ *  For more information see rev().
+ *
+ *  @param[in,out] b In(out)put \f$M \times N\f$ matrix
+ *  @param[in] e Epilogue \f$R \times N\f$ matrix (\f$R\f$ is the filter order)
+ *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
+ *  @tparam M Number of rows
+ *  @tparam N Number of columns
+ *  @tparam R Number of feedback coefficients
+ *  @tparam T Matrix value type
  */
 template <class T, int M, int N, int R>
 void rev_inplace( Matrix<T,M,N>& b,
-                  const Matrix<T,R,N>& p,
+                  const Matrix<T,R,N>& e,
                   const Vector<T,R+1>& w ) {
-    b = rev(b, p, w);
+    b = rev(b, e, w);
 }
 
 /**
@@ -675,7 +743,7 @@ void rev_inplace( Matrix<T,M,N>& b,
  *  the same size as the input \f$b\f$.
  *
  *  @param[in] b Input \f$M \times N\f$ matrix
- *  @param[in] eT Epilogue \f$M \times R\f$ matrix (\f$R\f$ is the filter order)
+ *  @param[in] eT Epilogue \f$R \times N\f$ matrix (\f$R\f$ is the filter order)
  *  @param[in] w Filter weights with \f$R+1\f$ size (\f$R\f$ feedback coefficients)
  *  @tparam M Number of rows
  *  @tparam N Number of columns
@@ -683,11 +751,13 @@ void rev_inplace( Matrix<T,M,N>& b,
  *  @tparam T Matrix value type
  */
 template <class T, int M, int N, int R>
-Matrix<T,M,N> rev( const Matrix<T,M,N>& b,
-                   const Matrix<T,R,N>& eT,
-                   const Vector<T,R+1>& w ) {
+Matrix<T,M,N> revT( const Matrix<T,M,N>& b,
+                    const Matrix<T,R,N>& eT,
+                    const Vector<T,R+1>& w ) {
     return transp(rev(transp(b), transp(eT), w));
 }
+
+//-- Head ---------------------------------------------------------------------
 
 /**
  *  @relates Matrix
@@ -701,7 +771,8 @@ Matrix<T,M,N> rev( const Matrix<T,M,N>& b,
  *  function).  The following image illustrates the concept:
  *
  *  @image html blocks-2d.png "2D Block Notation"
- *  @image latex blocks-2d.eps "2D Block Notation"
+ *  @image latex blocks-2d.eps "2D Block Notation" width=\textwidth
+ *
  *
  *  2D block notation showing a block and its boundary data from
  *  adjacent blocks.  Note that the column-epilogue \f$E_{m+1,n}\f$
@@ -718,8 +789,8 @@ template <int R, int M, int N, class T>
 Matrix<T,M,R> head( const Matrix<T,M,N>& mat ) {
     assert(mat.cols() >= R);
     Matrix<T,M,R> h;
-    for(int j=0; j<R; ++j)
-        for(int i=0; i<mat.rows(); ++i)
+    for (int j=0; j<R; ++j)
+        for (int i=0; i<mat.rows(); ++i)
             h[i][j] = mat[i][j];
     return h;
 }
@@ -751,6 +822,8 @@ Matrix<T,R,N> headT( const Matrix<T,M,N>& mat ) {
     return transp(head<R>(transp(mat)));
 }
 
+//-- Tail ---------------------------------------------------------------------
+
 /**
  *  @relates Matrix
  *  @brief Computes the \a tail operator on matrices
@@ -777,8 +850,8 @@ template <int R, int M, int N, class T>
 Matrix<T,M,R> tail( const Matrix<T,M,N>& mat ) {
     assert(mat.cols() >= R);
     Matrix<T,M,R> t;
-    for(int j=0; j<R; ++j)
-        for(int i=0; i<mat.rows(); ++i)
+    for (int j=0; j<R; ++j)
+        for (int i=0; i<mat.rows(); ++i)
             t[i][j] = mat[i][mat.cols()-R+j];
     return t;
 }
@@ -808,14 +881,6 @@ Matrix<T,M,R> tail( const Matrix<T,M,N>& mat ) {
 template <int R, int M, int N, class T>
 Matrix<T,R,N> tailT( const Matrix<T,M,N>& mat ) {
     return transp(tail<R>(transp(mat)));
-}
-
-
-template <class T> 
-__device__ inline void swap(T& a, T& b) {
-    T c = a;
-    a = b;
-    b = c;
 }
 
 //=============================================================================
