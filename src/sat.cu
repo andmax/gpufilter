@@ -21,14 +21,15 @@ namespace gpufilter {
 
 //== IMPLEMENTATION ===========================================================
 
-//-- Algorithm SAT ------------------------------------------------------------
+//-- Algorithm SAT Stage 1 ----------------------------------------------------
 
 __global__ __launch_bounds__( WS * SOW, MBO )
 void algSAT_stage1( const float *g_in,
                     float *g_ybar,
                     float *g_vhat ) {
 
-	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
+	const int tx = threadIdx.x, ty = threadIdx.y,
+        bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
 	__shared__ float s_block[ WS ][ WS+1 ];
 
@@ -82,11 +83,14 @@ void algSAT_stage1( const float *g_in,
 
 }
 
+//-- Algorithm SAT Stage 2 ----------------------------------------------------
+
 __global__ __launch_bounds__( WS * MW, MBO )
 void algSAT_stage2( float *g_ybar,
                     float *g_ysum ) {
 
-	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, col0 = bx*MW+ty, col = col0*WS+tx;
+	const int tx = threadIdx.x, ty = threadIdx.y,
+        bx = blockIdx.x, col0 = bx*MW+ty, col = col0*WS+tx;
 
 	if( col >= c_width ) return;
 
@@ -128,11 +132,14 @@ void algSAT_stage2( float *g_ybar,
 
 }
 
+//-- Algorithm SAT Stage 3 ----------------------------------------------------
+
 __global__ __launch_bounds__( WS * MW, MBO )
 void algSAT_stage3( const float *g_ysum,
                     float *g_vhat ) {
 
-	const int tx = threadIdx.x, ty = threadIdx.y, by = blockIdx.y, row0 = by*MW+ty, row = row0*WS+tx;
+	const int tx = threadIdx.x, ty = threadIdx.y,
+        by = blockIdx.y, row0 = by*MW+ty, row = row0*WS+tx;
 
 	if( row >= c_height ) return;
 
@@ -158,12 +165,15 @@ void algSAT_stage3( const float *g_ysum,
 
 }
 
+//-- Algorithm SAT Stage 4 ----------------------------------------------------
+
 __global__ __launch_bounds__( WS * SOW, MBO )
 void algSAT_stage4( float *g_inout,
                     const float *g_y,
                     const float *g_v ) {
 
-	const int tx = threadIdx.x, ty = threadIdx.y, bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
+	const int tx = threadIdx.x, ty = threadIdx.y,
+        bx = blockIdx.x, by = blockIdx.y, col = bx*WS+tx, row0 = by*WS;
 
 	__shared__ float s_block[ WS ][ WS+1 ];
 
@@ -230,6 +240,8 @@ void algSAT_stage4( float *g_inout,
     }
 
 }
+
+//-- Algorithm SAT Stage 4 (not-in-place) -------------------------------------
 
 __global__ __launch_bounds__( WS * SOW, MBO )
 void algSAT_stage4( float *g_out,

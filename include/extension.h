@@ -17,7 +17,7 @@
 
 namespace gpufilter {
 
-//== CLASS DEFINITION =========================================================
+//== ENUMERATION ==============================================================
 
 /**
  *  @ingroup utils
@@ -29,6 +29,8 @@ enum initcond {
     repeat, ///< Repeat (image repeats itself forever)
     mirror ///< Mirror (image repeats itself mirrored forever)
 };
+
+//== CLASS DEFINITION =========================================================
 
 /**
  *  @struct _clamp extension.h
@@ -59,6 +61,8 @@ struct _clamp {
     }
 };
 
+//== CLASS DEFINITION =========================================================
+
 /**
  *  @struct _repeat extension.h
  *  @ingroup utils
@@ -85,6 +89,8 @@ struct _repeat {
         else return (n-1) - ((-i-1) % n);
     }
 };
+
+//== CLASS DEFINITION =========================================================
 
 /**
  *  @struct _mirror extension.h

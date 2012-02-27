@@ -177,6 +177,8 @@ private:
 
 };
 
+//== CLASS DEFINITION =========================================================
+
 /**
  *  @class Matrix util.h
  *  @ingroup utils

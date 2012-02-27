@@ -296,8 +296,8 @@ void prepare_algSAT( alg_setup& algs,
  *  @overload
  *  @brief Compute Algorithm SAT
  *
- *  @note The pre-allocated device memory should match the values in
- *  the computational grids.
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function works better in multiples of 32 in each dimension.
  *
  *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
  *  @param[out] d_out The output 2D image allocated in device memory
@@ -320,8 +320,8 @@ void algSAT( dvector<float>& d_out,
  *  @overload
  *  @brief Compute Algorithm SAT
  *
- *  @note The pre-allocated device memory should match the values in
- *  the computational grids.
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function works better in multiples of 32 in each dimension.
  *
  *  @see Base algSAT() function and [Nehab:2011] cited in alg5() function
  *  @param[in,out] d_inout The in/output 2D image allocated in device memory
@@ -361,9 +361,6 @@ void algSAT( dvector<float>& d_inout,
  *  prologues \f$P^T_{m,n}(V)\f$. Finally, stage S.4 reads the input
  *  and completed prologues, then computes and stores the final
  *  summed-area table.
- *
- *  @note For performance purposes (in CUDA kernels implementation)
- *  this function works better in multiples of 32 in each dimension.
  *
  *  @param[in,out] inout The in/output 2D image to compute SAT
  *  @param[in] w Image width
@@ -444,6 +441,10 @@ void prepare_alg4( alg_setup& algs,
  *  @overload
  *  @brief Compute Algorithm 4 (first-order)
  *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function only works with \f$64^2\f$ minimum image resolution,
+ *  and only in multiples of 64 in each dimension.
+ *
  *  @param[out] d_out The output 2D image allocated in device memory
  *  @param[out] d_transp_out The transposed output 2D image used in the middle of the computation
  *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
@@ -475,10 +476,6 @@ void alg4( dvector<float>& d_out,
  *
  *  The algorithm 4 is discussed in depth in our paper ([Nehab:2011]
  *  cited in alg5() function).
- *
- *  @note For performance purposes (in CUDA kernels implementation)
- *  this function only works with \f$64^2\f$ minimum image resolution,
- *  and only in multiples of 64 in each dimension.
  *
  *  @param[in,out] h_inout The in/output 2D image to compute recursive filtering
  *  @param[in] w Image width
@@ -564,6 +561,10 @@ void prepare_alg5( alg_setup& algs,
  *  @ingroup api_gpu
  *  @overload
  *  @brief Compute Algorithm 5 (first-order)
+ *
+ *  @note For performance purposes (in CUDA kernels implementation)
+ *  this function only works with \f$64^2\f$ minimum image resolution,
+ *  and only in multiples of 64 in each dimension.
  *
  *  @param[out] d_out The output 2D image allocated in device memory
  *  @param[out] d_transp_pybar The \f$P_{m,n}(\bar{Y})\f$ allocated in device memory
