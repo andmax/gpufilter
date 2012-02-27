@@ -35,16 +35,16 @@ Installation:
 
     gpufilter code was written in C++ and C for CUDA and tested on
     Linux platform using gcc 4.4.4 of the Ubuntu distribution.  The
-    library is built along with the examples and applications (see
-    below) although part of the code is in the include/ directory.
+    library in lib/libgpufilter.a is built before the examples and
+    application (see below).
 
 Dependencies:
 
-    The applications using the gpufilter library depend on the OpenCV
-    library (http://opencv.willowgarage.com) to read and write images.
-    The gpufilter project is based on CMake (http://www.cmake.org) and
-    its documentation is based on doxygen (www.doxygen.org).  All the
-    GPU code is written in C for CUDA
+    The application recursive using the gpufilter library depend on
+    the OpenCV library (http://opencv.willowgarage.com) to read and
+    write images.  The gpufilter project is based on CMake
+    (http://www.cmake.org) and its documentation is based on doxygen
+    (www.doxygen.org).  All the GPU code is written in C for CUDA
     (http://developer.nvidia.com/what-cuda).
 
 Build:
@@ -67,13 +67,12 @@ Build:
     $ ../bin/ex4
     <etc.>
 
-    There are also a number of applications to use in ../bin:
+    There is also one application to use in ../bin:
 
-    $ ../bin/recursive_cpu
-    $ ../bin/recursive_gpu
+    $ ../bin/recursive
 
-    Additionally the documentation of the gpufilter project can be
-    built by:
+    Additionally the documentation of the gpufilter project in ../doc
+    can be built by:
 
     $ cd ..
     <back in project root directory>
