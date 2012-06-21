@@ -35,7 +35,7 @@ target_link_libraries(exB gpufilter)
 cuda_add_executable(exG example_gauss.cc)
 target_link_libraries(exG gpufilter)
 
-include_directories(${OPENCV_DIR})
+# include_directories(${OPENCV_DIR})
 
-cuda_add_executable(recursive app_recursive.cc)
-target_link_libraries(recursive cv highgui gpufilter)
+# cuda_add_executable(recursive app_recursive.cc)
+# target_link_libraries(recursive cv highgui gpufilter)

@@ -917,8 +917,7 @@ following paper (cited throughout the text as [vanVliet:1998]):
 Read more in the @ref gpu module or start at the namespace @ref
 gpufilter.
 
-
- */
+*/
 
 //=============================================================================
 #endif // GPUFILTER_H
