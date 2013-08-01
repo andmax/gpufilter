@@ -39,7 +39,7 @@ public:
      *  Constructor
      *  @param[in] that Host (STL) Vector data (non-converted) to be copied into this object
      */
-    explicit dvector( const std::vector<T>& that ) : m_size(0), m_capacity(0), m_data(0) {
+    explicit dvector( const std::vector<T>& that ) : m_size(0), m_capacity(0), m_data(0), m_pitch(0) {
         *this = that;
     }
 
@@ -49,8 +49,8 @@ public:
      *  @param[in] size Vector data size
      */
     dvector( const T *data,
-             const size_t& size ) : m_size(0), m_capacity(0), m_data(0) {
-        copy_from( data, size );
+             const size_t& _size ) : m_size(0), m_capacity(0), m_data(0), m_pitch(0) {
+        copy_from( data, _size );
     }
 
     /**
@@ -65,7 +65,7 @@ public:
              const size_t& w_data,
              const size_t& h_data,
              const size_t& w,
-             const size_t& h ) : m_size(0), m_capacity(0), m_data(0) {
+             const size_t& h ) : m_size(0), m_capacity(0), m_data(0), m_pitch(0) {
         copy_from( data, w_data, h_data, w, h );
     }
 
@@ -73,7 +73,7 @@ public:
      *  Copy Constructor
      *  @param[in] that Copy that object to this object
      */
-    dvector( const dvector<T>& that ) : m_size(0), m_capacity(0), m_data(0) {
+    dvector( const dvector<T>& that ) : m_size(0), m_capacity(0), m_data(0), m_pitch(0) {
         *this = that;
     }
 
@@ -81,8 +81,17 @@ public:
      *  Default Constructor
      *  @param[in] size Vector data size
      */
-    dvector( const size_t& size = 0 ) : m_size(0), m_capacity(0), m_data(0) {
-        resize(size);
+    dvector( const size_t& _size = 0 ) : m_size(0), m_capacity(0), m_data(0), m_pitch(0) {
+        resize(_size);
+    }
+
+    /**
+     *  Default Constructor
+     *  @param[w] width Width of the 2D array vector
+     *  @param[h] height Width of the 2D array vector
+     */
+    dvector( const size_t& w, const size_t& h ) : m_size(0), m_capacity(0), m_data(0), m_pitch(0) {
+        resize(w, h);
     }
 
     /**
@@ -99,20 +108,36 @@ public:
      *  @brief Resize this vector
      *  @param[in] size The new vector size
      */
-    void resize( const size_t& size ) {
-        if( size > m_capacity )
+    void resize( const size_t& _size ) {
+        if( _size > m_capacity )
         {
             cuda_delete(m_data);
             m_data = 0;
             m_capacity = 0;
             m_size = 0;
 
-            m_data = cuda_new<T>(size);
-            m_capacity = size;
-            m_size = size;
+            m_data = cuda_new<T>(_size);
+            m_capacity = _size;
+            m_size = _size;
         }
         else
-            m_size = size;
+            m_size = _size;
+    }
+
+    /**
+     *  @brief Resize this vector
+     *  @param[w] w The width of the new 2D array vector 
+     *  @param[h] h The height of the new 2D array vector 
+     */
+    void resize( const size_t& w, const size_t& h ) {
+        cuda_delete(m_data);
+        m_data = 0;
+        m_capacity = 0;
+        m_size = 0;
+
+        m_data = cuda_new<T>(m_pitch, w, h);
+        m_capacity = m_pitch*h;
+        m_size = m_pitch*h;
     }
 
     /**
@@ -162,9 +187,11 @@ public:
      *  @param[out] data Host Vector to copy values to
      *  @param[in] s Maximum number of elements to copy
      */
-    void copy_to( T *data,
+    void copy_to( T *_data,
                   const size_t& s ) const {
-        cudaMemcpy(data, this->data(), std::min(size(),s)*sizeof(T), cudaMemcpyDeviceToHost);
+        cudaMemcpy(_data, this->data(),
+                   std::min(size(),s)*sizeof(T),
+                   cudaMemcpyDeviceToHost);
         cuda_error("Error during memcpy from device to host");
     }
 
@@ -176,12 +203,15 @@ public:
      *  @param[in] w_data Width of the vector data to copy values to
      *  @param[in] h_data Height of the vector data to copy values to
      */
-    void copy_to( T *data,
+    void copy_to( T *_data,
                   const size_t& w,
                   const size_t& h,
                   const size_t& w_data,
                   const size_t& h_data ) const {
-        cudaMemcpy2D(data, w_data*sizeof(T), this->data(), w*sizeof(T), w_data*sizeof(T), h_data, cudaMemcpyDeviceToHost);
+        cudaMemcpy2D(_data, w_data*sizeof(T),
+                     this->data(), m_pitch,
+                     w_data*sizeof(T), h_data,
+                     cudaMemcpyDeviceToHost);
         cuda_error("Error during memcpy2D from device to host");
     }
 
@@ -190,11 +220,11 @@ public:
      *  @param[in] data Vector data to be copied into this object
      *  @param[in] size Vector data size
      */
-    void copy_from( const T *data,
-                    const size_t& size ) {
-        resize(size);
-        cudaMemcpy(this->data(), const_cast<T *>(data),
-                   size*sizeof(T), cudaMemcpyHostToDevice);
+    void copy_from( const T *_data,
+                    const size_t& _size ) {
+        resize(_size);
+        cudaMemcpy(this->data(), _data,
+                   _size*sizeof(T), cudaMemcpyHostToDevice);
         cuda_error("Error during memcpy from host to device");
     }
 
@@ -206,15 +236,16 @@ public:
      *  @param[in] w Width of the vector data in device memory
      *  @param[in] h Height of the vector data in device memory
      */
-    void copy_from( const T *data,
+    void copy_from( const T *_data,
                     const size_t& w_data,
                     const size_t& h_data,
                     const size_t& w,
                     const size_t& h ) {
-        resize(w*h);
-        cudaMemcpy2D(this->data(), w*sizeof(T),
-                     const_cast<T *>(data), w_data*sizeof(T), w_data*sizeof(T),
-                     h_data, cudaMemcpyHostToDevice);
+        resize(w, h);
+        cudaMemcpy2D(this->data(), m_pitch,
+                     _data, w_data*sizeof(T),
+                     w_data*sizeof(T), h_data,
+                     cudaMemcpyHostToDevice);
         cuda_error("Error during memcpy2D from host to device");
     }
 
@@ -284,6 +315,7 @@ private:
     T *m_data; ///< Vector data
     size_t m_size; ///< Vector size
     size_t m_capacity; ///< Vector capacity
+    size_t m_pitch; ///< Pitch for 2D arrays
 
 };
 

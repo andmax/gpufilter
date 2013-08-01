@@ -18,7 +18,6 @@
 #include <dvector.h>
 #include <extension.h>
 
-#include <gpudefs.h>
 #include <gpufilter.h>
 #include <gpuconsts.cuh>
 

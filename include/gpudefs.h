@@ -95,49 +95,6 @@ void calc_alg_setup( alg_setup& algs,
                      const int& h,
                      const int& extb );
 
-/**
- *  @ingroup api_gpu
- *  @brief Upload algorithm setup values
- *
- *  Given the algorithm setup, upload the values to the device
- *  constant memory.
- *
- *  @param[in] algs Algorithm setup to upload to the GPU
- */
-extern
-void up_alg_setup( const alg_setup& algs );
-
-/**
- *  @ingroup api_gpu
- *  @brief Upload device constants first-order coefficients
- *
- *  Given the first-order coefficients of the recursive filter, upload
- *  to the device constant memory the coefficients-related values.
- *
- *  @param[in] b0 Feedforward coefficient
- *  @param[in] a1 Feedback first-order coefficient
- */
-extern
-void up_constants_coefficients1( const float& b0,
-                                 const float& a1 );
-
-/**
- *  @ingroup api_gpu
- *  @brief Upload device constants second-order coefficients
- *
- *  Given the second-order coefficients of the recursive filter,
- *  upload to the device constant memory the coefficients-related
- *  values.
- *
- *  @param[in] b0 Feedforward coefficient
- *  @param[in] a1 Feedback first-order coefficient
- *  @param[in] a2 Feedback second-order coefficient
- */
-extern
-void up_constants_coefficients2( const float& b0,
-                                 const float& a1,
-                                 const float& a2 );
-
 //=============================================================================
 } // namespace gpufilter
 //=============================================================================

@@ -17,7 +17,6 @@
 #include <util.h>
 #include <symbol.h>
 
-#include <gpudefs.h>
 #include <gpufilter.h>
 #include <gpuconsts.cuh>
 
@@ -71,7 +70,7 @@ __device__ float2 operator / ( const float2& a,
 
 
 __device__ float2 mul2x2( const float2& v,
-                          float mat[2][2] ) {
+                          Matrix<float,2,2> mat) {
     return make_float2(v.x*mat[0][0] + v.y*mat[1][0],
                        v.x*mat[0][1] + v.y*mat[1][1]);
 }

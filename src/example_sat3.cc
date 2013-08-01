@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
     gpufilter::prepare_algSAT( algs, d_in_gpu, d_ybar, d_vhat, d_ysum, in_gpu,
                                in_w, in_h );
 
-    gpufilter::dvector<float> d_out_gpu( algs.width*algs.height );
+    gpufilter::dvector<float> d_out_gpu( algs.width, algs.height );
 
     std::cout << "done!\n[sat3] Computing summed-area table in the GPU ... "
               << std::flush;

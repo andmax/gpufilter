@@ -32,12 +32,36 @@ namespace gpufilter {
  *  @tparam T Memory values type
  */
 template< class T >
-T *cuda_new( size_t elements ) {
+T *cuda_new( const size_t& elements ) {
     T *ptr = 0;
 
-    cudaMalloc((void **)&ptr, elements*sizeof(T));
+    cudaError_t e = cudaMalloc((void **)&ptr, elements*sizeof(T));
     cuda_error("Memory allocation error");
-    if( ptr == 0 )
+    if( (e != cudaSuccess) || (ptr == 0) )
+        throw std::runtime_error("Memory allocation error");
+
+    return ptr;
+}
+
+/**
+ *  @ingroup utils
+ *  @brief Allocates a new memory space in the GPU
+ *
+ *  This function allocates device (GPU) memory space.
+ *
+ *  @param[in] elements Number of elements to allocate
+ *  @return Pointer to the device memory allocated
+ *  @tparam T Memory values type
+ */
+template< class T >
+T *cuda_new( size_t& pitch,
+             const size_t& width,
+             const size_t& height ) {
+    T *ptr = 0;
+
+    cudaError_t e = cudaMallocPitch((void **)&ptr, &pitch, width*sizeof(T), height);
+    cuda_error("Memory allocation error");
+    if( (e != cudaSuccess) || (ptr == 0) )
         throw std::runtime_error("Memory allocation error");
 
     return ptr;
