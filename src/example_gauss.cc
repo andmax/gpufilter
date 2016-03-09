@@ -12,8 +12,8 @@
 #include <iomanip>
 
 #include <timer.h>
-#include <cpuground.h>
 #include <gpufilter.h>
+#include <cpuground.h>
 
 // Check computation
 void check_reference( const float *ref,
