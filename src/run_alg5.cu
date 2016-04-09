@@ -28,7 +28,7 @@
 
 int main( int argc, char** argv ) {
 
-    int width = 1024, height = 1024, runtimes = 1024;
+    int width = 1024, height = 1024;
 
     if (argc==2 || (argc==3 && (sscanf(argv[1], "%d", &width) != 1 ||
                                 sscanf(argv[2], "%d", &height) != 1))) {

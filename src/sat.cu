@@ -7,8 +7,6 @@
 
 //== INCLUDES =================================================================
 
-#include <symbol.h>
-
 #include <dvector.h>
 
 #include <gpufilter.h>

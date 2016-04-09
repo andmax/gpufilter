@@ -36,7 +36,7 @@ T *cuda_new( const size_t& elements ) {
     T *ptr = 0;
 
     cudaError_t e = cudaMalloc((void **)&ptr, elements*sizeof(T));
-    cuda_error("Memory allocation error");
+    check_cuda_error("Memory allocation error");
     if( (e != cudaSuccess) || (ptr == 0) )
         throw std::runtime_error("Memory allocation error");
 
@@ -60,7 +60,7 @@ T *cuda_new( size_t& pitch,
     T *ptr = 0;
 
     cudaError_t e = cudaMallocPitch((void **)&ptr, &pitch, width*sizeof(T), height);
-    cuda_error("Memory allocation error");
+    check_cuda_error("Memory allocation error");
     if( (e != cudaSuccess) || (ptr == 0) )
         throw std::runtime_error("Memory allocation error");
 
@@ -79,7 +79,7 @@ T *cuda_new( size_t& pitch,
 template< class T >
 void cuda_delete( T *d_ptr ) {
     cudaFree((void *)d_ptr);
-    cuda_error("Error freeing memory");
+    check_cuda_error("Error freeing memory");
 }
 
 //=============================================================================

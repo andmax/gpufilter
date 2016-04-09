@@ -11,28 +11,32 @@
 //== INCLUDES =================================================================
 
 #include <util.h>
-
 #include <gpudefs.h>
-
-//== DEFINITIONS ===============================================================
-
-__constant__ int c_width, c_height,
-    c_m_size, c_n_size, c_last_m, c_last_n,
-    c_border, c_carry_width, c_carry_height;
-
-__constant__ float c_inv_width, c_inv_height,
-    c_b0, c_a1, c_a2, c_inv_b0,
-    c_AbF, c_AbR, c_HARB_AFP;
-
-__constant__ gpufilter::Vector<float,WS> c_TAFB, c_HARB_AFB,
-    c_ARE, c_ARB_AFP_T;
-
-__constant__ gpufilter::Matrix<float,2,2> c_AbF2, c_AbR2,
-    c_AFP_HARB;
+#include <symbol.h>
 
 //== NAMESPACES ===============================================================
 
 namespace gpufilter {
+
+//== DEFINITIONS ===============================================================
+
+__device__
+__constant__ int c_width, c_height,
+    c_m_size, c_n_size, c_last_m, c_last_n,
+    c_border, c_carry_width, c_carry_height;
+
+__device__
+__constant__ float c_inv_width, c_inv_height,
+    c_b0, c_a1, c_a2, c_inv_b0,
+    c_AbF, c_AbR, c_HARB_AFP;
+
+__device__
+__constant__ Vector<float,WS> c_TAFB, c_HARB_AFB,
+    c_ARE, c_ARB_AFP_T;
+
+__device__
+__constant__ Matrix<float,2,2> c_AbF2, c_AbR2,
+    c_AFP_HARB;
 
 //== IMPLEMENTATION ===========================================================
 

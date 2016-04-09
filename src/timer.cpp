@@ -11,6 +11,7 @@
 #include <stack>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -90,12 +91,12 @@ gpu_timer::~gpu_timer()
     if(m_stop)
     {
         cudaEventDestroy(m_stop);
-        cuda_error("Timer event destruction");
+        check_cuda_error("Timer event destruction");
     }
     if(m_start)
     {
         cudaEventDestroy(m_start);
-        cuda_error("Timer event destruction");
+        check_cuda_error("Timer event destruction");
     }
 }
 
@@ -104,23 +105,23 @@ void gpu_timer::do_start()
     if(m_start == NULL)
     {
         cudaEventCreate(&m_start);
-        cuda_error("Timer event creation");
+        check_cuda_error("Timer event creation");
     }
     if(m_stop == NULL)
     {
         cudaEventCreate(&m_stop);
-        cuda_error("Timer event creation");
+        check_cuda_error("Timer event creation");
     }
 
 
     cudaEventRecord(m_start, 0);
-    cuda_error("Event recording");
+    check_cuda_error("Event recording");
 }
 
 void gpu_timer::do_stop()
 {
     cudaEventRecord(m_stop, 0);
-    cuda_error("Event recording");
+    check_cuda_error("Event recording");
 }
 
 float gpu_timer::do_get_elapsed() const
@@ -128,9 +129,9 @@ float gpu_timer::do_get_elapsed() const
     float elapsed;
 
     cudaEventSynchronize(m_stop);
-    cuda_error("Event synchronize");
+    check_cuda_error("Event synchronize");
     cudaEventElapsedTime(&elapsed, m_start, m_stop);
-    cuda_error("Event elapsed time");
+    check_cuda_error("Event elapsed time");
 
     return elapsed/1000.f;
 }

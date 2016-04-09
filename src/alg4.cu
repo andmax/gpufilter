@@ -15,7 +15,6 @@
 #include <algorithm>
 
 #include <util.h>
-#include <symbol.h>
 
 #include <gpufilter.h>
 #include <gpuconsts.cuh>

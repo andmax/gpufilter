@@ -36,7 +36,7 @@ template <class T>
 void copy_to_symbol( const T &symbol,
                      const T &value ) {
     cudaMemcpyToSymbol(symbol, &value, sizeof(T));
-    cuda_error("Error copying symbol to device");
+    check_cuda_error("Error copying symbol to device");
 }
 
 #else // CUDA <5000
@@ -54,14 +54,14 @@ void _copy_to_symbol( const std::string &name,
                       const T &value ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, name.c_str());
-    cuda_error("Invalid symbol '"+name+"'");
+    check_cuda_error("Invalid symbol '"+name+"'");
 
     if(sizeof(T) > size_storage)
         throw std::runtime_error("'"+name+"'"+" storage overflow");
 
     cudaMemcpyToSymbol(name.c_str(), &value, sizeof(T), 0,
                        cudaMemcpyHostToDevice);
-    cuda_error("Error copying '"+name+"' buffer to device");
+    check_cuda_error("Error1 copying '"+name+"' buffer to device");
 }
 
 #define copy_to_symbol(S,V) _copy_to_symbol(#S,V)
@@ -85,7 +85,7 @@ void copy_to_symbol( const T *symbol,
                      const std::vector<T> &items ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, symbol);
-    cuda_error("Invalid symbol");
+    check_cuda_error("Invalid symbol");
 
     size_t size = items.size()*sizeof(T);
 
@@ -94,7 +94,7 @@ void copy_to_symbol( const T *symbol,
 
     cudaMemcpyToSymbol(symbol,&items[0], size, 0,
                        cudaMemcpyHostToDevice);
-    cuda_error("Error copying symbol to device");
+    check_cuda_error("Error copying symbol to device");
 
     copy_to_symbol(symbol_size, items.size());
 }
@@ -115,7 +115,7 @@ void copy_to_symbol( const T *symbol,
                      IT end ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, symbol);
-    cuda_error("Invalid symbol");
+    check_cuda_error("Invalid symbol");
 
     using std::distance;
     size_t size = distance(beg,end)*sizeof(T);
@@ -125,7 +125,7 @@ void copy_to_symbol( const T *symbol,
 
     cudaMemcpyToSymbol(symbol,&*beg, size, 0,
                        cudaMemcpyHostToDevice);
-    cuda_error("Error copying symbol to device");
+    check_cuda_error("Error copying symbol to device");
 }
 
 /**
@@ -192,7 +192,7 @@ void _copy_to_symbol( const std::string &name,
                       const std::vector<T> &items ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, name.c_str());
-    cuda_error("Invalid symbol '"+name+"'");
+    check_cuda_error("Invalid symbol '"+name+"'");
 
     size_t size = items.size()*sizeof(T);
 
@@ -201,7 +201,7 @@ void _copy_to_symbol( const std::string &name,
 
     cudaMemcpyToSymbol(name.c_str(),&items[0], size, 0,
                        cudaMemcpyHostToDevice);
-    cuda_error("Error copying '"+name+"' buffer to device");
+    check_cuda_error("Error copying '"+name+"' buffer to device");
 
     if(!size_name.empty())
         _copy_to_symbol(size_name.c_str(), items.size());
@@ -240,7 +240,7 @@ T copy_from_symbol( const T &symbol ) {
     T value;
     cudaMemcpyFromSymbol(&value, symbol, sizeof(T), 0,
                          cudaMemcpyDeviceToHost);
-    cuda_error("Error copying symbol from device");
+    check_cuda_error("Error copying symbol from device");
 
     return value;
 }
@@ -259,7 +259,7 @@ template <class T>
 T _copy_from_symbol( const std::string &name ) {
     size_t size_storage;
     cudaGetSymbolSize(&size_storage, name.c_str());
-    cuda_error("Invalid symbol '"+name+"'");
+    check_cuda_error("Invalid symbol '"+name+"'");
 
     if(sizeof(T) > size_storage)
         throw std::runtime_error("'"+name+"'"+" storage overflow");
@@ -267,7 +267,7 @@ T _copy_from_symbol( const std::string &name ) {
     T value;
     cudaMemcpyFromSymbol(&value, name.c_str(), sizeof(T), 0,
                          cudaMemcpyDeviceToHost);
-    cuda_error("Error copying '"+name+"' buffer to device");
+    check_cuda_error("Error copying '"+name+"' buffer to device");
 
     return value;
 }

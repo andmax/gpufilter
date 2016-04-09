@@ -166,7 +166,7 @@ public:
     dvector& operator = ( const dvector<T>& that ) {
         resize(that.size());
         cudaMemcpy(data(), that.data(), size()*sizeof(T), cudaMemcpyDeviceToDevice);
-        cuda_error("Error during memcpy from device to device");
+        check_cuda_error("Error during memcpy from device to device");
         return *this;
     }
 
@@ -178,7 +178,7 @@ public:
     dvector& operator = ( const std::vector<T>& that ) {
         resize(that.size());
         cudaMemcpy(data(), &that[0], size()*sizeof(T), cudaMemcpyHostToDevice);
-        cuda_error("Error during memcpy from host to device");
+        check_cuda_error("Error during memcpy from host to device");
         return *this;
     }
 
@@ -192,7 +192,7 @@ public:
         cudaMemcpy(_data, this->data(),
                    std::min(size(),s)*sizeof(T),
                    cudaMemcpyDeviceToHost);
-        cuda_error("Error during memcpy from device to host");
+        check_cuda_error("Error during memcpy from device to host");
     }
 
     /**
@@ -212,7 +212,7 @@ public:
                      this->data(), m_pitch,
                      w_data*sizeof(T), h_data,
                      cudaMemcpyDeviceToHost);
-        cuda_error("Error during memcpy2D from device to host");
+        check_cuda_error("Error during memcpy2D from device to host");
     }
 
     /**
@@ -225,7 +225,7 @@ public:
         resize(_size);
         cudaMemcpy(this->data(), _data,
                    _size*sizeof(T), cudaMemcpyHostToDevice);
-        cuda_error("Error during memcpy from host to device");
+        check_cuda_error("Error during memcpy from host to device");
     }
 
     /**
@@ -246,7 +246,7 @@ public:
                      _data, w_data*sizeof(T),
                      w_data*sizeof(T), h_data,
                      cudaMemcpyHostToDevice);
-        cuda_error("Error during memcpy2D from host to device");
+        check_cuda_error("Error during memcpy2D from host to device");
     }
 
     /**
@@ -339,7 +339,7 @@ std::vector<T> to_cpu( const T *d_vec,
     out.resize(len);
 
     cudaMemcpy(&out[0], d_vec, len*sizeof(T), cudaMemcpyDeviceToHost);
-    cuda_error("Error during memcpy from device to host");
+    check_cuda_error("Error during memcpy from device to host");
 
     return out;
 }

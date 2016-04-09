@@ -14,7 +14,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include <symbol.h>
 #include <dvector.h>
 #include <extension.h>
 

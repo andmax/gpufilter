@@ -14,7 +14,6 @@
 #include <symbol.h>
 
 #include <gpudefs.h>
-//#include <gpuconsts.cuh>
 
 //== NAMESPACES ===============================================================
 
