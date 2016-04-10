@@ -13,8 +13,8 @@ find_package(CUDA REQUIRED)
 #find_package(OpenCV REQUIRED)
 
 if(NOT USE_SM)
-    set(USE_SM 30) #using SM_35 in TITAN was slower than SM_30
-    #set(USE_SM 35) #..it does not seem to be the case anymore..
+    #set(USE_SM 30) #using SM_35 in TITAN was slower than SM_30
+    set(USE_SM 35) #..it does not seem to be the case anymore..
 endif()
 
 set(CUDA_NVCC_FLAGS
@@ -31,6 +31,8 @@ set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 
 # Set this variable to true if you want to watch compilation
 set(CMAKE_VERBOSE_MAKEFILE FALSE)
+
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-std=c++11;")
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

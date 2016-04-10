@@ -91,8 +91,8 @@ int main(int argc, char *argv[]) {
               << "using Algorithm 5 ... " << std::flush;
 
     {
-        gpufilter::scoped_timer_stop sts( gpufilter::timers.gpu_add(
-                                              "GPU", in_w*in_h*REPEATS, "iP") );
+        gpufilter::scoped_timer_stop sts(
+            gpufilter::timers.gpu_add("GPU", in_w*in_h*REPEATS, "iP") );
 
         for (int i = 0; i < REPEATS; ++i)
             gpufilter::alg5( d_out, d_transp_pybar, d_transp_ezhat, d_ptucheck,
