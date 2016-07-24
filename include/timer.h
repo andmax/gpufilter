@@ -55,7 +55,7 @@ public:
      *  @brief Time elapsed
      *  @return Elapsed time in seconds
      */
-    float elapsed();
+    double elapsed();
 
     /**
      *  @brief Check if this timer is not counting timing
@@ -97,7 +97,7 @@ protected:
      *  @brief Do get time elapsed by this timer
      *  @return Time elapsed in seconds
      */
-    virtual float do_get_elapsed() const = 0;
+    virtual double do_get_elapsed() const = 0;
 
 private:
 
@@ -118,7 +118,7 @@ private:
 
     const char *m_type_label; ///< Label for this timer type
 
-    float m_elapsed; ///< Elapsed time
+    double m_elapsed; ///< Elapsed time
 
     bool m_started; ///< Flag true if this timer is counting timing
 
@@ -172,7 +172,7 @@ private:
      *  @brief Do get time elapsed by this timer
      *  @return Time elapsed in seconds
      */
-    virtual float do_get_elapsed() const;
+    virtual double do_get_elapsed() const;
 
     cudaEvent_t m_start; ///< Start CUDA events for timing computation
     cudaEvent_t m_stop; ///< Stop CUDA events for timing computation
@@ -223,7 +223,7 @@ private:
      *  @brief Do get time elapsed by this timer
      *  @return Time elapsed in seconds
      */
-    virtual float do_get_elapsed() const;
+    virtual double do_get_elapsed() const;
 
     /**
      *  @brief Get the current CPU time
@@ -270,7 +270,7 @@ public:
      *  @brief Time elapsed
      *  @return Elapsed time in seconds
      */
-    float elapsed() const { return m_timer->elapsed(); }
+    double elapsed() const { return m_timer->elapsed(); }
 
 private:
 

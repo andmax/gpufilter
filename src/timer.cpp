@@ -67,7 +67,7 @@ void base_timer::stop()
     --g_start_count;
 }
 
-float base_timer::elapsed()
+double base_timer::elapsed()
 { 
     if(m_elapsed == 0)
     {
@@ -125,7 +125,7 @@ void gpu_timer::do_stop()
     check_cuda_error("Event recording");
 }
 
-float gpu_timer::do_get_elapsed() const
+double gpu_timer::do_get_elapsed() const
 { 
     float elapsed;
 
@@ -169,7 +169,7 @@ void cpu_timer::do_stop()
     m_stop_time = get_cpu_time();
 }
 
-float cpu_timer::do_get_elapsed() const
+double cpu_timer::do_get_elapsed() const
 {
     return m_stop_time - m_start_time;
 }
