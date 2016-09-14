@@ -34,9 +34,9 @@ To run the algorithms after compiling, execute:
 src/algN_R
 ```
 
-replacing N for the desired algorithm (4--6) and
-R for the desired filter order (1--5).  There are
-also two extra algorithms that can be called by:
+replacing N for the desired algorithm (4-6) and R for the desired
+filter order (1-5).  There are also two extra algorithms that can
+be called by:
 
 ```
 src/alg5f4
@@ -73,6 +73,6 @@ The authors of this project is listed in the [AUTHORS](AUTHORS) file.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE)
+This project is licensed under the MIT License - see the [COPYING](COPYING)
 file for details.
 
