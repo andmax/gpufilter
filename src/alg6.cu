@@ -1,15 +1,15 @@
 /**
- *  @file alg5.cu
- *  @brief Algorithm 5 in the GPU
+ *  @file alg6.cu
+ *  @brief Algorithm 6 in the GPU
  *  @author Andre Maximo
- *  @date Sep, 2012
+ *  @date Dec, 2012
  *  @copyright The MIT License
  */
 
 #ifndef ORDER
 #define ORDER 1 // default filter order r=1
 #endif
-#define APPNAME "[alg5_" << ORDER << "]"
+#define APPNAME "[alg6_" << ORDER << "]"
 
 //== INCLUDES ==================================================================
 
@@ -34,31 +34,37 @@
 #include "cpudefs.h"
 #include "gpudefs.h"
 #include "alg0_cpu.h"
-#include "alg5_gpu.cuh"
+#include "alg6_gpu.cuh"
+#include "alg6_clamp.cuh"
+#include "alg6_repeat.cuh"
+#include "alg6_reflect.cuh"
 
 //== IMPLEMENTATION ============================================================
 
 /**
  *  @ingroup api_gpu
- *  @brief Compute Algorithm 5 (order agnostic) with any boundary condition
+ *  @brief Compute Algorithm 6 (order agnostic) with any boundary condition
  *
  *  This function computes R-order recursive filtering with given
- *  weights of an input 2D image using algorithm \f$5_r\f$ and any
- *  given boundary condition.  All choices of boundary conditions
- *  imply border input padding, that is the algorithm 5 is restricted
- *  to the discussions and considerations in our 2011 paper:
+ *  weights of an input 2D image using algorithm \f$6_r\f$ and any
+ *  given boundary condition.  That is, it can compute using border
+ *  input padding \f$6^b_r\f$, constant padding extension (or clamp to
+ *  border) \f$6^c_r\f$, periodic extension (a.k.a. repeat)
+ *  \f$6^p_r\f$ or even-periodic extension (a.k.a. mirror or reflect)
+ *  \f$6^e_r\f$.
+ *
+ *  All flavors of the algorithm 6 are discussed in depth in our paper:
  *
  *  @verbatim
-@inproceedings{NehabEtAl:2011,
-  title = {{GPU}-{E}fficient {R}ecursive {F}iltering and {S}ummed-{A}rea {T}ables},
-  author = {{N}ehab, {D}. and {M}aximo, {A}. and {L}ima, {R}. {S}. and {H}oppe, {H}.},
-  journal = {{ACM} {T}ransactions on {G}raphics ({P}roceedings of the {ACM} {SIGGRAPH} {A}sia 2011)},
-  year = {2011},
-  volume = {30},
-  number = {6},
+@inproceedings{NehabMaximo:2016,
+  title = {{P}arallel {R}ecursive {F}iltering of {I}nfinite {I}nput {E}xtesions},
+  author = {{N}ehab, {D}. and {M}aximo, {A}.},
+  journal = {{ACM} {T}ransactions on {G}raphics ({P}roceedings of the {ACM} {SIGGRAPH} {A}sia 2016)},
+  year = {2016},
+  volume = {},
+  number = {},
   doi = {},
-  publisher = {ACM},
-  address = {{N}ew {Y}ork, {NY}, {USA}}
+  publisher = {ACM}
 }   @endverbatim
  *
  *  @param[in,out] h_img The in(out)put 2D image to filter in host memory
@@ -71,16 +77,23 @@
  *  @tparam R Filter order
  */
 template<int R>
-void alg5( float *h_img,
+void alg6( float *h_img,
            const int& width, const int& height, const int& runtimes,
            const gpufilter::Vector<float, R+1>& w,
            const int& border,
            const gpufilter::BorderType& btype ) {
 
     if (border == 0) {
-        gpufilter::alg5_gpu<false, R>(h_img, width, height, runtimes, w);
+        if (btype == gpufilter::CLAMP_TO_ZERO)
+            gpufilter::alg6_gpu<false, R>(h_img, width, height, runtimes, w);
+        else if (btype == gpufilter::CLAMP_TO_EDGE)
+            gpufilter::alg6_clamp<R>(h_img, width, height, runtimes, w);
+        else if (btype == gpufilter::REPEAT)
+            gpufilter::alg6_repeat<R>(h_img, width, height, runtimes, w);
+        else if (btype == gpufilter::REFLECT)
+            gpufilter::alg6_reflect<R>(h_img, width, height, runtimes, w);
     } else if (border > 0) {
-        gpufilter::alg5_gpu<true, R>(h_img, width, height, runtimes, w,
+        gpufilter::alg6_gpu<true, R>(h_img, width, height, runtimes, w,
                                      border, btype);
     }
 
@@ -105,7 +118,7 @@ int main( int argc, char** argv ) {
 
     gpufilter::alg0_cpu<ORDER>(&cpu_img[0], width, height, w, a0border, btype);
 
-    alg5<ORDER>(&gpu_img[0], width, height, runtimes, w, border, btype);
+    alg6<ORDER>(&gpu_img[0], width, height, runtimes, w, border, btype);
 
     gpufilter::check_cpu_reference( &cpu_img[0], &gpu_img[0], width*height, me, mre );
 

@@ -1,6 +1,6 @@
 ****************************************************************************
 **                                                                        **
-**  gpufilter - GPU-Efficient Recursive Filtering and Summed-Area Tables  **
+**                  gpufilter - GPU Recursive Filtering                   **
 **                                                                        **
 **                              AUTHORS File                              **
 **                                                                        **
@@ -19,10 +19,22 @@
     program.  If not, see
     <http://www.opensource.org/licenses/mit-license.php>.
 
-Credits:
+    gpufilter comprehends the work described in the following articles:
+
+GPU-efficient recursive filtering and summed-area tables.
+In Proceedings of the 2011 SIGGRAPH Asia Conference (SA '11).
+ACM, New York, NY, USA, Article 176, 12 pages.
+DOI: http://dx.doi.org/10.1145/2024156.2024210
 
     Diego Nehab (diego@impa.br)
     Andre Maximo (andmax@impa.br)
     Rodolfo S. Lima (rodolfo@rodsoft.org)
     Hugues Hoppe (hhoppe@microsoft.com)
 
+Parallel Recursive Filtering of Infinite Input Extensions.
+In Proceedings of the 2016 SIGGRAPH Asia Conference (SA '16).
+ACM, New York, NY, USA, Article 176, 13 pages.
+DOI: http://dx.doi.org/10.1145/2980179.2980222
+
+    Diego Nehab (diego@impa.br)
+    Andre Maximo (andmax@impa.br)
