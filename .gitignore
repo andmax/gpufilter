@@ -8,5 +8,4 @@ build/
 *.zip
 *.sh
 doc/
-lib/
 scripts/results/
