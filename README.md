@@ -54,6 +54,7 @@ the following environment:
 + Ubuntu 14.04
 + CUDA 7.0
 + gcc 4.8.5
++ g++ 4.9.3
 + CMake 2.8.12
 + Python 2.7.6
 
@@ -63,7 +64,7 @@ First compile all the algorithms (see getting started above)
 to then be able to run:
 
 ```
-cd scripts
+cd ../scripts
 sh runall.sh
 ```
 

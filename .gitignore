@@ -6,6 +6,5 @@ bin/
 build/
 .*
 *.zip
-*.sh
 doc/
 scripts/results/
