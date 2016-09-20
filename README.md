@@ -1,8 +1,17 @@
 # gpufilter
 
 gpufilter stands for GPU Recursive Filtering and its goal is to provide the
-baseline code in C/C++/CUDA for computing recursive filtering using the
-GPU (graphics processing unit).
+baseline code in C/C++/CUDA for computing the fastest boundary-aware
+recursive filtering using the GPU (graphics processing unit).
+The *fastest* means fastest to date (as of 2016) and *boundary
+awareness* means closed-form exact (no approximations), i.e.,
+we compute the exact initial feedbacks needed for recursive filtering
+infinite input extensions.
+
+## Goal
+
+Please keep in mind that this code is just to check the performance
+and accuracy of the recursive filtering algorithms.
 
 ## Papers
 
@@ -19,13 +28,21 @@ Jupyter notebooks are included for explanations purposes only.
 The following sequence of commands assume a working computer environment
 with CMake and the CUDA SDK (see prerequisites below).  It compiles
 all the algorithms for testing in a range of recursive filter orders.
-The total compilation time takes several minutes to complete.
+The total compilation time may take **tens of minutes** to complete.
 
 ```
 mkdir build
 cd build
 cmake ..
 make
+```
+
+It may be the case (depending on your environment) that the *cmake*
+command line must be properly configured (for instance to access
+the proper host compiler):
+
+```
+cmake -DCUDA_HOST_COMPILER=/usr/bin/g++ ..
 ```
 
 To run the algorithms after compiling, execute:
@@ -61,10 +78,11 @@ the following environment:
 ## Running the tests
 
 First compile all the algorithms (see getting started above)
-to then be able to run:
+to then be able to run (this may take **hours** to finish):
 
 ```
 cd ../scripts
+mkdir results
 sh runall.sh
 ```
 
