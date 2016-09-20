@@ -1,17 +1,17 @@
 # gpufilter
 
-gpufilter stands for GPU Recursive Filtering and its goal is to provide the
-baseline code in C/C++/CUDA for computing the fastest boundary-aware
-recursive filtering using the GPU (graphics processing unit).
+gpufilter stands for GPU Recursive Filtering.  The goal of this project
+is to provide the baseline code in C/C++/CUDA for computing the fastest
+boundary-aware recursive filtering using the GPU (graphics processing unit).
 The *fastest* means fastest to date (as of 2016) and *boundary
 awareness* means closed-form exact (no approximations), i.e.,
-we compute the exact initial feedbacks needed for recursive filtering
-infinite input extensions.
-
-## Goal
+the idea is to compute the exact initial feedbacks needed for
+recursive filtering infinite input extensions.
 
 Please keep in mind that this code is just to check the performance
-and accuracy of the recursive filtering algorithms.
+and accuracy of the recursive filtering algorithms on a 2D random
+image of 32bit floats.  Nevertheless, the code can be specialized
+for 1D or 3D inputs, and for reading any given input.
 
 ## Papers
 
