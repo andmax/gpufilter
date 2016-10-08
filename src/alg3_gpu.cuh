@@ -1,13 +1,13 @@
 /**
- *  @file alg4_gpu.cuh
- *  @brief Algorithm 4 in the GPU with borders
+ *  @file alg3_gpu.cuh
+ *  @brief Algorithm 3 in the GPU with borders
  *  @author Andre Maximo
- *  @date Nov, 2012
+ *  @date Feb, 2012
  *  @copyright The MIT License
  */
 
-#ifndef ALG4_GPU_CUH
-#define ALG4_GPU_CUH
+#ifndef ALG3_GPU_CUH
+#define ALG3_GPU_CUH
 
 #define MST == // measure step time: no: == ; yes: >=
 #define LDG // uncomment to use __ldg
@@ -27,51 +27,39 @@ namespace gpufilter {
 
 /**
  *  @ingroup gpu
- *  @brief Algorithm 4 step 3 or 5
+ *  @brief Algorithm 3 step 3
  *
- *  This function computes the algorithm step 4.3 or 4.5
- *  (corresponding to the step 4.4 or 4.7 in [NehabEtAl:2011])
- *  following:
+ *  This function computes the algorithm step 3.3 (corresponding to
+ *  step 3.4 in [NehabEtAl:2011]) following:
  *
- *  \li In parallel for all \f$m\f$ and \f$n\f$, load block
+ *  \li In parallel for all \f$m\f$, load block
  *  \f$B_{m,n}(X)\f$ and column block feedbacks \f$P_{m-1,n}(Y)\f$ and
- *  \f$E_{m+1,n}(Z)\f$, compute and store B_{m,n}(Z) and then compute
- *  and store block perimeters \f$P^T_{m,n}(U)\f$ and
- *  \f$E^T_{m,n}(V)\f$.
- *
- *  \li In parallel for all \f$m\f$ and \f$n\f$, load block
- *  \f$B_{m,n}(Z)\f$ and row block feedbacks \f$P^T_{m,n-1}(U)\f$ and
- *  \f$E^T_{m,n+1}(V)\f$.  Compute and store B_{m,n}(V).
+ *  \f$E_{m+1,n}(Z)\f$, compute and store B_{m,n}(Z).
  *
  *  @note The CUDA kernel functions (as this one) have many
  *  idiosyncrasies and should not be used lightly.
  *
  *  @note This follows the improved base-line implementation in [NehabMaximo:2016]
  *  @see [NehabEtAl:2011] cited in alg5() and [NehabMaximo:2016] cited in alg6()
- *  @param[out] g_transp_out The output transposed 2D image
- *  @param[in] g_rows_py All \f$P_{m,n}(Y)\f$ or \f$P^T_{m,n}(U)\f$ 
- *  @param[in] g_rows_ez All \f$E_{m,n}(Z)\f$ or \f$E^T_{m,n}(V)\f$ 
- *  @param[in] g_cols_py All \f$P^T_{m,n}(U)\f$ (for 4.3 fusion)
- *  @param[in] g_cols_ez All \f$E^T_{m,n}(V)\f$ (for 4.3 fusion)
+ *  @param[out] g_out The output 2D image
+ *  @param[in] g_py All \f$P_{m,n}(Y)\f$ or \f$P^T_{m,n}(U)\f$ 
+ *  @param[in] g_ez All \f$E_{m,n}(Z)\f$ or \f$E^T_{m,n}(V)\f$ 
  *  @param[in] inv_width Image width inversed (1/w)
  *  @param[in] inv_height Image height inversed (1/h)
  *  @param[in] m_size The big M (number of row blocks)
  *  @param[in] n_size The big N (number of column blocks)
  *  @param[in] out_stride Image output stride for memory width alignment
- *  @tparam FUSION Flag for 4.3 fusion to compute feedbacks in other direction
  *  @tparam BORDER Flag to consider border input padding
  *  @tparam R Filter order
  */
-template <bool FUSION, bool BORDER, int R>
+template <bool BORDER, int R>
 __global__ __launch_bounds__(WS*NWW, NBCW)
-void alg4_step3v5( float *g_transp_out,
-                   const Matrix<float,R,WS> *g_rows_py,
-                   const Matrix<float,R,WS> *g_rows_ez,
-                   Matrix<float,R,WS> *g_cols_py,
-                   Matrix<float,R,WS> *g_cols_ez,
-                   float inv_width, float inv_height,
-                   int m_size, int n_size,
-                   int out_stride ) {
+void alg3_step3( float *g_out,
+                 const Matrix<float,R,WS> *g_py,
+                 const Matrix<float,R,WS> *g_ez,
+                 float inv_width, float inv_height,
+                 int m_size, int n_size,
+                 int out_stride ) {
 
     int tx = threadIdx.x, ty = threadIdx.y, m = blockIdx.x, n = blockIdx.y;
 
@@ -99,9 +87,9 @@ void alg4_step3v5( float *g_transp_out,
 #ifdef LDG
 #pragma unroll
         for (int r=0; r<R; ++r)
-            p[r] = __ldg((const float *)&g_rows_py[n*(m_size+1)+m][r][tx]);
+            p[r] = __ldg((const float *)&g_py[n*(m_size+1)+m][r][tx]);
 #else
-        p = ((Matrix<float,R,WS>*)&g_rows_py[n*(m_size+1)+m][0][tx])->col(0);
+        p = ((Matrix<float,R,WS>*)&g_py[n*(m_size+1)+m][0][tx])->col(0);
 #endif
 
 #pragma unroll // calculate block, scan left -> right
@@ -115,9 +103,9 @@ void alg4_step3v5( float *g_transp_out,
 #ifdef LDG
 #pragma unroll
         for (int r=0; r<R; ++r)
-            e[r] = __ldg((const float *)&g_rows_ez[n*(m_size+1)+m+1][r][tx]);
+            e[r] = __ldg((const float *)&g_ez[n*(m_size+1)+m+1][r][tx]);
 #else
-        e = ((Matrix<float,R,WS>*)&g_rows_ez[n*(m_size+1)+m+1][0][tx])->col(0);
+        e = ((Matrix<float,R,WS>*)&g_ez[n*(m_size+1)+m+1][0][tx])->col(0);
 #endif
 
 #pragma unroll // calculate block, scan right -> left
@@ -128,69 +116,37 @@ void alg4_step3v5( float *g_transp_out,
             block[tx][j] = revI(block[tx][j], e, c_weights);
 #endif
 
+#ifdef REGS
+#pragma unroll // transpose regs part-1
+        for (int i=0; i<32; ++i)
+            block[tx][i] = x[i];
+#pragma unroll // transpose regs part-2
+        for (int i=0; i<32; ++i)
+            x[i] = block[i][tx];
+#endif
+
         if (BORDER) {
             if ((m >= c_border) && (m < m_size-c_border) && (n >= c_border) && (n < n_size-c_border)) {
-                g_transp_out += (m-c_border)*WS*out_stride + (n-c_border)*WS + tx;
-#pragma unroll // write block inside valid transpose image
-                for (int i=0; i<WS; ++i, g_transp_out += out_stride) {
+                g_out += ((n-c_border+1)*WS-1)*out_stride + (m-c_border)*WS+tx;
+#pragma unroll // write block inside valid image
+                for (int i=0; i<WS; ++i, g_out-=out_stride) {
 #ifdef REGS
-                    *g_transp_out = x[i];
+                    *g_out = x[WS-1-i];
 #else
-                    *g_transp_out = block[tx][i];
+                    *g_out = block[WS-1-i][tx];
 #endif
                 }
             }
         } else {
-            g_transp_out += m*WS*out_stride + n*WS + tx;
-#pragma unroll // write block inside valid transpose image
-            for (int i=0; i<WS; ++i, g_transp_out += out_stride) {
+            g_out += ((n+1)*WS-1)*out_stride + m*WS+tx;
+#pragma unroll // write block
+            for (int i=0; i<WS; ++i, g_out-=out_stride) {
 #ifdef REGS
-                *g_transp_out = x[i];
+                *g_out = x[WS-1-i];
 #else
-                *g_transp_out = block[tx][i];
+                *g_out = block[WS-1-i][tx];
 #endif
             }
-        }
-
-        if (FUSION) {
-
-#ifdef REGS
-#pragma unroll // transpose regs part-1
-            for (int i=0; i<32; ++i)
-                block[tx][i] = x[i];
-#pragma unroll // transpose regs part-2
-            for (int i=0; i<32; ++i)
-                x[i] = block[i][tx];
-#endif
-
-            Matrix<float,R,WS>
-                &pybar = (Matrix<float,R,WS>&)g_cols_py[m*(n_size+1)+n+1][0][tx],
-                &ezhat = (Matrix<float,R,WS>&)g_cols_ez[m*(n_size+1)+n][0][tx];
-
-            p = zeros<float,R>();
-
-#pragma unroll // calculate pybar cols, scan left -> right
-            for (int j=0; j<WS; ++j)
-#ifdef REGS
-                x[j] = fwdI(p, x[j], c_weights);
-#else
-                block[j][tx] = fwdI(p, block[j][tx], c_weights);
-#endif
-
-            pybar.set_col(0, p); // store pybar cols
-
-            e = zeros<float,R>();
-
-#pragma unroll // calculate ezhat cols, scan right -> left
-            for (int j=WS-1; j>=0; --j)
-#ifdef REGS
-                revI(x[j], e, c_weights);
-#else
-                revI(block[j][tx], e, c_weights);
-#endif
-
-            ezhat.set_col(0, e); // store ezhat cols
-
         }
 
     }
@@ -199,7 +155,7 @@ void alg4_step3v5( float *g_transp_out,
 
 /**
  *  @ingroup api_gpu
- *  @brief Compute algorithm 4 in the GPU
+ *  @brief Compute algorithm 3 in the GPU
  *
  *  @see [NehabEtAl:2011] cited in alg5() and [NehabMaximo:2016] cited in alg6()
  *  @param[in,out] h_img The in(out)put 2D image to filter in host memory
@@ -214,7 +170,7 @@ void alg4_step3v5( float *g_transp_out,
  */
 template <bool BORDER, int R>
 __host__
-void alg4_gpu( float *h_img,
+void alg3_gpu( float *h_img,
                int width, int height, int runtimes,
                const Vector<float, R+1> &w,
                int border=0,
@@ -262,7 +218,6 @@ void alg4_gpu( float *h_img,
     float inv_width = 1.f/width, inv_height = 1.f/height;
 
     cudaArray *a_in;
-    size_t offset;
     cudaChannelFormatDesc ccd = cudaCreateChannelDesc<float>();
     cudaMallocArray(&a_in, &ccd, width, height);
     cudaMemcpyToArray(a_in, 0, 0, h_img, width*height*sizeof(float),
@@ -289,23 +244,19 @@ void alg4_gpu( float *h_img,
         }
     }
 
-    int stride_img = width+WS, stride_transp_img = width+WS;
-    if (BORDER) stride_img = stride_transp_img = width+WS*border+WS;
+    int stride_img = width+WS;
+    if (BORDER) stride_img = width+WS*border+WS;
 
-    dvector<float> d_img(height*stride_img), d_transp_img(width*stride_transp_img);
+    dvector<float> d_img(height*stride_img);
 
     // +1 padding is important even in zero-border to avoid if's in kernels
     dvector< Matrix<float,R,B> >
-        d_rows_pybar((m_size+1)*n_size), d_rows_ezhat((m_size+1)*n_size),
-        d_cols_pybar((n_size+1)*m_size), d_cols_ezhat((n_size+1)*m_size);
-    d_rows_pybar.fillzero();
-    d_rows_ezhat.fillzero();
-    d_cols_pybar.fillzero();
-    d_cols_ezhat.fillzero();
+        d_pybar((m_size+1)*n_size), d_ezhat((m_size+1)*n_size);
+    d_pybar.fillzero();
+    d_ezhat.fillzero();
 
     cudaFuncSetCacheConfig(alg3v4_step1<BORDER,R>, cudaFuncCachePreferShared);
-    cudaFuncSetCacheConfig(alg4_step3v5<true,BORDER,R>, cudaFuncCachePreferShared);
-    cudaFuncSetCacheConfig(alg4_step3v5<false,BORDER,R>, cudaFuncCachePreferShared);
+    cudaFuncSetCacheConfig(alg3_step3<BORDER,R>, cudaFuncCachePreferShared);
 
     if (R == 1)
         cudaFuncSetCacheConfig(alg3v4v5v6_step2v4<R>, cudaFuncCachePreferL1);
@@ -314,12 +265,12 @@ void alg4_gpu( float *h_img,
     else if (R >= 3)
         cudaFuncSetCacheConfig(alg3v4v5v6_step2v4<R>, cudaFuncCachePreferShared);
 
-    double te[5] = {0, 0, 0, 0, 0}; // time elapsed for the five steps
-    base_timer *timer[5];
-    for (int i = 0; i < 5; ++i)
+    double te[3] = {0, 0, 0}; // time elapsed for the three steps
+    base_timer *timer[3];
+    for (int i = 0; i < 3; ++i)
         timer[i] = new gpu_timer(0, "", false);
 
-    base_timer &timer_total = timers.gpu_add("alg4_gpu", width*height, "iP");
+    base_timer &timer_total = timers.gpu_add("alg3_gpu", width*height, "iP");
 
     for(int r = 0; r < runtimes; ++r) {
 
@@ -328,36 +279,22 @@ void alg4_gpu( float *h_img,
         cudaBindTextureToArray(t_in, a_in);
 
         alg3v4_step1<BORDER><<< dim3(m_size, n_size), dim3(WS, NWC) >>>
-            ( &d_rows_pybar, &d_rows_ezhat, inv_width, inv_height, m_size );
+            ( &d_pybar, &d_ezhat, inv_width, inv_height, m_size );
 
         if (runtimes MST 1) { timer[0]->stop(); te[0] += timer[0]->elapsed(); timer[1]->start(); }
 
         alg3v4v5v6_step2v4<<< dim3(1, n_size), dim3(WS, NWA) >>>
-            ( &d_rows_pybar, &d_rows_ezhat, m_size );
+            ( &d_pybar, &d_ezhat, m_size );
 
         if (runtimes MST 1) { timer[1]->stop(); te[1] += timer[1]->elapsed(); timer[2]->start(); }
 
-        alg4_step3v5<true, BORDER><<< dim3(m_size, n_size), dim3(WS, NWW) >>>
-            ( d_transp_img, &d_rows_pybar, &d_rows_ezhat, &d_cols_pybar, &d_cols_ezhat,
-              inv_width, inv_height, m_size, n_size, stride_transp_img );
-    
-        cudaUnbindTexture(t_in);
-        cudaBindTexture2D(&offset, t_in, d_transp_img, height, width, stride_transp_img*sizeof(float));
-
-        if (runtimes MST 1) { timer[2]->stop(); te[2] += timer[2]->elapsed(); timer[3]->start(); }
-
-        alg3v4v5v6_step2v4<<< dim3(1, m_size), dim3(WS, NWA) >>>
-            ( &d_cols_pybar, &d_cols_ezhat, n_size );
-
-        if (runtimes MST 1) { timer[3]->stop(); te[3] += timer[3]->elapsed(); timer[4]->start(); }
-
-        alg4_step3v5<false, BORDER><<< dim3(n_size, m_size), dim3(WS, NWW) >>>
-            ( d_img, &d_cols_pybar, &d_cols_ezhat, &d_rows_pybar, &d_rows_ezhat,
-              inv_height, inv_width, n_size, m_size, stride_img );
+        alg3_step3<BORDER><<< dim3(m_size, n_size), dim3(WS, NWW) >>>
+            ( d_img, &d_pybar, &d_ezhat, inv_height, inv_width,
+              m_size, n_size, stride_img );
 
         cudaUnbindTexture(t_in);
 
-        if (runtimes MST 1) { timer[4]->stop(); te[4] += timer[4]->elapsed(); }
+        if (runtimes MST 1) { timer[2]->stop(); te[2] += timer[2]->elapsed(); }
 
     }
 
@@ -366,7 +303,7 @@ void alg4_gpu( float *h_img,
     if (runtimes > 1) {
 
         if (runtimes MST 1) {
-            for (int i = 0; i < 5; ++i)
+            for (int i = 0; i < 3; ++i)
                 std::cout << std::fixed << " " << te[i]/(double)runtimes << std::flush;
         } else {
             std::cout << std::fixed << (timer_total.data_size()*runtimes)/(double)(timer_total.elapsed()*1024*1024) << std::flush;
@@ -377,8 +314,6 @@ void alg4_gpu( float *h_img,
         timers.gpu_add("step 1", timer[0]);
         timers.gpu_add("step 2", timer[1]);
         timers.gpu_add("step 3", timer[2]);
-        timers.gpu_add("step 4", timer[3]);
-        timers.gpu_add("step 5", timer[4]);
         timers.flush();
 
     }
@@ -390,5 +325,5 @@ void alg4_gpu( float *h_img,
 //==============================================================================
 } // namespace gpufilter
 //==============================================================================
-#endif // ALG4_GPU_CUH
+#endif // ALG3_GPU_CUH
 //==============================================================================

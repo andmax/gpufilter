@@ -18,7 +18,7 @@
 
 //== INCLUDES ==================================================================
 
-#include "alg4v5v6_gpu.cuh"
+#include "alg3v4v5v6_gpu.cuh"
 
 //== NAMESPACES ================================================================
 
@@ -266,11 +266,11 @@ void alg6_gpu( float *h_img,
     cudaFuncSetCacheConfig(alg6_step3<R>, cudaFuncCachePreferL1);
 
     if (R == 1)
-        cudaFuncSetCacheConfig(alg4v5v6_step2v4<R>, cudaFuncCachePreferL1);
+        cudaFuncSetCacheConfig(alg3v4v5v6_step2v4<R>, cudaFuncCachePreferL1);
     else if (R == 2)
-        cudaFuncSetCacheConfig(alg4v5v6_step2v4<R>, cudaFuncCachePreferEqual);
+        cudaFuncSetCacheConfig(alg3v4v5v6_step2v4<R>, cudaFuncCachePreferEqual);
     else if (R >= 3)
-        cudaFuncSetCacheConfig(alg4v5v6_step2v4<R>, cudaFuncCachePreferShared);
+        cudaFuncSetCacheConfig(alg3v4v5v6_step2v4<R>, cudaFuncCachePreferShared);
 
     double te[5] = {0, 0, 0, 0, 0}; // time elapsed for the five steps
     base_timer *timer[5];
@@ -290,7 +290,7 @@ void alg6_gpu( float *h_img,
 
         if (runtimes MST 1) { timer[0]->stop(); te[0] += timer[0]->elapsed(); timer[1]->start(); }
 
-        alg4v5v6_step2v4<<< dim3(1, n_size), dim3(WS, NWA) >>>
+        alg3v4v5v6_step2v4<<< dim3(1, n_size), dim3(WS, NWA) >>>
             ( &d_pybar, &d_ezhat, m_size );
 
         if (runtimes MST 1) { timer[1]->stop(); te[1] += timer[1]->elapsed(); timer[2]->start(); }
@@ -304,7 +304,7 @@ void alg6_gpu( float *h_img,
 
         if (runtimes MST 1) { timer[2]->stop(); te[2] += timer[2]->elapsed(); timer[3]->start(); }
 
-        alg4v5v6_step2v4<<< dim3(1, m_size), dim3(WS, NWA) >>>
+        alg3v4v5v6_step2v4<<< dim3(1, m_size), dim3(WS, NWA) >>>
             ( &d_ptucheck, &d_etvtilde, n_size );
 
         if (runtimes MST 1) { timer[3]->stop(); te[3] += timer[3]->elapsed(); timer[4]->start(); }
