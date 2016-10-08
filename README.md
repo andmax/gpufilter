@@ -51,7 +51,7 @@ To run the algorithms after compiling, execute:
 src/algN_R
 ```
 
-replacing N for the desired algorithm (4-6) and R for the desired
+replacing N for the desired algorithm (3-6) and R for the desired
 filter order (1-5).  There are also two extra algorithms that can
 be called by:
 
@@ -68,11 +68,10 @@ and the second is the algorithm 5 with varying coefficients.
 The project has been successfully compiled and tested using
 the following environment:
 
-+ Ubuntu 14.04
-+ CUDA 7.0
-+ gcc 4.8.5
-+ g++ 4.9.3
-+ CMake 2.8.12
++ Ubuntu 16.04
++ CUDA 8.0
++ gcc/g++ 5.4.0
++ CMake 3.5.1
 + Python 2.7.6
 
 ## Running the tests
