@@ -45,6 +45,10 @@ the proper host compiler):
 cmake -DCUDA_HOST_COMPILER=/usr/bin/g++ ..
 ```
 
+Or that you need to change the *sm_61* (for Pascal) architecture to
+another target architecture of your choice in the root
+[CMakeLists.txt] (CMakeLists.txt) file.
+
 To run the algorithms after compiling, execute:
 
 ```
@@ -73,6 +77,7 @@ the following environment:
 + gcc/g++ 5.4.0
 + CMake 3.5.1
 + Python 2.7.6
++ Pandas 0.18.1
 
 ## Running the tests
 
@@ -83,6 +88,14 @@ to then be able to run (this may take **hours** to finish):
 cd ../scripts
 mkdir results
 sh runall.sh
+```
+
+The bash scripts use a python script (in scripts/) to compute the
+average of the performance results.  The python script depends on the
+Pandas library, that can be installed via:
+
+```
+pip install pandas
 ```
 
 ## Authors
