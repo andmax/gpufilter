@@ -42,8 +42,8 @@ namespace gpufilter {
  *  @note This follows the improved base-line implementation in [NehabMaximo:2016]
  *  @see [NehabEtAl:2011] cited in alg5() and [NehabMaximo:2016] cited in alg6()
  *  @param[out] g_out The output 2D image
- *  @param[in] g_py All \f$P_{m,n}(Y)\f$ or \f$P^T_{m,n}(U)\f$ 
- *  @param[in] g_ez All \f$E_{m,n}(Z)\f$ or \f$E^T_{m,n}(V)\f$ 
+ *  @param[in] g_py All \f$P_{m,n}(Y)\f$
+ *  @param[in] g_ez All \f$E_{m,n}(Z)\f$
  *  @param[in] inv_width Image width inversed (1/w)
  *  @param[in] inv_height Image height inversed (1/h)
  *  @param[in] m_size The big M (number of row blocks)
@@ -178,7 +178,7 @@ void alg3_gpu( float *h_img,
 
     const int B = WS;
 
-    // pre-compute basic alg4 matrices
+    // pre-compute basic alg3 matrices
     Matrix<float,R,R> Ir = identity<float,R,R>();
     Matrix<float,B,R> Zbr = zeros<float,B,R>();
     Matrix<float,R,B> Zrb = zeros<float,R,B>();

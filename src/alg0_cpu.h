@@ -227,13 +227,14 @@ void alg0_cpu( float *inout,
 
 /**
  *  @ingroup api_cpu
- *  @brief Compute algorithm 0 1D in the CPU
+ *  @brief Compute reference for the algorithm 3 in the CPU
  *
- *  Algorithm 0 is the naïve single-core CPU computation of an R-order
+ *  This is the naïve single-core CPU computation of an R-order
  *  recursive filtering, and it servers only for reference.  This
  *  function considers 1D input, computing the ground truth for
- *  algorithm 3.
+ *  algorithm 3 described in [NehabEtAl:2011] cited in alg5().
  *
+ *  @see [NehabEtAl:2011] cited in alg5()
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] width Image width
  *  @param[in] height Image height
@@ -243,11 +244,11 @@ void alg0_cpu( float *inout,
  *  @tparam R Filter order
  */
 template <int R>
-void alg01D_cpu( float *inout,
-                 int width, int height, 
-                 const Vector<float, R+1> &weights,
-                 int border=0,
-                 BorderType border_type=CLAMP_TO_ZERO ) {
+void ref_alg3_cpu( float *inout,
+                   int width, int height, 
+                   const Vector<float, R+1> &weights,
+                   int border=0,
+                   BorderType border_type=CLAMP_TO_ZERO ) {
 
     int border_left, border_top, border_right, border_bottom;
 
@@ -267,6 +268,60 @@ void alg01D_cpu( float *inout,
 
     recursive_rows_fwd<R>(eimg, nw, nh, weights);
     recursive_rows_rev<R>(eimg, nw, nh, weights);
+
+    crop_image(inout, eimg, width, height, 
+               border_top, border_left, 
+               border_bottom, border_right);
+
+    delete [] eimg;
+
+}
+
+/**
+ *  @ingroup api_cpu
+ *  @brief Compute reference for algorithm SAT (Summed-Area Table) in the CPU
+ *
+ *  This is the naïve single-core CPU computation of an R-order
+ *  recursive filtering, in the form of a summed-area table
+ *  (a.k.a. integral image) and it servers only for reference.  This
+ *  function considers 2D input, computing the ground truth for the
+ *  algorithm SAT (Summed-Area Table) described in [NehabEtAl:2011]
+ *  cited in alg5().
+ *
+ *  @see [NehabEtAl:2011] cited in alg5()
+ *  @param[in,out] inout The 2D image to compute recursive filtering
+ *  @param[in] width Image width
+ *  @param[in] height Image height
+ *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] border Number of border blocks (32x32) outside image
+ *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
+ *  @tparam R Filter order
+ */
+template <int R>
+void ref_sat_cpu( float *inout,
+                  int width, int height, 
+                  const Vector<float, R+1> &weights,
+                  int border=0,
+                  BorderType border_type=CLAMP_TO_ZERO ) {
+
+    int border_left, border_top, border_right, border_bottom;
+
+    calc_borders(&border_left, &border_top, &border_right, &border_bottom, 
+                 width, height, border);
+
+    float *eimg = extend_image(inout, width, height, 
+                               border_top, border_left, 
+                               border_bottom, border_right,
+                               border_type);
+
+    int nw = width+border_left+border_right,
+        nh = height+border_top+border_bottom;
+
+    assert(nw%32 == 0);
+    assert(nh%32 == 0);
+
+    recursive_rows_fwd<R>(eimg, nw, nh, weights);
+    recursive_cols_fwd<R>(eimg, nw, nh, weights);
 
     crop_image(inout, eimg, width, height, 
                border_top, border_left, 

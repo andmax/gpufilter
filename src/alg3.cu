@@ -92,7 +92,7 @@ int main( int argc, char** argv ) {
     if (runtimes == 1) // running for debugging
         print_info(width, height, btype, border, a0border, w);
 
-    gpufilter::alg01D_cpu<ORDER>(&cpu_img[0], width, height, w, a0border, btype);
+    gpufilter::ref_alg3_cpu<ORDER>(&cpu_img[0], width, height, w, a0border, btype);
 
     alg3<ORDER>(&gpu_img[0], width, height, runtimes, w, border, btype);
 

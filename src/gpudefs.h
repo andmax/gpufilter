@@ -41,11 +41,14 @@ namespace gpufilter {
 __constant__ int c_border;
 __constant__ Vector<float,ORDER+1> c_weights;
 
-// alg4
+// alg3 and alg4
 __constant__ Matrix<float,ORDER,ORDER> c_AbF_T, c_AbR_T, c_HARB_AFP_T;
 
 // alg5
 __constant__ Matrix<float,ORDER,WS> c_ARE_T, c_ARB_AFP_T, c_TAFB, c_HARB_AFB;
+
+// sat
+__constant__ Matrix<float,ORDER,WS> c_AFP_T;
 
 // clamp
 __constant__ Matrix<float,ORDER,ORDER> c_AbarFIArF_T, c_ArFSRRF_T,

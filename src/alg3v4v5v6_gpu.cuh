@@ -13,6 +13,8 @@
 
 namespace gpufilter {
 
+//== IMPLEMENTATION ============================================================
+
 /**
  *  @ingroup gpu
  *  @brief Algorithm 3 or 4 step 1
@@ -94,7 +96,7 @@ void alg3v4_step1( Matrix<float,R,WS> *g_pybar,
 
 /**
  *  @ingroup gpu
- *  @brief Algorithm 4 or 6 step 2 or 4 or algorithm 5 step 2
+ *  @brief Algorithm 3 or 4 or 6 step 2 or 4 or algorithm 5 step 2
  *
  *  This function computes the algorithm step 3.2 or 4.2 or 4.4 or 6.2
  *  or 6.4 or 5.4 (corresponding to the steps 3.2 and 3.3 or 4.2 and

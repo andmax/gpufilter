@@ -114,7 +114,6 @@ void gpu_timer::do_start()
         check_cuda_error("Timer event creation");
     }
 
-
     cudaEventRecord(m_start, 0);
     check_cuda_error("Event recording");
 }

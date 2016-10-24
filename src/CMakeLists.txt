@@ -67,6 +67,7 @@ endmacro()
 
 add_cuda_exec(alg5f4)
 add_cuda_exec(alg5varc)
+add_cuda_exec(sat)
 
 add_cuda_exec_r(alg3 1)
 add_cuda_exec_r(alg3 2)
