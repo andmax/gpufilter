@@ -56,12 +56,13 @@ src/algN_R
 ```
 
 replacing N for the desired algorithm (3-6) and R for the desired
-filter order (1-5).  There are also two extra algorithms that can
-be called by:
+filter order (1-5).  There are also three extra algorithms that can be
+called by:
 
 ```
 src/alg5f4
 src/alg5varc
+src/sat
 ```
 
 where the first is the algorithm 5 fusioned with 4,

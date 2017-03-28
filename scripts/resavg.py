@@ -4,14 +4,15 @@ import sys
 import pandas as pd
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print 'Usage:', sys.argv[0], 'res.txt resavg.txt'
+    gbc = [0, 1] # group-by columns (default 0 and 1)
+    if len(sys.argv) < 3 or len(sys.argv) > 5:
+        print('Usage: {} res.txt resavg.txt [group-by cols={}]'.format(sys.argv[0], gbc))
         sys.exit(1)
-    print 'Reading', sys.argv[1]
+    if len(sys.argv) == 4: gbc = [int(sys.argv[3])]
+    if len(sys.argv) == 5: gbc = [int(sys.argv[3]), int(sys.argv[4])]
+    print('Reading {}'.format(sys.argv[1]))
     df = pd.read_csv(sys.argv[1], sep=' ', header=None)
-    df.drop(3, axis=1, inplace=True) # drop maximum-error column
-    df.drop(4, axis=1, inplace=True) # drop maximum-relative-error column
-    print 'Writing', sys.argv[2]
-    df.groupby([0, 1]).mean().to_csv(sys.argv[2], sep=' ',header=None)
-    print 'Done!'
+    print('Writing {}'.format(sys.argv[2]))
+    df.groupby(gbc).mean().to_csv(sys.argv[2], sep=' ', header=None)
+    print('Done!')
     sys.exit(0)

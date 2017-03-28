@@ -40,7 +40,7 @@ namespace gpufilter {
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] w Width of the input image
  *  @param[in] h Height of the input image
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @tparam R Filter order
  *  @tparam T Image value type
  */
@@ -74,7 +74,7 @@ void recursive_rows_fwd( T *inout,
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] w Width of the input image
  *  @param[in] h Height of the input image
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @tparam R Filter order
  *  @tparam T Image value type
  */
@@ -108,7 +108,7 @@ void recursive_rows_rev( T *inout,
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] w Width of the input image
  *  @param[in] h Height of the input image
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @tparam R Filter order
  *  @tparam T Image value type
  */
@@ -142,7 +142,7 @@ void recursive_cols_fwd( T *inout,
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] w Width of the input image
  *  @param[in] h Height of the input image
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @tparam R Filter order
  *  @tparam T Image value type
  */
@@ -172,7 +172,7 @@ void recursive_cols_rev( T *inout,
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] width Image width
  *  @param[in] height Image height
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @param[in] border Number of border blocks (32x32) outside image
  *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
  *  @param[in] st The solve type (other attempts to solve with borders)
@@ -238,7 +238,7 @@ void alg0_cpu( float *inout,
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] width Image width
  *  @param[in] height Image height
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @param[in] border Number of border blocks (32x32) outside image
  *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
  *  @tparam R Filter order
@@ -292,7 +292,7 @@ void ref_alg3_cpu( float *inout,
  *  @param[in,out] inout The 2D image to compute recursive filtering
  *  @param[in] width Image width
  *  @param[in] height Image height
- *  @param[in] weights Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] weights Filter weights (feedforward and feedback coefficients)
  *  @param[in] border Number of border blocks (32x32) outside image
  *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
  *  @tparam R Filter order

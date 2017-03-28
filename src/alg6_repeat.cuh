@@ -471,7 +471,7 @@ void alg6_repeat_stage5( float *g_out,
  *  @param[in] width Image width
  *  @param[in] height Image height
  *  @param[in] runtimes Number of run times (1 for debug and 1000 for performance measurements)
- *  @param[in] w Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] w Filter weights (feedforward and feedback coefficients)
  *  @tparam R Filter order
  */
 template <int R>

@@ -1,0 +1,163 @@
+set term svg fsize 11.25 fname "Nimbus Roman No9 L" size 300,200
+set termopt enhanced # to have power-of-2
+
+set tmargin 1.0
+set lmargin 3.5
+set rmargin 1.5
+set bmargin 1.75
+set ylabel offset 2.25, 0.0
+set ytics offset 0.5, 0.0
+set xlabel offset 0.0, 1.25
+set title offset 0.0, -0.8
+set xtics offset 0.0, 0.5
+set key spacing 0.85
+set key samplen 1
+set key reverse
+set key opaque
+
+set style line 1 lc rgb '#2abdbe' dt 1 lw 1.25 # cyan -
+set style line 2 lc rgb '#f47d23' dt 1 lw 1.25 # orange -
+set style line 3 lc rgb '#185aa9' dt 1 lw 1.25 # blue -
+set style line 4 lc rgb '#008c48' dt 1 lw 1.25 # green -
+set style line 5 lc rgb '#eae542' dt 1 lw 1.25 # yellow -
+set style line 6 lc rgb '#999999' dt 1 lw 1.25 # dark grey -
+set style line 7 lc rgb '#000000' dt 1 lw 1.25 # black -
+set style line 8 lc rgb '#912c80' dt 1 lw 1.25 # purple -
+set style line 9 lc rgb '#ee2e2f' dt 1 lw 1.25 # red -
+
+set style line 11 lc rgb '#2abdbe' dt 3 lw 1.25 # cyan ...
+set style line 12 lc rgb '#f47d23' dt 3 lw 1.25 # orange ...
+set style line 13 lc rgb '#185aa9' dt 3 lw 1.25 # blue ...
+set style line 14 lc rgb '#008c48' dt 3 lw 1.25 # green ...
+set style line 15 lc rgb '#eae542' dt 3 lw 1.25 # yellow ...
+set style line 16 lc rgb '#999999' dt 3 lw 1.25 # dark grey ...
+set style line 17 lc rgb '#000000' dt 3 lw 1.25 # black ...
+set style line 18 lc rgb '#912c80' dt 3 lw 1.25 # purple ...
+set style line 19 lc rgb '#ee2e2f' dt 3 lw 1.25 # red ...
+
+set style line 21 lc rgb '#2abdbe' dt 5 lw .75 # cyan -..-
+set style line 22 lc rgb '#f47d23' dt 5 lw .75 # orange -..-
+set style line 23 lc rgb '#185aa9' dt 5 lw .75 # blue -..-
+set style line 24 lc rgb '#008c48' dt 5 lw .75 # green -..-
+set style line 25 lc rgb '#eae542' dt 5 lw .75 # yellow -..-
+set style line 26 lc rgb '#999999' dt 5 lw .75 # dark grey -..-
+set style line 27 lc rgb '#000000' dt 5 lw .75 # black -..-
+set style line 28 lc rgb '#912c80' dt 5 lw .75 # purple -..-
+set style line 29 lc rgb '#ee2e2f' dt 5 lw .75 # red -..-
+
+set style line 10 lc rgb '#b0b0b0' lt 1 lw 0.4 # thin gray
+
+set grid back ls 10
+
+set xtics nomirror scale 0,0
+set ytics nomirror scale 0,0
+
+set format y "%2g"
+set ytics font "Nimbus Roman No9 L,8.75"
+set xtics font "Nimbus Roman No9 L,8.75"
+
+set title "Baseline implementations (zero feedback)"
+set output "algs456-perf.svg"
+set nologscale y
+set key top left
+set key Left
+set ytics 1, 2
+set yrange [0:17]
+set logscale x 2
+set xlabel "Input size (pixels)"
+set xtics ('64^2' 64, '128^2' 128, '256^2' 256, '512^2' 512,\
+  '1024^2' 1024, '2048^2' 2048, '4096^2' 4096, '8192^2' 8192)
+set xrange [64:8192]
+set ylabel "Throughput (GiP/s)"
+plot\
+  "results/alg6_1" using 1:($3/1024) title "6_1" w l ls  7,\
+  "results/alg5_1" using 1:($3/1024) title "5_1" w l ls 27,\
+  "results/alg4_1" using 1:($3/1024) title "4_1" w l ls 17,\
+  "results/alg6_2" using 1:($3/1024) title "6_2" w l ls  9,\
+  "results/alg5_2" using 1:($3/1024) title "5_2" w l ls 29,\
+  "results/alg4_2" using 1:($3/1024) title "4_2" w l ls 19,\
+  "results/alg6_3" using 1:($3/1024) title "6_3" w l ls  4,\
+  "results/alg5_3" using 1:($3/1024) title "5_3" w l ls 24,\
+  "results/alg4_3" using 1:($3/1024) title "4_3" w l ls 14,\
+  "results/alg6_4" using 1:($3/1024) title "6_4" w l ls  3,\
+  "results/alg5_4" using 1:($3/1024) title "5_4" w l ls 23,\
+  "results/alg4_4" using 1:($3/1024) title "4_4" w l ls 13,\
+  "results/alg6_5" using 1:($3/1024) title "6_5" w l ls  2,\
+  "results/alg5_5" using 1:($3/1024) title "5_5" w l ls 22,\
+  "results/alg4_5" using 1:($3/1024) title "4_5" w l ls 12
+
+set title "2D bicubic B-spline interpolation"
+set output "bicubic-interpolation.svg"
+set yrange [0:17]
+plot\
+  "results/alg6bB_1" using 1:($3/1024) title "6^b" w l ls 7,\
+  "results/alg6cB_1" using 1:($3/1024) title "6^c" w l ls 9,\
+  "results/alg6pB_1" using 1:($3/1024) title "6^p" w l ls 4,\
+  "results/alg6eB_1" using 1:($3/1024) title "6^e" w l ls 3,\
+  "results/alg5vB_1" using 1:($3/1024) title "5^v" w l ls 2,\
+  "results/alg5oB_1" using 1:($3/1024) title "5" w l ls 18,\
+  "results/alg5_1_cha.txt" using 1:($3/1024) title "1xy" w l ls 8
+
+#   The phantom char @ works for rendering svg in firefox but not inkscape
+#   The solution was to edit the svg manually, that is why the plot here is removed
+set title "2D Gaussian blur"
+set output "gaussian-blur.svg"
+set yrange [0:11]
+plot\
+  "results/alg6bG_3" using 1:($3/1024) title "6@^b_{3}" w l ls 7,\
+  "results/alg6cG_3" using 1:($3/1024) title "6@^c_{3}" w l ls 9,\
+  "results/alg6pG_3" using 1:($3/1024) title "6@^p_{3}" w l ls 4,\
+  "results/alg6eG_3" using 1:($3/1024) title "6@^e_{3}" w l ls 3,\
+  "results/gauss_fft" using 1:($3/1024) title "cuFFT" w l ls 2,\
+  "results/gauss_dir" using 1:($3/1024) title "conv" w l ls 12,\
+  "results/alg5f4_3" using 1:($3/1024) title "5_1+4_2" w l ls 8,\
+  "results/alg4_3_cha.txt" using 1:($3/1024) title "3x\\_3y" w l ls 18
+
+set title "Effect of filter decay"
+set output "filter-decay.svg"
+set key bottom left
+set yrange [0:17]
+set nologscale x
+set xlabel "Number of blocks"
+set xtics (1, 8, 14, 20, 26, 32)
+set xrange [1:32]
+plot\
+  "results/alg6bb_1" using 1:($2/1024) title "6^b" w l ls 7,\
+  "results/alg6cb_1" using 1:($2/1024) title "6^c" w l ls 9,\
+  "results/alg6pb_1" using 1:($2/1024) title "6^p" w l ls 4,\
+  "results/alg6eb_1" using 1:($2/1024) title "6^e" w l ls 3,\
+  "results/alg5vb_1" using 1:($2/1024) title "5^v" w l ls 2
+
+unset xtics
+unset xrange
+
+# set bars to be solid filled without borders
+set style fill solid 1.00 noborder
+# space box width so there are spaces between bars
+set boxwidth 0.8 absolute
+
+# set and hide ytics
+set ytics nomirror scale 0,0
+set ytics 1
+set ytics font ",8.75"
+
+set grid noxtics
+
+set nokey
+
+set style histogram rowstacked title font ",11.25" offset 0,0.2 textcolor lt -1
+set style data histograms
+
+# set xtics as bar labels rotated
+set xtics scale 0,0 nomirror offset character -0.85,0.1 rotate by -45
+set xtics font ",8.75"
+
+set noxlabel
+set ylabel "Time (ms)"
+set format y "%2g"
+
+set title "Processing time by step (zero feedback)"
+
+set yrange [ 0 : 12 ] noreverse nowriteback
+set output '4k-stages.svg'
+plot newhistogram "1st order", 'results/4k-stages.dat' u (1000*column("1--4--1")):xtic(1) t col ls 3, '' u (1000*column("1--(56)--1")):xtic(1) t col ls 2, '' u (1000*column("1--(456)--2")) t col ls 7, '' u (1000*column("1--4--3")) t col ls 4, '' u (1000*column("1--5--3")) t col ls 5, '' u (1000*column("1--6--3")) t col ls 6, '' u (1000*column("1--(46)--4")) t col ls 7, '' u (1000*column("1--4--5")) t col ls 8, '' u (1000*column("1--(5--4)(6--5)")) t col ls 9, newhistogram "2nd order", '' u (1000*column("2--4--1")):xtic(1) t col ls 3, '' u (1000*column("2--(56)--1")):xtic(1) t col ls 2, '' u (1000*column("2--(456)--2")) t col ls 7, '' u (1000*column("2--4--3")) t col ls 4, '' u (1000*column("2--5--3")) t col ls 5, '' u (1000*column("2--6--3")) t col ls 6, '' u (1000*column("2--(46)--4")) t col ls 7, '' u (1000*column("2--4--5")) t col ls 8, '' u (1000*column("2--(5--4)(6--5)")) t col ls 9, newhistogram "3rd order", '' u (1000*column("3--4--1")):xtic(1) t col ls 3, '' u (1000*column("3--(56)--1")):xtic(1) t col ls 2, '' u (1000*column("3--(456)--2")) t col ls 7, '' u (1000*column("3--4--3")) t col ls 4, '' u (1000*column("3--5--3")) t col ls 5, '' u (1000*column("3--6--3")) t col ls 6, '' u (1000*column("3--(46)--4")) t col ls 7, '' u (1000*column("3--4--5")) t col ls 8, '' u (1000*column("3--(5--4)(6--5)")) t col ls 9, newhistogram "4th order", '' u (1000*column("4--4--1")):xtic(1) t col ls 3, '' u (1000*column("4--(56)--1")):xtic(1) t col ls 2, '' u (1000*column("4--(456)--2")) t col ls 7, '' u (1000*column("4--4--3")) t col ls 4, '' u (1000*column("4--5--3")) t col ls 5, '' u (1000*column("4--6--3")) t col ls 6, '' u (1000*column("4--(46)--4")) t col ls 7, '' u (1000*column("4--4--5")) t col ls 8, '' u (1000*column("4--(5--4)(6--5)")) t col ls 9, newhistogram "5th order", '' u (1000*column("5--4--1")):xtic(1) t col ls 3, '' u (1000*column("5--(56)--1")):xtic(1) t col ls 2, '' u (1000*column("5--(456)--2")) t col ls 7, '' u (1000*column("5--4--3")) t col ls 4, '' u (1000*column("5--5--3")) t col ls 5, '' u (1000*column("5--6--3")) t col ls 6, '' u (1000*column("5--(46)--4")) t col ls 7, '' u (1000*column("5--4--5")) t col ls 8, '' u (1000*column("5--(5--4)(6--5)")) t col ls 9

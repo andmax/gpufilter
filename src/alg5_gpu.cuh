@@ -10,10 +10,12 @@
 #define ALG5_GPU_CUH
 
 #define MST == // measure step time: no: == ; yes: >=
+#ifndef ALG5ORIG // external define it to run alg5 original
 #define LDG // uncomment to use __ldg
-#if ORDER==1 || ORDER==2 || ORDER==4
+//#if ORDER==1 || ORDER==2 || ORDER==4
 #define REGS // uncomment to use registers
 #define GMAT // uncomment to use global constant matrices
+//#endif
 #endif
 
 //== INCLUDES ==================================================================
@@ -225,7 +227,7 @@ void alg5_step3( Matrix<float,R,WS> *g_ptucheck,
  *  @param[in] width Image width
  *  @param[in] height Image height
  *  @param[in] runtimes Number of run times (1 for debug and 1000 for performance measurements)
- *  @param[in] w Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] w Filter weights (feedforward and feedback coefficients)
  *  @param[in] border Number of border blocks (32x32) outside image
  *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
  *  @tparam BORDER Flag to consider border input padding

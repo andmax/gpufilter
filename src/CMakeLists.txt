@@ -65,10 +65,6 @@ macro(add_cuda_exec_r name r)
   remove_definitions(-DORDER=${r})
 endmacro()
 
-add_cuda_exec(alg5f4)
-add_cuda_exec(alg5varc)
-add_cuda_exec(sat)
-
 add_cuda_exec_r(alg3 1)
 add_cuda_exec_r(alg3 2)
 add_cuda_exec_r(alg3 3)
@@ -92,3 +88,22 @@ add_cuda_exec_r(alg6 2)
 add_cuda_exec_r(alg6 3)
 add_cuda_exec_r(alg6 4)
 add_cuda_exec_r(alg6 5)
+
+add_cuda_exec(alg5f4)
+add_cuda_exec(alg5varc)
+add_cuda_exec(sat)
+
+add_definitions(-DALG5ORIG)
+cuda_add_executable(alg5orig_1 alg5.cu)
+target_link_libraries(alg5orig_1 util)
+remove_definitions(-DALG5ORIG)
+
+add_definitions(-DRUN_GAUSS_2)
+cuda_add_executable(gauss_dir gauss_dir_fft.cu)
+target_link_libraries(gauss_dir util)
+remove_definitions(-DRUN_GAUSS_2)
+
+add_definitions(-DRUN_GAUSS_FFT)
+cuda_add_executable(gauss_fft gauss_dir_fft.cu)
+target_link_libraries(gauss_fft util ${CUDA_cufft_LIBRARY})
+remove_definitions(-DRUN_GAUSS_FFT)

@@ -39,7 +39,7 @@ void usage(char *argv0) {
  *  @param[out] border Number of border blocks (32x32) outside image
  *  @param[out] cpu_img Random image to be filtered in the CPU
  *  @param[out] gpu_img Random image to be filtered in the GPU
- *  @param[out] w Filter weights (feedforward and feedforward coefficients)
+ *  @param[out] w Filter weights (feedforward and feedback coefficients)
  *  @param[out] a0border Number of border blocks for algorithm 0 (reference)
  *  @param[out] me Maximum error to check the results versus reference
  *  @param[out] mre Maximum relative error to check the results versus reference
@@ -90,7 +90,7 @@ void initial_setup(int& width, int& height, int& runtimes,
     float sigma = 4.f; // width / 6.f;
     gpufilter::weights(sigma, w);
 
-    a0border = (width+63)/64; // worst case will have half-image border
+    a0border = (width+63)/64; // up to half-image border in blocks
     if (btype == gpufilter::CLAMP_TO_ZERO)
         a0border = 0;
     if (a0border < border)
@@ -107,7 +107,7 @@ void initial_setup(int& width, int& height, int& runtimes,
  *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
  *  @param[in] border Number of border blocks (32x32) outside image
  *  @param[in] a0border Number of border blocks for algorithm 0 (reference)
- *  @param[in] w Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] w Filter weights (feedforward and feedback coefficients)
  */
 void print_info(const int& width, const int& height,
                 const gpufilter::BorderType& btype,

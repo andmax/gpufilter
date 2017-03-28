@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(gpufilter CXX C)
 
 if(NOT CUDA_SDK_ROOT_DIR) # it is ugly, I know
-  set(CUDA_SDK_ROOT_DIR /usr/local/cuda-7.0/samples)
+  set(CUDA_SDK_ROOT_DIR /usr/local/cuda/samples)
 endif()
 if(NOT CUDA_TOOLKIT_ROOT_DIR)
-  set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda-7.0)
+  set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda)
 endif()
 
 find_package(CUDA REQUIRED)
@@ -14,7 +14,8 @@ find_package(CUDA REQUIRED)
 
 if(NOT USE_SM)
     #set(USE_SM 30) #using SM_35 in TITAN was slower than SM_30
-    set(USE_SM 35) #..it does not seem to be the case anymore..
+    #set(USE_SM 35) #..it does not seem to be the case anymore..
+    set(USE_SM 61) # Pascal
 endif()
 
 set(CUDA_NVCC_FLAGS

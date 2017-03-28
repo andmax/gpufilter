@@ -1,4 +1,4 @@
-g.o
+12;rgb:fdfd/f6f6/e3e3g.o
 *~
 *.bak
 \#*
@@ -7,4 +7,7 @@ build/
 .*
 *.zip
 doc/
-scripts/results/
+grave/lib/
+scripts/results*
+scripts/*.svg
+scripts/*.pdf

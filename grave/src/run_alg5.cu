@@ -35,7 +35,7 @@ int main( int argc, char** argv ) {
                      sscanf(argv[2], "%d", &height) != 1 ||
                      sscanf(argv[3], "%d", &runtimes) != 1))) {
         std::cerr << APPNAME << " Bad arguments!\n";
-        std::cout << APPNAME << " Usage: " << argv[0] << " width height\n";
+        std::cout << APPNAME << " Usage: " << argv[0] << " [width height runtimes]\n";
         return 1;
     }
 

@@ -11,9 +11,9 @@
 
 #define MST == // measure step time: no: == ; yes: >=
 #define LDG // uncomment to use __ldg
-#if ORDER==1 || ORDER==2 || ORDER==4
+//#if ORDER==1 || ORDER==2 || ORDER==4
 #define REGS // uncomment to use registers
-#endif
+//#endif
 #define GMAT // uncomment to use global constant matrices
 
 //== INCLUDES ==================================================================
@@ -155,7 +155,7 @@ void alg6_step3( Matrix<float,R,WS> *g_ptucheck,
  *  @param[in] width Image width
  *  @param[in] height Image height
  *  @param[in] runtimes Number of run times (1 for debug and 1000 for performance measurements)
- *  @param[in] w Filter weights (feedforward and feedforward coefficients)
+ *  @param[in] w Filter weights (feedforward and feedback coefficients)
  *  @param[in] border Number of border blocks (32x32) outside image
  *  @param[in] btype Border type (either zero, clamp, repeat or reflect)
  *  @tparam BORDER Flag to consider border input padding

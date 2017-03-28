@@ -44,9 +44,9 @@ int main( int argc, char** argv ) {
     float me = 0.f, mre = 0.f; // maximum error and maximum relative error
 
     if ((argc > 1 && argc < 4) ||
-        (argc==4 && (sscanf(argv[1], "%d", &width) != 1 ||
-                     sscanf(argv[2], "%d", &height) != 1 ||
-                     sscanf(argv[3], "%d", &runtimes) != 1))) {
+        (argc >= 4 && (sscanf(argv[1], "%d", &width) != 1 ||
+                       sscanf(argv[2], "%d", &height) != 1 ||
+                       sscanf(argv[3], "%d", &runtimes) != 1))) {
         std::cerr << APPNAME << " Bad arguments!\n";
         std::cout << APPNAME << " Usage: " << argv[0]
                   << " [width height runtimes]\n";
