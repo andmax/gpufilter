@@ -641,6 +641,33 @@ Matrix<T,R,N> tailT(const Matrix<T,M,N> &mat, bool clamp=false) {
     return transp(tail<R>(transp(mat), clamp));
 }
 
+/**
+ *  @ingroup utils
+ *  @brief Computes the \a forward operator on an array of values
+ *
+ *  Computes in-place the array resulting from applying the \a forward
+ *  operator \f$F\f$ (causal filter) considering the prologue vector
+ *  \f$p\f$ (i.e. initial conditions) zero, given the input array
+ *  \f$io\f$ and a vector of weights \f$w\f$.  The array is returned
+ *  in the input array itself.
+ *
+ *  @see fwd()
+ *  @param[in,out] io Input array (at the current filtering position)
+ *  @param[in] n Number of elements in the array
+ *  @param[in] w Filter weights with \f$R+1\f$ size
+ *  @tparam R Filter order
+ *  @tparam T Value type
+ */
+template <int R, typename T>
+void iir_fwd_inplace( T *io,
+                      const int& n,
+                      const Vector<T,R+1>& w ) {
+    Vector<T,R> p = zeros<T,R>();
+    for (int i = 0; i < n; ++i) {
+        io[i] = fwd(p, io[i]*w[0], w);
+    }
+}
+
 //==============================================================================
 } // namespace gpufilter
 //==============================================================================

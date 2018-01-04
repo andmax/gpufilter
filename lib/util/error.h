@@ -171,21 +171,23 @@ void print_matrix(const T *res,
 
 /**
  *  @ingroup utils
- *  @brief Print device vector values
+ *  @brief Print array of values
  *
- *  This function prints values from a vector stored in the
- *  GPU.  This function is for debug only.
+ *  This function prints an array of values for debug.
  *
- *  @param[in] res Result (GPU) values
- *  @param[in] ne Number of elements in vector
- *  @tparam T Values type used in the GPU
+ *  @param[in] a Array of values
+ *  @param[in] n Number of elements in array
+ *  @param[in] t Title string of this array
+ *  @tparam T Type of the values in the array
  */
-template< class T >
-void print_vector(const T *res,
-                  const int& ne) {
-    std::cout << res[ 0 ] << std::flush;
-    for (int i = 1; i < ne; i++)
-        std::cout << " " << res[ i ] << std::flush;
+template <typename T>
+void print_array( const T *a,
+                  const int& n,
+                  const char* t ) {
+    std::cout << t << std::flush;
+    for (int i = 0; i < n; ++i) {
+        std::cout << " " << a[i] << std::flush;
+    }
     std::cout << "\n";
 }
 
