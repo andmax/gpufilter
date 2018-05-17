@@ -83,6 +83,36 @@ T fwd(Vector<T,R> &p, T x, const Vector<T,R+1> &w) {
 
 /**
  *  @ingroup utils
+ *  @brief Computes direct \a forward operator in-place on a value
+ *
+ *  This function is similar to fwd() but it also multiplies the 
+ *  input value \f$x\f$ by the first weight \f$w\f$ corresponding
+ *  to the feedforward (or direct) coefficient.
+ *
+ *  @see rec_op()
+ *  @param[in,out] p Prologue vector with \f$R\f$ size
+ *  @param[in] x Input value (at the current filtering position)
+ *  @param[in] w Filter weights with \f$R+1\f$ size
+ *  @return Filtered value at the current filtering position
+ *  @tparam T Value type
+ *  @tparam R Filter order
+ */
+template <class T, int R>
+HOSTDEV
+T fwdI( Vector<T,R> &p,
+        T x,
+        const Vector<T,R+1>& w ) {
+    T acc = rec_op(x*w[0],p[R-1]*w[1]);
+#pragma unroll
+    for (int k=R-1; k>=1; --k) {
+        acc = rec_op(acc,p[R-1-k]*w[k+1]);
+        p[R-1-k] = p[R-1-k+1];
+    }
+    return p[R-1] = acc;
+}
+
+/**
+ *  @ingroup utils
  *  @relates Vector
  *  @brief Computes the \a forward operator on vectors (in-place)
  *
@@ -308,6 +338,36 @@ T rev(T x, Vector<T,R> &e, const Vector<T,R+1> &w) {
 #pragma unroll
     for(int k=R-1; k>=1; --k)
     {
+        acc = rec_op(acc,e[k]*w[k+1]);
+        e[k] = e[k-1];
+    }
+    return e[0] = acc;
+}
+
+/**
+ *  @ingroup utils
+ *  @brief Computes direct \a reverse operator in-place on a value
+ *
+ *  This function is similar to rev() but it also multiples the
+ *  input value \f$x\f$ by the first weight \f$w\f$ corresponding
+ *  to the direct reverse coefficient.
+ *
+ *  @see rec_op()
+ *  @param[in] x Input value (at the current filtering position)
+ *  @param[in,out] e Epilogue vector with \f$R\f$ size
+ *  @param[in] w Filter weights with \f$R+1\f$ size
+ *  @return Filtered value at the current filtering position
+ *  @tparam T Value type
+ *  @tparam R Filter order
+ */
+template <class T, int R>
+HOSTDEV
+T revI( T x,
+        Vector<T,R> &e,
+        const Vector<T,R+1>& w ) {
+    T acc = rec_op(x*w[0],e[0]*w[1]);
+#pragma unroll
+    for (int k=R-1; k>=1; --k) {
         acc = rec_op(acc,e[k]*w[k+1]);
         e[k] = e[k-1];
     }
@@ -643,7 +703,7 @@ Matrix<T,R,N> tailT(const Matrix<T,M,N> &mat, bool clamp=false) {
 
 /**
  *  @ingroup utils
- *  @brief Computes the \a forward operator on an array of values
+ *  @brief Computes the \a forward operator on an array
  *
  *  Computes in-place the array resulting from applying the \a forward
  *  operator \f$F\f$ (causal filter) considering the prologue vector
@@ -667,6 +727,39 @@ void iir_fwd_inplace( T *io,
         io[i] = fwd(p, io[i]*w[0], w);
     }
 }
+
+/**
+ *  @ingroup utils
+ *  @brief Computes the \a forward and reverse operators on an array
+ *
+ *  Computes in-place the array resulting from applying the \a forward
+ *  operator \f$F\f$ (causal filter) and \a reverse operator \f$R\f$
+ *  (anti-causal filter) considering both the prologue and epilogue
+ *  \f$p\f$  and \f$e\f$ (i.e. initial conditions) zero, given an
+ *  input array \f$io\f$ and weights \f$w\f$.  The array is returned
+ *  in the input array itself.
+ *
+ *  @see fwd()
+ *  @param[in,out] io Input array (at the current filtering position)
+ *  @param[in] n Number of elements in the array
+ *  @param[in] w Filter weights with \f$R+1\f$ size
+ *  @tparam R Filter order
+ *  @tparam T Value type
+ */
+template <int R, typename T>
+void iir_fwd_rev_inplace( T *io,
+                          const int& n,
+                          const Vector<T,R+1>& w ) {
+    Vector<T,R> p = zeros<T,R>();
+    for (int i = 0; i < n; ++i) {
+        io[i] = fwd(p, io[i]*w[0], w);
+    }
+    Vector<T,R> e = zeros<T,R>();
+    for (int i = n-1; i >= 0; --i) {
+        io[i] = rev(io[i]*w[0], e, w);
+    }
+}
+
 
 //==============================================================================
 } // namespace gpufilter

@@ -71,34 +71,6 @@ texture<float, cudaTextureType2D, cudaReadModeElementType> t_in;
 
 // Auxiliary functions ---------------------------------------------------------
 
-template <class T, int R>
-HOSTDEV
-T fwdI( Vector<T,R> &p,
-        T x,
-        const Vector<T,R+1>& w ) {
-    T acc = rec_op(x*w[0],p[R-1]*w[1]);
-#pragma unroll
-    for (int k=R-1; k>=1; --k) {
-        acc = rec_op(acc,p[R-1-k]*w[k+1]);
-        p[R-1-k] = p[R-1-k+1];
-    }
-    return p[R-1] = acc;
-}
-
-template <class T, int R>
-HOSTDEV
-T revI( T x,
-        Vector<T,R> &e,
-        const Vector<T,R+1>& w ) {
-    T acc = rec_op(x*w[0],e[0]*w[1]);
-#pragma unroll
-    for (int k=R-1; k>=1; --k) {
-        acc = rec_op(acc,e[k]*w[k+1]);
-        e[k] = e[k-1];
-    }
-    return e[0] = acc;
-}
-
 template <int W, int V>
 __device__
 void read_block( Matrix<float,WS,V>& block,
