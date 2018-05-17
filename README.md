@@ -1,11 +1,11 @@
 # gpufilter
 
-gpufilter stands for GPU Recursive Filtering.  The goal of this project
-is to provide the baseline code in C/C++/CUDA for computing the fastest
-boundary-aware recursive filtering using the GPU (graphics processing unit).
-The *fastest* means fastest to date (as of 2016) and *boundary
-awareness* means closed-form exact (no approximations), i.e.,
-the idea is to compute the exact initial feedbacks needed for
+gpufilter stands for GPU Recursive Filtering.  The goal of this
+project is to provide the baseline code in C/C++/CUDA for computing
+the fastest boundary-aware recursive filtering using the GPU (graphics
+processing unit).  The *fastest* means fastest to date (as of 2016)
+and *boundary awareness* means closed-form exact (no approximations),
+i.e.  the idea is to compute the exact initial feedbacks needed for
 recursive filtering infinite input extensions.
 
 Please keep in mind that this code is just to check the performance
@@ -47,7 +47,7 @@ cmake -DCUDA_HOST_COMPILER=/usr/bin/g++ ..
 
 Or that you need to change the *sm_61* (for Pascal) architecture to
 another target architecture of your choice in the root
-[CMakeLists.txt] (CMakeLists.txt) file.
+[CMakeLists.txt](CMakeLists.txt) file.
 
 To run the algorithms after compiling, execute:
 
@@ -65,8 +65,9 @@ src/alg5varc
 src/sat
 ```
 
-where the first is the algorithm 5 fusioned with 4,
-and the second is the algorithm 5 with varying coefficients.
+where the first is the algorithm 5 fusioned with 4, the second is the
+algorithm 5 with varying coefficients, and the third is the
+summed-area table algorithm.
 
 ### Prerequisities
 
