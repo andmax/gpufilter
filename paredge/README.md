@@ -1,0 +1,4 @@
+paredge
+=======
+
+Parallel Edge Detection
