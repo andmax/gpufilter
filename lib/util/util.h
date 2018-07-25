@@ -1,5 +1,5 @@
 /**
- *  @file error.h
+ *  @file util.h
  *  @brief Device error management definition and implementation
  *  @author Rodolfo Lima
  *  @author Andre Maximo
@@ -7,8 +7,8 @@
  *  @copyright The MIT License
  */
 
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef UTIL_H
+#define UTIL_H
 
 //== INCLUDES ==================================================================
 
@@ -23,6 +23,27 @@
 namespace gpufilter {
 
 //=== IMPLEMENTATION ===========================================================
+
+/**
+ *  @ingroup utils
+ *  @brief Get CUDA device properties string
+ *  @return Device properties string
+ */
+inline std::string get_cuda_device_properties(void) {
+    cudaDeviceProp info;
+    cudaGetDeviceProperties(&info, 0);
+    std::stringstream ss;
+    ss << "CUDA Compute Capability: "
+       << info.major << "." << info.minor << "\n"
+       << "Warp size: " << info.warpSize << "\n"
+       << "Maximum warps per multiprocessor "
+       << info.maxThreadsPerMultiProcessor/info.warpSize << "\n"
+       << "Shared memory per block: "
+       << info.sharedMemPerBlock/1024 << "KiB\n"
+       << "Shared memory per multiprocessor: "
+       << info.sharedMemPerMultiprocessor/1024 << "KiB\n";
+    return ss.str();
+}
 
 /**
  *  @ingroup utils
@@ -194,5 +215,5 @@ void print_array( const T *a,
 //==============================================================================
 } // namespace gpufilter
 //==============================================================================
-#endif // ERROR_H
+#endif // UTIL_H
 //==============================================================================

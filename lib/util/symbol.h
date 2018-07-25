@@ -18,7 +18,7 @@
 
 #include <cuda.h>
 
-#include "error.h"
+#include "util.h"
 
 //== NAMESPACES ================================================================
 

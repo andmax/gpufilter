@@ -23,7 +23,7 @@
 #include <complex>
 #include <iomanip>
 
-#include <util/error.h>
+#include <util/util.h>
 #include <util/symbol.h>
 #include <util/dvector.h>
 #include <util/timer.h>

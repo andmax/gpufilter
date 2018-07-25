@@ -15,7 +15,9 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "error.h"
+#include <cuda_runtime.h>
+
+#include "util.h"
 
 //== NAMESPACES ================================================================
 

@@ -23,13 +23,13 @@
 #include <complex>
 #include <iomanip>
 
-#include <util/error.h>
 #include <util/symbol.h>
 #include <util/dvector.h>
 #include <util/timer.h>
 #include <util/recfilter.h>
 #include <util/image.h>
 #include <util/gaussian.h>
+#include <util/util.h>
 
 #include "cpudefs.h"
 #include "gpudefs.h"

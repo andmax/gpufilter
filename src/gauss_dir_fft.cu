@@ -14,7 +14,7 @@
 
 #include <cufft.h>
 
-#include <util/error.h>
+#include <util/util.h>
 #include <util/symbol.h>
 //#include <util/chronos.h>
 #include <util/dvector.h>

@@ -9,6 +9,7 @@
 
 //== INCLUDES ==================================================================
 
+#include <sstream>
 #include <iostream>
 #include <cmath>
 #include <stack>
@@ -21,7 +22,7 @@
 #include <sys/time.h>
 #endif
 
-#include "error.h"
+#include "util.h"
 #include "timer.h"
 
 //== NAMESPACES ================================================================
