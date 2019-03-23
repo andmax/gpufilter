@@ -1,6 +1,6 @@
 /**
  *  @file util.h
- *  @brief Device error management definition and implementation
+ *  @brief Device-based definitions, errors and implementations
  *  @author Rodolfo Lima
  *  @author Andre Maximo
  *  @date February, 2011
@@ -36,12 +36,14 @@ inline std::string get_cuda_device_properties(void) {
     ss << "CUDA Compute Capability: "
        << info.major << "." << info.minor << "\n"
        << "Warp size: " << info.warpSize << "\n"
-       << "Maximum warps per multiprocessor "
-       << info.maxThreadsPerMultiProcessor/info.warpSize << "\n"
-       << "Shared memory per block: "
-       << info.sharedMemPerBlock/1024 << "KiB\n"
+       << "Memory pitch: " << info.memPitch/1024/1024 << "MiB\n"
+       << "Global memory bus: " << info.memoryBusWidth << "-bit\n"
+       << "Number of multiprocessors: " << info.multiProcessorCount << "\n"
+       << "Shared memory per block: " << info.sharedMemPerBlock/1024 << "KiB\n"
        << "Shared memory per multiprocessor: "
-       << info.sharedMemPerMultiprocessor/1024 << "KiB\n";
+       << info.sharedMemPerMultiprocessor/1024 << "KiB\n"
+       << "Maximum warps per multiprocessor: "
+       << info.maxThreadsPerMultiProcessor/info.warpSize << "\n";
     return ss.str();
 }
 
