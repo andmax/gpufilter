@@ -118,6 +118,7 @@ void check_cpu_reference(const T1 *ref,
  *  @param[in] res Result (GPU) values
  *  @param[in] w Image width
  *  @param[in] h Image height
+ *  @param[in] nep Number of errors to print
  *  @param[in] thrld Error threshold (default: 1e-5)
  *  @tparam T1 Values type used in the GPU
  *  @tparam T2 Values type used in the CPU
@@ -126,16 +127,22 @@ template< class T1, class T2 >
 void print_errors(const T1 *ref,
                   const T2 *res,
                   const int& w, const int& h,
+                  const long int& nep = -1,
                   const T1& thrld = (T1)1e-5) {
+    long int pi = 0;
     for (int i = 0; i < h; i++)
     {
         for (int j = 0; j < w; j++)
         {
             T1 a = (T1)(res[i*w+j]) - ref[i*w+j];
             if( a < (T1)0 ) a = -a;
-            if( a > thrld )
+            if( a > thrld ) {
                 std::cout << "Row: " << i << " Col: " << j << " Err: " << a
                           << " Ref: " << ref[i*w+j] << " Res: " << res[i*w+j] << "\n";
+                pi++;
+                if (pi == nep)
+                    return;
+            }
         }
     }
 }
@@ -147,6 +154,7 @@ void print_errors(const T1 *ref,
  *  @param[in] ref Reference (CPU) values
  *  @param[in] res Result (GPU) values
  *  @param[in] ne Number of elements in vector
+ *  @param[in] nep Number of errors to print
  *  @param[in] thrld Error threshold (default: 1e-5)
  *  @tparam T1 Values type used in the GPU
  *  @tparam T2 Values type used in the CPU
@@ -154,15 +162,21 @@ void print_errors(const T1 *ref,
 template< class T1, class T2 >
 void print_errors(const T1 *ref,
                   const T2 *res,
-                  const int& ne,
+                  const long int& ne,
+                  const long int& nep = -1,
                   const T1& thrld = (T1)1e-5) {
-    for (int i = 0; i < ne; i++)
+    long int pi = 0;
+    for (long int i = 0; i < ne; i++)
     {
         T1 a = (T1)(res[i]) - ref[i];
         if( a < (T1)0 ) a = -a;
-        if( a > thrld )
+        if( a > thrld ) {
             std::cout << "Elem: " << i << " Err: " << a
                       << " Ref: " << ref[i] << " Res: " << res[i] << "\n";
+            pi++;
+            if (pi == nep)
+                return;
+        }
     }
 }
 
