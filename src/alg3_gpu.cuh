@@ -265,6 +265,22 @@ void alg3_gpu( float *h_img,
     else if (R >= 3)
         cudaFuncSetCacheConfig(alg3v4v5v6_step2v4<R>, cudaFuncCachePreferShared);
 
+    // first run to warm the GPU up
+
+    cudaBindTextureToArray(t_in, a_in);
+
+    alg3v4_step1<BORDER><<< dim3(m_size, n_size), dim3(WS, NWC) >>>
+        ( &d_pybar, &d_ezhat, inv_width, inv_height, m_size );
+
+    alg3v4v5v6_step2v4<<< dim3(1, n_size), dim3(WS, NWA) >>>
+        ( &d_pybar, &d_ezhat, m_size );
+
+    alg3_step3<BORDER><<< dim3(m_size, n_size), dim3(WS, NWW) >>>
+        ( d_img, &d_pybar, &d_ezhat, inv_height, inv_width,
+          m_size, n_size, stride_img );
+
+    cudaUnbindTexture(t_in);
+
     double te[3] = {0, 0, 0}; // time elapsed for the three steps
     base_timer *timer[3];
     for (int i = 0; i < 3; ++i)
