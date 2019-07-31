@@ -90,10 +90,10 @@ inline void check_cuda_error(const std::string &msg) {
 template< class T1, class T2 >
 void check_cpu_reference(const T1 *ref,
                          const T2 *res,
-                         const int& ne,
+                         const long int& ne,
                          T1& me, T1& mre) {
     mre = me = (T1)0;
-    for (int i = 0; i < ne; i++)
+    for (long int i = 0; i < ne; i++)
     {
         T1 a = (T1)(res[i]) - ref[i];
         if( a < (T1)0 ) a = -a;
