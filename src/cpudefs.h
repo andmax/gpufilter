@@ -87,7 +87,7 @@ void initial_setup(int& width, int& height, int& runtimes,
     for (int i = 0; i < width*height; ++i)
         gpu_img[i] = cpu_img[i] = rand() / (float)RAND_MAX;
 
-    float sigma = 4.f; // width / 6.f;
+    double sigma = 4.0; // width / 6.0;
     gpufilter::weights(sigma, w);
 
     a0border = (width+63)/64; // up to half-image border in blocks

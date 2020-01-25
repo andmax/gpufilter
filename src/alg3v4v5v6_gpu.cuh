@@ -445,7 +445,7 @@ void alg5v6_step4v5( float *g_out,
 #ifdef LDG
 #pragma unroll
         for (int r=0; r<R; ++r)
-            e[r] = __ldg((float *)&g_etv[m*(n_size+1)+n+1][r][tx]);
+            e[r] = __ldg((const float *)&g_etv[m*(n_size+1)+n+1][r][tx]);
 #else
         e = ((Matrix<float,R,WS>*)&g_etv[m*(n_size+1)+n+1][0][tx])->col(0);
 #endif

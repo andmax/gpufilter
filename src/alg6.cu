@@ -120,7 +120,8 @@ int main( int argc, char** argv ) {
 
     alg6<ORDER>(&gpu_img[0], width, height, runtimes, w, border, btype);
 
-    gpufilter::check_cpu_reference( &cpu_img[0], &gpu_img[0], width*height, me, mre );
+    gpufilter::check_cpu_reference( &cpu_img[0], &gpu_img[0], width*height,
+                                    me, mre );
 
     if (runtimes == 1) // running for debugging
         std::cout << APPNAME << " [max-error] [max-relative-error]:";

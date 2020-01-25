@@ -41,21 +41,24 @@ namespace gpufilter {
  *  @param[in] s Gaussian sigma
  *  @param[out] w Weights with feedforward and feedback first-order coefficients
  */
-void weights(double s, Vector<float,3> &w);
+template <typename T>
+void weights(double s, Vector<T,3> &w);
 
 /**
  *  @ingroup utils
  *  @overload void weights(double s, Vector<float,2> &w)
  *  @brief Compute first-order weights
  */
-void weights(double s, Vector<float,2> &w);
+template <typename T>
+void weights(double s, Vector<T,2> &w);
 
 /**
  *  @ingroup utils
  *  @overload void weights(double s, Vector<float,4> &w)
  *  @brief Compute third-order weights
  */
-void weights(double s, Vector<float,4> &w);
+template <typename T>
+void weights(double s, Vector<T,4> &w);
 
 //== IMPLEMENTATION ============================================================
 
@@ -65,12 +68,12 @@ void weights(double s, Vector<float,4> &w);
  *  @brief Compute random weights for any order (fourth or greater)
  *  @tparam R Filter order
  */
-template <int R>
-void weights(double s, Vector<float,R> &w) {
+template <typename T, int R>
+void weights(double s, Vector<T,R> &w) {
 
-    float sum = 0;
+    T sum = 0;
     for(int i=0; i<R; ++i)
-        sum += w[i] = rand()/(float)RAND_MAX;
+        sum += w[i] = rand()/(T)RAND_MAX;
 
     for(int i=0; i<R; ++i)
         w[i] /= sum;
@@ -79,5 +82,10 @@ void weights(double s, Vector<float,R> &w) {
 //==============================================================================
 } // namespace gpufilter
 //==============================================================================
+
+//== IMPLEMENTATION ============================================================
+
+#include "gaussian.hpp"
+
 #endif // GAUSSIAN_H
 //==============================================================================

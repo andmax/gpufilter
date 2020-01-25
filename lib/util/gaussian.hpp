@@ -1,5 +1,5 @@
 /**
- *  @file gaussian.cpp
+ *  @file gaussian.hpp
  *  @brief Gaussian blur via recursive filtering implementation
  *  @author Rodolfo Lima
  *  @author Andre Maximo
@@ -98,17 +98,19 @@ int rec_op_sign() {
 
 //-- Weights -------------------------------------------------------------------
 
-void weights(double s, Vector<float,2> &w) 
+template <typename T>
+void weights(double s, Vector<T,2> &w) 
 {
     double d = ds(d3, s);
 
     int sign = rec_op_sign();
 
-    w[0] = static_cast<float>(-(1.0-d)/d);
-    w[1] = sign*static_cast<float>(1.0/d);
+    w[0] = static_cast<T>(-(1.0-d)/d);
+    w[1] = sign*static_cast<T>(1.0/d);
 }
 
-void weights(double s, Vector<float,3> &w) 
+template <typename T>
+void weights(double s, Vector<T,3> &w) 
 {
     dcomplex d = ds(d1, s);
     double n2 = abs(d); 
@@ -117,12 +119,13 @@ void weights(double s, Vector<float,3> &w)
 
     int sign = rec_op_sign();
 
-    w[0] = static_cast<float>((1-2*re+n2)/n2);
-    w[1] = sign*static_cast<float>(2*re/n2);
-    w[2] = sign*static_cast<float>(-1/n2);
+    w[0] = static_cast<T>((1-2*re+n2)/n2);
+    w[1] = sign*static_cast<T>(2*re/n2);
+    w[2] = sign*static_cast<T>(-1/n2);
 }
 
-void weights(double s, Vector<float,4> &w) 
+template <typename T>
+void weights(double s, Vector<T,4> &w) 
 {
     Vector<float, 2> w1;
     Vector<float, 3> w2;
