@@ -141,7 +141,7 @@ void sat_step2( Matrix<float,R,WS> *g_pybar,
                         float v = c_TAFB[i][tx] * py[j];
 #pragma unroll // recursive doubling by shuffle
                         for (int k = 1; k < WS; k *= 2) {
-                            float p = __shfl_up(v, k);
+                            float p = __shfl_up_sync(FM, v, k);
                             if (tx >= k) {
                                 v += p;
                             }

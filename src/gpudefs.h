@@ -13,6 +13,8 @@
 
 #define WS 32 ///< Warp size (defines b x b block size where b = WS)
 
+#define FM 0xffffffff ///< Full mask for shuffle sync operations
+
 /**
  *  @note Compute shared memory usage by number of blocks (nb), order
  *  (r) and number of carries (nc):
@@ -194,11 +196,11 @@ void fixpet( Vector<T,R>& pet,
             float v = a[i][tx] * pe[j];
 #pragma unroll // recursive doubling by shuffle
             for (int k = 1; k < WS; k *= 2) {
-                float p = __shfl_up(v, k);
+                float p = __shfl_up_sync(FM, v, k);
                 if (tx >= k)
                     v += p;
             }
-            pet[i] += b[j][tx] * __shfl(v, WS-1);
+            pet[i] += b[j][tx] * __shfl_sync(FM, v, WS-1);
         }
     }
 }
@@ -218,11 +220,11 @@ void fixpet( Vector<T,R>& pet,
             float v = a[i] * pe[j];
 #pragma unroll // recursive doubling by shuffle
             for (int k = 1; k < WS; k *= 2) {
-                float p = __shfl_up(v, k);
+                float p = __shfl_up_sync(FM, v, k);
                 if (tx >= k)
                     v += p;
             }
-            pet[i] += b[j] * __shfl(v, WS-1);
+            pet[i] += b[j] * __shfl_sync(FM, v, WS-1);
         }
     }
 }
