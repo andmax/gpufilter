@@ -740,6 +740,9 @@ int main( int argc, char** argv ) {
 #endif
     //if( res_out ) printf( "\n" );
 
+    if ( res_out == 0 )
+        printf( "[GPU] max_err = %g max_rel_err = %g in %gs\n", me, mre, dt );
+
     cudaEventDestroy(start_device); cudaEventDestroy(stop_device);
 
     cudaFreeArray( a_in_img );
