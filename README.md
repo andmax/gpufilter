@@ -44,8 +44,8 @@ make
 ```
 
 It may be the case (depending on your environment) that the *cmake*
-command line must be properly configured (for instance to access
-the proper host compiler):
+command line must be properly configured (for instance to access the
+proper host compiler):
 
 ```
 cmake -DCUDA_HOST_COMPILER=/usr/bin/g++ ..
@@ -99,13 +99,13 @@ the following environment:
 
 ## Running the tests
 
-First compile all the algorithms (see getting started above)
-to then be able to run (this may take **hours** to finish):
+First compile all the algorithms (see getting started above) to then
+be able to run (this may take **hours** to finish):
 
 ```
 cd ../scripts
 mkdir results
-sh runall.sh
+sh run_all.sh
 ```
 
 The bash scripts use a python script (in scripts/) to compute the
