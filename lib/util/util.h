@@ -87,11 +87,11 @@ inline void check_cuda_error(const std::string &msg) {
  *  @tparam T1 Values type used in the GPU
  *  @tparam T2 Values type used in the CPU
  */
-template< class T1, class T2 >
+template< typename T1, typename T2, typename T3 >
 void check_cpu_reference(const T1 *ref,
                          const T2 *res,
                          const long int& ne,
-                         T1& me, T1& mre) {
+                         T3& me, T3& mre) {
     mre = me = (T1)0;
     for (long int i = 0; i < ne; i++)
     {
