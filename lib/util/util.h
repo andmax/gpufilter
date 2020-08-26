@@ -86,6 +86,7 @@ inline void check_cuda_error(const std::string &msg) {
  *  @param[out] mre Maximum relative error (difference among all values)
  *  @tparam T1 Values type used in the GPU
  *  @tparam T2 Values type used in the CPU
+ *  @tparam T3 Values type used for maximum absolute and relative errors
  */
 template< typename T1, typename T2, typename T3 >
 void check_cpu_reference(const T1 *ref,
@@ -96,16 +97,43 @@ void check_cpu_reference(const T1 *ref,
     for (long int i = 0; i < ne; i++)
     {
         T1 a = (T1)(res[i]) - ref[i];
-        if( a < (T1)0 ) a = -a;
+        if( a < (T1)0 )
+            a = -a;
         if( ref[i] != (T1)0 )
         {
-            T1 r = (ref[i] < (T1)0) ? -ref[i] : ref[i];
+            T1 r = ref[i];
+            if (r < (T1)0)
+                r = -r;
             T1 b = a / r;
             mre = b > mre ? b : mre;
         }
         me = a > me ? a : me;
     }
 }
+
+/**
+ *  @ingroup utils
+ *  @brief Template specialization for check device computation
+ *  @see check_cpu_reference()
+ */
+template<typename T3>
+void check_cpu_reference(
+    const unsigned int *ref, const unsigned int *res,
+    const long int& ne, T3& me, T3& mre) {
+    mre = me = (unsigned int)0;
+    for (long int i = 0; i < ne; i++)
+    {
+        unsigned int a = (unsigned int)(res[i]) - ref[i];
+        if( ref[i] != (unsigned int)0 )
+        {
+            unsigned int r = ref[i];
+            unsigned int b = a / r;
+            mre = b > mre ? b : mre;
+        }
+        me = a > me ? a : me;
+    }
+}
+
 
 /**
  *  @ingroup utils
