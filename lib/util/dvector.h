@@ -155,6 +155,17 @@ public:
         check_cuda_error("Error during memcpy from host to device");
         return *this;
     }
+    /**
+     *  @brief Assign operator
+     *  @param that Host (STL) Vector to copy from
+     *  @return This device vector with assigned values
+     */
+    void copy_from(T *data, size_t s)
+    {
+        resize(s);
+        cudaMemcpy(this->data(), data, this->size()*sizeof(T), cudaMemcpyHostToDevice);
+        check_cuda_error("Error during memcpy from host to device");
+    }
 
     /**
      *  @brief Copy values from this vector to a host (CPU) vector
