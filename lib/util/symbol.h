@@ -97,7 +97,7 @@ void copy_to_symbol( const T *symbol,
     if(size > size_storage)
         throw std::runtime_error("symbol storage overflow");
 
-    cudaMemcpyToSymbol(symbol,&items[0], size, 0,
+    cudaMemcpyToSymbol(symbol, &items[0], size, 0,
                        cudaMemcpyHostToDevice);
     check_cuda_error("Error copying symbol to device");
 
@@ -127,7 +127,7 @@ void copy_to_symbol( const T *symbol,
     if(size > size_storage)
         throw std::runtime_error("symbol storage overflow");
 
-    cudaMemcpyToSymbol(symbol,&*beg, size, 0,
+    cudaMemcpyToSymbol(symbol, &*beg, size, 0,
                        cudaMemcpyHostToDevice);
     check_cuda_error("Error copying symbol to device");
 }
@@ -203,7 +203,7 @@ void _copy_to_symbol( const std::string &name,
     if(size > size_storage)
         throw std::runtime_error("'"+name+"'"+" storage overflow");
 
-    cudaMemcpyToSymbol(name.c_str(),&items[0], size, 0,
+    cudaMemcpyToSymbol(name.c_str(), &items[0], size, 0,
                        cudaMemcpyHostToDevice);
     check_cuda_error("Error copying '"+name+"' buffer to device");
 
