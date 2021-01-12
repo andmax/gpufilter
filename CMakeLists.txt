@@ -26,8 +26,9 @@ set(CUDA_NVCC_FLAGS
 
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_35) # Kepler
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_61) # Pascal
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_37) # Kepler K80
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_37) # Kepler K80
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_60) # Tesla P100
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_75) # Titan RTX
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
