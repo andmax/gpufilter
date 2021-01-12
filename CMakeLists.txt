@@ -21,7 +21,7 @@ set(CUDA_NVCC_FLAGS
 #  -maxrregcount=255
   -arch=sm_${USE_SM}
   --ptxas-options=-v -O3 -ftz=true
-  -prec-div=false -prec-sqrt=false -use_fast_math -std=c++11
+  -prec-div=false -prec-sqrt=false -use_fast_math #-std=c++11
 )
 
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_35) # Kepler
