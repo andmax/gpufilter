@@ -5,12 +5,16 @@ filtering can also be regarded as Prefix Scans or Sums and Summed-area
 Tables (paper 1) or Integral Images.  The main goal of this project is
 to provide the baseline code in C/C++/CUDA for computing the fastest
 boundary-aware recursive filtering (paper 3) running on the GPU
-(graphics processing unit), i.e. a massively-parallel processor (paper
-2).  The *fastest* means fastest to date (as the last published paper)
+(graphics processing unit), i.e. a massively-parallel processor
+The *fastest* means fastest to date (as the last published paper)
 and *boundary awareness* means closed-form exact (i.e. no
 approximations).  The idea of boundary awareness is to compute the
 exact initial feedbacks needed for recursive filtering infinite input
-extensions (paper 3).
+extensions (paper 3).  Besides serial interconnection (papers 1 and 3),
+one can also compute a parallel interconnection of recursive filters
+(paper 2) and use this parallelism as a new source of performance
+improvement.  Besides 2D images (papers 1, 2 and 3),
+one can also compute recursive filtering on 1D and 3D input (paper 4).
 
 Please keep in mind that this code is just to check the performance
 and accuracy of the recursive filtering algorithms on a 2D random
@@ -25,6 +29,7 @@ in the following papers:
 1. [GPU-Efficient Recursive Filtering and Summed Area Tables](http://dx.doi.org/10.1145/2024156.2024210)
 2. [Efficient finite impulse response filters in massively-parallel recursive systems](https://doi.org/10.1007/s11554-015-0510-x)
 3. [Parallel Recursive Filtering of Infinite Input Extensions](http://dx.doi.org/10.1145/2980179.2980222)
+4. [GPU efficient 1D and 3D recursive filtering](http://dx.doi.org/10.1016/j.dsp.2021.103076)
 
 ## Getting started
 
